@@ -1,0 +1,15 @@
+digraph g {
+graph[ranksep=0.1];
+node [shape=circle, style="filled"];
+U [fillcolor=red];
+V1 [fillcolor=white, label=<V<SUB>1</SUB>>];
+V2 [fillcolor=gray, label=<V<SUB>2</SUB>>];
+V3 [fillcolor=gray, label=<V<SUB>3</SUB>>];
+V4 [fillcolor=gray, label=<V<SUB>4</SUB>>];
+V5 [fillcolor=gray, label=<V<SUB>5</SUB>>];
+V6 [fillcolor=gray, label=<V<SUB>6</SUB>>];
+V7 [fillcolor=white, label=<V<SUB>7</SUB>>];
+O1 [fillcolor=green, label=<O<SUB>1</SUB>>];
+O2 [fillcolor=green, label=<O<SUB>2</SUB>>];
+V1 -> U; U -> V2; U -> V3; U-> V4; U-> V5; U -> V6; V1 -> O2; V2 -> O2; V4-> O1; V5 -> O1; V6 -> O1; U -> O2; U -> O1; V1 -> V2; V5 -> V6; V7 -> O1
+}

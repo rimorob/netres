@@ -1,0 +1,197 @@
+\begin{thebibliography}{23}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Anandkumar et~al.(2013)Anandkumar, Hsu, Javanmard, and
+  Kakade]{anandkumar_learning_2013}
+Animashree Anandkumar, Daniel Hsu, Adel Javanmard, and Sham Kakade.
+\newblock Learning {Linear} {Bayesian} {Networks} with {Latent} {Variables}.
+\newblock In Sanjoy Dasgupta and David McAllester, editors, \emph{Proceedings
+  of the 30th {International} {Conference} on {Machine} {Learning}}, volume~28
+  of \emph{Proceedings of {Machine} {Learning} {Research}}, pages 249--257,
+  Atlanta, Georgia, USA, June 2013. PMLR.
+\newblock URL \url{http://proceedings.mlr.press/v28/anandkumar13.html}.
+
+\bibitem[Bareinboim and Pearl(2016)]{bareinboim_causal_2016}
+Elias Bareinboim and Judea Pearl.
+\newblock Causal inference and the data-fusion problem.
+\newblock \emph{Proceedings of the National Academy of Sciences}, 113\penalty0
+  (27):\penalty0 7345--7352, July 2016.
+\newblock ISSN 0027-8424, 1091-6490.
+\newblock \doi{10.1073/pnas.1510507113}.
+\newblock URL \url{http://www.pnas.org/lookup/doi/10.1073/pnas.1510507113}.
+
+\bibitem[D'Amour(2019)]{damour_multi-cause_2019}
+Alexander D'Amour.
+\newblock On {Multi}-{Cause} {Causal} {Inference} with {Unobserved}
+  {Confounding}: {Counterexamples}, {Impossibility}, and {Alternatives}.
+\newblock \emph{arXiv:1902.10286 [cs, stat]}, February 2019.
+\newblock URL \url{http://arxiv.org/abs/1902.10286}.
+\newblock arXiv: 1902.10286.
+
+\bibitem[Elidan and Friedman(2005)]{elidan_learning_2005}
+Gal Elidan and Nir Friedman.
+\newblock Learning {Hidden} {Variable} {Networks}: {The} {Information}
+  {Bottleneck} {Approach}.
+\newblock \emph{J. Mach. Learn. Res.}, 6:\penalty0 81--127, December 2005.
+\newblock ISSN 1532-4435.
+\newblock URL \url{http://dl.acm.org/citation.cfm?id=1046920.1046924}.
+
+\bibitem[Elidan et~al.(2001)Elidan, Lotner, Friedman, and
+  Koller]{elidan_discovering_2001}
+Gal Elidan, Noam Lotner, Nir Friedman, and Daphne Koller.
+\newblock Discovering {Hidden} {Variables}: {A} {Structure}-{Based} {Approach}.
+\newblock In T.~K. Leen, T.~G. Dietterich, and V.~Tresp, editors,
+  \emph{Advances in {Neural} {Information} {Processing} {Systems} 13}, pages
+  479--485. MIT Press, 2001.
+\newblock URL
+  \url{http://papers.nips.cc/paper/1940-discovering-hidden-variables-a-structure-based-approach.pdf}.
+
+\bibitem[Elidan et~al.(2007)Elidan, Nachman, and Friedman]{elidan_ideal_2007}
+Gal Elidan, Iftach Nachman, and Nir Friedman.
+\newblock “{Ideal} {Parent}” {Structure} {Learning} for {Continuous}
+  {Variable} {Bayesian} {Networks}.
+\newblock \emph{Journal of Machine Learning Research}, 8:\penalty0 35, August
+  2007.
+
+\bibitem[Friedman(1998)]{friedman1998bayesian}
+Nir Friedman.
+\newblock The {Bayesian} structural {EM} algorithm.
+\newblock In \emph{Proceedings of the {Fourteenth} conference on {Uncertainty}
+  in artificial intelligence}, pages 129--138, 1998.
+\newblock bibtex[organization=Morgan Kaufmann Publishers Inc.].
+
+\bibitem[Friedman and Koller(2013)]{friedman_being_2013}
+Nir Friedman and Daphne Koller.
+\newblock Being {Bayesian} about {Network} {Structure}.
+\newblock \emph{arXiv:1301.3856 [cs, stat]}, January 2013.
+\newblock URL \url{http://arxiv.org/abs/1301.3856}.
+\newblock arXiv: 1301.3856.
+
+\bibitem[Friedman and {others}(1997)]{friedman1997learning}
+Nir Friedman and {others}.
+\newblock Learning belief networks in the presence of missing values and hidden
+  variables.
+\newblock In \emph{{ICML}}, volume~97, pages 125--133, 1997.
+\newblock bibtex[number=July].
+
+\bibitem[Gavish and Donoho(2014)]{gavish_optimal_2014}
+Matan Gavish and David~L. Donoho.
+\newblock The {Optimal} {Hard} {Threshold} for {Singular} {Values} is
+  {\textbackslash}(4/{\textbackslash}sqrt \{3\}{\textbackslash}).
+\newblock \emph{IEEE Transactions on Information Theory}, 60\penalty0
+  (8):\penalty0 5040--5053, August 2014.
+\newblock ISSN 0018-9448, 1557-9654.
+\newblock \doi{10.1109/TIT.2014.2323359}.
+\newblock URL \url{http://ieeexplore.ieee.org/document/6846297/}.
+
+\bibitem[Hernán and Robins(2006)]{hernan_estimating_2006}
+Miguel~A. Hernán and James~M. Robins.
+\newblock Estimating causal effects from epidemiological data.
+\newblock \emph{Journal of Epidemiology and Community Health}, 60\penalty0
+  (7):\penalty0 578--586, July 2006.
+\newblock ISSN 0143-005X.
+\newblock \doi{10.1136/jech.2004.029496}.
+
+\bibitem[Karatzoglou et~al.(2004)Karatzoglou, Smola, Hornik, and
+  Zeileis]{karatzoglou_kernlab_2004}
+Alexandros Karatzoglou, Alex Smola, Kurt Hornik, and Achim Zeileis.
+\newblock \textbf{kernlab} - {An} \textit{{S}4} {Package} for {Kernel}
+  {Methods} in \textit{{R}}.
+\newblock \emph{Journal of Statistical Software}, 11\penalty0 (9), 2004.
+\newblock ISSN 1548-7660.
+\newblock \doi{10.18637/jss.v011.i09}.
+\newblock URL \url{http://www.jstatsoft.org/v11/i09/}.
+
+\bibitem[Koller and Friedman(2009)]{koller_probabilistic_2009}
+Daphne Koller and Nir Friedman.
+\newblock \emph{Probabilistic graphical models: principles and techniques}.
+\newblock Adaptive computation and machine learning. MIT Press, Cambridge, MA,
+  2009.
+\newblock ISBN 978-0-262-01319-2.
+
+\bibitem[Kraskov et~al.(2004)Kraskov, Stögbauer, and
+  Grassberger]{kraskov_estimating_2004}
+Alexander Kraskov, Harald Stögbauer, and Peter Grassberger.
+\newblock Estimating mutual information.
+\newblock \emph{Physical Review E}, 69\penalty0 (6), June 2004.
+\newblock ISSN 1539-3755, 1550-2376.
+\newblock \doi{10.1103/PhysRevE.69.066138}.
+\newblock URL \url{https://link.aps.org/doi/10.1103/PhysRevE.69.066138}.
+
+\bibitem[Louizos et~al.(2017)Louizos, Shalit, Mooij, Sontag, Zemel, and
+  Welling]{louizos_causal_2017}
+Christos Louizos, Uri Shalit, Joris Mooij, David Sontag, Richard Zemel, and Max
+  Welling.
+\newblock Causal {Effect} {Inference} with {Deep} {Latent}-{Variable} {Models}.
+\newblock \emph{arXiv:1705.08821 [cs, stat]}, May 2017.
+\newblock URL \url{http://arxiv.org/abs/1705.08821}.
+\newblock arXiv: 1705.08821.
+
+\bibitem[MacKay(2003)]{mackay_information_2003}
+David J.~C. MacKay.
+\newblock \emph{Information theory, inference, and learning algorithms}.
+\newblock Cambridge University Press, Cambridge, UK ; New York, 2003.
+\newblock ISBN 978-0-521-64298-9.
+
+\bibitem[Pearl(2000)]{pearl_causality:_2000}
+Judea Pearl.
+\newblock \emph{Causality: models, reasoning, and inference}.
+\newblock Cambridge University Press, Cambridge, U.K.; New York, 2000.
+\newblock ISBN 978-1-139-64936-0 978-0-511-80316-1.
+\newblock URL \url{http://dx.doi.org/10.1017/CBO9780511803161}.
+\newblock OCLC: 834142635.
+
+\bibitem[Rawlings et~al.(1998)Rawlings, Pantula, and
+  Dickey]{rawlings_applied_1998}
+John~O. Rawlings, Sastry~G. Pantula, and David~A. Dickey.
+\newblock \emph{Applied regression analysis: a research tool}.
+\newblock Springer texts in statistics. Springer, New York, 2nd ed edition,
+  1998.
+\newblock ISBN 978-0-387-98454-4.
+
+\bibitem[Scutari(2010)]{scutari_learning_2010}
+Marco Scutari.
+\newblock Learning {Bayesian} {Networks} with the \textbf{bnlearn} \textit{{R}}
+  {Package}.
+\newblock \emph{Journal of Statistical Software}, 35\penalty0 (3), 2010.
+\newblock ISSN 1548-7660.
+\newblock \doi{10.18637/jss.v035.i03}.
+\newblock URL \url{http://www.jstatsoft.org/v35/i03/}.
+
+\bibitem[Shepherd et~al.(2016)Shepherd, Li, and
+  Liu]{shepherd_probability-scale_2016}
+Bryan~E. Shepherd, Chun Li, and Qi~Liu.
+\newblock Probability-scale residuals for continuous, discrete, and censored
+  data.
+\newblock \emph{The Canadian journal of statistics = Revue canadienne de
+  statistique}, 44\penalty0 (4):\penalty0 463--479, December 2016.
+\newblock ISSN 0319-5724.
+\newblock \doi{10.1002/cjs.11302}.
+\newblock URL \url{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5364820/}.
+
+\bibitem[Silva et~al.(2006)Silva, Scheines, Glymour, and
+  Spirtes]{silva_learning_2006}
+Ricardo Silva, Richard Scheines, Clark Glymour, and Peter Spirtes.
+\newblock Learning the {Structure} of {Linear} {Latent} {Variable} {Models}.
+\newblock \emph{J. Mach. Learn. Res.}, 7:\penalty0 191--246, 2006.
+
+\bibitem[Spirtes et~al.(1993)Spirtes, Glymour, and
+  Scheines]{spirtes_causation_1993}
+Peter Spirtes, Clark~N. Glymour, and Richard Scheines.
+\newblock \emph{Causation, prediction, and search}.
+\newblock Number~81 in Lecture notes in statistics. Springer-Verlag, New York,
+  1993.
+\newblock ISBN 978-0-387-97979-3.
+
+\bibitem[Wang and Blei(2018)]{wang_blessings_2018}
+Yixin Wang and David~M. Blei.
+\newblock The {Blessings} of {Multiple} {Causes}.
+\newblock \emph{arXiv:1805.06826 [cs, stat]}, May 2018.
+\newblock URL \url{http://arxiv.org/abs/1805.06826}.
+\newblock arXiv: 1805.06826.
+
+\end{thebibliography}
