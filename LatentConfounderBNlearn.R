@@ -555,9 +555,9 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
 fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
                         optimizer = 'adagrad', metrics = 'cosine_proximity', drRate = 0.3,
                         summarize=TRUE, fname='aeRunSummary.pdf', valData=NULL,
-                        epochs=100, batch_size = NULL) {
-    reticulate::conda_list()
-    reticulate::use_condaenv("tensorflow_p36")
+                        epochs=100, batch_size = NULL, activation = 'relu', use_batch_norm = TRUE) {
+    ## reticulate::conda_list()
+    ## reticulate::use_condaenv("tensorflow_p36")
     stopifnot(keras::is_keras_available())
 
     library(ggplot2)
@@ -579,30 +579,40 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
     encoder <- input_layer
 
     ##construct the encoder
-    for (li in 1:(length(architecture)-1)) {
-        curL = architecture[li]
-        encoder <-
-            encoder %>%
-            layer_dense(units = curL, activation = "relu") %>%
-            layer_batch_normalization() %>%
-            layer_dropout(rate = drRate)
+    if(length(architecture) > 1){
+        for (li in 1:(length(architecture)-1)) {
+            curL = architecture[li]
+            encoder <-
+                encoder %>%
+                layer_dense(units = curL, activation = activation)
+            if(use_batch_norm)
+                encoder = encoder %>% layer_batch_normalization()
+            encoder = encoder %>%
+                layer_dropout(rate = drRate)
+        }
     }
     ##add middle layer
     ##This should probably be PCA-constrained or at worst constrained from Donoho:
     ##https://arxiv.org/abs/1305.5870
-    encoder <- encoder %>% layer_dense(units = architecture[length(architecture)]) %>%
-            layer_batch_normalization() %>%
-            layer_dropout(rate = drRate)
+    encoder <- encoder %>% layer_dense(units = architecture[length(architecture)])
+    if(use_batch_norm)
+        encoder = encoder %>% layer_batch_normalization()
+    encoder = encoder %>%
+        layer_dropout(rate = drRate)
 
     ##construct the decoder
     decoder <- encoder
-    for (li in 1:(length(architecture) - 1)) {
-        curL = rev(architecture)[li + 1]
+    if(length(architecture) > 1){
+        for (li in 1:(length(architecture) - 1)) {
+            curL = rev(architecture)[li + 1]
 
-        decoder <- decoder %>%
-            layer_dense(units = curL, activation = "relu") %>%
-            layer_batch_normalization() %>%
-            layer_dropout(rate = drRate)
+            decoder <- decoder %>%
+                layer_dense(units = curL, activation = activation)
+            if(use_batch_norm)
+                decoder = decoder %>% layer_batch_normalization()
+            decoder = decoder %>%
+                layer_dropout(rate = drRate)
+        }
     }
 
     ##return to the original dimensions
@@ -626,7 +636,8 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
                    epochs=epochs,
                    batch_size=ifelse(is.null(batch_size), nrow(x_train), batch_size),
                    shuffle=TRUE,
-                   validation_data= list(x_train, x_train)
+                   ##validation_data= list(x_train, x_train)
+                   validation_split = 0.1
                    )
     if (summarize) {
         pdf(fname, width=11)
@@ -651,7 +662,10 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
                            method_disc = 'cluster',
                            number_of_groups = 3,
                            maxLatentVars = Inf,
-                           multiple_comparison_correction = TRUE
+                           multiple_comparison_correction = TRUE,
+                           architecture = NULL, activation = 'relu', drRate=0.3,
+                           use_batch_norm = TRUE, batch_size = NULL,
+                           optimizer = 'adagrad', metrics = 'cosine_proximity'
                            ) {
     ## check for missingness
     missing = which(!complete.cases(resDev))
@@ -696,8 +710,9 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
         }
         ##hacked outer dimension - min of 200 or half # of vars
         ##hacked # of layers
-        architecture = rev(round(exp(seq(log(nLatent), log(min(200, ncol(resDev)/2)), length.out=4))))
-        encoder <- fitAeLatent(data=resDev, architecture=architecture, valData=resDev, epochs=nIter)
+        if(is.null(architecture))
+            architecture = rev(round(exp(seq(log(nLatent), log(min(200, ncol(resDev)/2)), length.out=4))))
+        encoder <- fitAeLatent(data=resDev, architecture=architecture, valData=resDev, epochs=nIter, activation = activation, drRate = drRate, use_batch_norm = use_batch_norm, batch_size = batch_size, metrics = metrics, optimizer = optimizer)
         encoded = encoder %>% predict(as.matrix(resDev), verbose=0, callbacks=None, max_queue_size=10, workers=10, use_multiprocessing=True) %>% as.data.frame
         pr = encoder
         pr$x = encoded #append the predicted latent space to pr
@@ -928,7 +943,8 @@ latentDiscovery = function(
 			   varmap = NULL,
 			   debug = F,
 			   discretize_confounders = F,
-			   missing_code = NA
+			   missing_code = NA,
+                           ...
 			   ){
     if(debug){
 	message("At beginning...")
@@ -1002,7 +1018,8 @@ latentDiscovery = function(
 				 missing_encoding = missing_code,
 				 alpha = alpha,
 				 nIter = latent_iterations,
-				 multiple_comparison_correction = multiple_comparison_correction)
+				 multiple_comparison_correction = multiple_comparison_correction,
+                                 ...)
 	## check for missing latent
 	if(length(newlatVars) == 1 && newlatVars == -1){
 	    break()

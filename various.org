@@ -1,0 +1,88 @@
+#+TITLE:Variost terst 
+#+AUTHOR: Fred K. Gruber
+#+email: fred@gnshealthcare.com
+#+PROPERTY: header-args :tangle yes :eval never-export
+#+PROPERTY: header-args:R :session *R* :exports both
+#+OPTIONS: ^:{}
+-----
+* Test autoencoders
+#+begin_src R
+source("LatentConfounderBNlearn.R")
+load("/Users/fred/Documents/projects/latvar/res_alldata.RData", verbose = T)
+load("final_model_nolvp_novp.RData", verbose = T)
+reticulate::conda_list()
+reticulate::use_condaenv("anaconda3")
+library(keras)
+keras::is_keras_available()
+
+train = datalist$data_noisy
+vars = getDrivers(res_alldata, 'Z', maxpath = 2, cutoff = 0.1)$Drivers
+
+resList = getREFSresiduals (res_alldata,
+                            vars)
+
+resDev = residualDeviance(train,
+                          resList, isOrdinal = T)
+
+
+
+tst = findLatentVars(resDev,
+                     method = 'autoencoder'
+                     )
+
+tst$confounders %>%
+    cor(train$U2.out)
+
+
+tstlin = findLatentVars(resDev,
+                     method = 'linear'
+                     )
+
+
+tstlin$confounders %>%
+    cor(train$U2.out)
+
+tstlin$confounders %>%
+    cor(train$U1.out)
+
+myplot = function(tstlin, train){
+    toplot = cbind(as.data.frame(tstlin$confounder), train[, c("U1.out", "U2.out")]) %>% gather(var, val, -U1.out, -U2.out)
+    ggp1 = toplot%>% ggplot(aes(x = U1.out, y = val)) + geom_point() + facet_wrap( ~ var)
+    ggp2 = toplot %>% ggplot(aes(x = U2.out, y = val)) + geom_point() + facet_wrap( ~ var)
+    cowplot::plot_grid(ggp1, ggp2, ncol = 1)
+}
+
+myplot(tst, train)
+
+
+
+myplot(tstlin, train)
+
+tstlin$confounders %>%
+    cor(train$U1.out)
+
+tstlin$confounders %>%
+    cor(train$U2.out)
+
+
+tstaelin = findLatentVars(resDev,
+                          scale. = T, 
+                          method = 'autoencoder',
+                          architecture=NULL, 
+                          activation = 'relu',
+                          drRate=0.3,
+                          use_batch_norm=TRUE,
+                          nIter = 500,
+                          batch_size = 16,
+                          optimizer = "adam",
+                          metrics = 'mse'
+                     )
+
+tstaelin$confounders %>%
+    cor(train$U1.out)
+
+tstaelin$confounders %>%
+    cor(train$U2.out)
+
+myplot(tstaelin, train)
+#+end_src
