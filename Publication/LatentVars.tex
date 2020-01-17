@@ -11,6 +11,9 @@
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
 \usepackage{amsfonts}       % blackboard math symbols
@@ -20,7 +23,7 @@
 \usepackage{subfig}					% for laying out multi-panel figures and tables 
 \usepackage{cancel}					% for crossing out characters
 \usepackage{amsmath}				% for splitting multi-line equations
-\usepackage{placeins}				% for table positioning
+\usepackage{placeins}				% for table and figure positioning
 \usepackage{mathtools}			% for \vdotswithin{}
 \usepackage{resizegather}   % for gathering multi-lines to one line
 %packages for graph layout
@@ -35,12 +38,7 @@
 
 \setlength{\textfloatsep}{3pt}
 
-%OLD TITLE
-%\title{Identification of Latent Variables From Their \\
-%           Footprint In Bayesian Network Residuals}
-%NEW TITLE
-\icmltitlerunning{Identification of Latent Variables From Their
-Footprint In Bayesian Network Residuals}
+\icmltitlerunning{Identification of Latent Variables From Residuals}
 
 \begin{document}
 
@@ -49,6 +47,7 @@ Footprint In Bayesian Network Residuals}
 Footprint In Bayesian Network Residuals}
 
 \icmlsetsymbol{equal}{*}
+
 \begin{icmlauthorlist}
 \icmlauthor{Boris Hayete}{equal,former}
 \icmlauthor{Fred Gruber}{equal,gns}
@@ -130,17 +129,15 @@ Here, we consider the special case of Gaussian graphical models where our approa
 Recall that, for some $V_j \in \{V, U, O\}$, $P^{V_j}_k$ denotes the $k$th parent of $V_j$.  For GGMs, we can write down a fragment of any DAG G as a linear equation where a child node is parameterized as a linear function of its parents:
 \begin{equation}
 \begin{align*}
-V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j, \\\qquad \xi_j \sim \mathcal{N}(0, \sigma_j).
+V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j,\\\xi_j \sim \mathcal{N}(0, \sigma_j).
 \end{align*}
-\end{equation}
-\vspace{-10mm}
-	
+\end{equation}	
 
 \FloatBarrier
 \begin{figure}[h]
 	\centering
-	\begin{minipage}[t]{\dimexpr0.56\textwidth}
-	\digraph[scale=0.45]{g}{
+	\begin{minipage}[t]{\dimexpr0.6\textwidth}
+	\digraph[scale=0.5]{g}{
 			graph[ranksep=0.1];
       node [shape=circle, style="filled"];
       U [fillcolor=red];
@@ -155,11 +152,13 @@ V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j, 
       O2 [fillcolor=green, label=<O<SUB>2</SUB>>];
       V1 -> U; U -> V2; U -> V3; U-> V4; U-> V5; U -> V6; V1 -> O2; V2 -> O2; V4-> O1; V5 -> O1; V6 -> O1; U -> O2; U -> O1; V1 -> V2; V5 -> V6; V7 -> O1
 	}
+	\begin{minipage}{\dimexpr0.8\textwidth}
 	\caption{Graph $G_u$.  $U$ influences the outcomes $O$, and a number of predictors $V$, confounding many of the $V_j \rightarrow O_k$ relationships.  Gray nodes are affected by $U$.}
+	\end{minipage}
 	\label{fig:sampleGraph}
 	\end{minipage}\hfill
-	\begin{minipage}[t]{\dimexpr0.4\textwidth}
-	\digraph[scale=0.45]{g2}{
+	\begin{minipage}[t]{\dimexpr0.6\textwidth}
+	\digraph[scale=0.5]{g2}{
 			graph[ranksep=0.1];
       node [shape=circle, style="filled"];
       V1 [fillcolor=white, label=<V<SUB>1</SUB>>];
@@ -173,21 +172,26 @@ V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j, 
       O2 [fillcolor=green, label=<O<SUB>2</SUB>>];
       V1 -> V3; V3 -> V2; V3 -> V4; V3 -> V6; V3 -> V5; V4 -> V6; V6 -> V5; V1 -> O2; V2 -> O2; V4-> O1; V5 -> O1; V6 -> O1; V7 -> O1; V3 -> O2; V4 -> V5; V5 -> O2; V1 -> V2; V2 -> V5; V3 -> O1
 	}
+	\begin{minipage}{\dimexpr0.8\textwidth}
 	\caption{Graph $G$.  With $U$ latent, the graph adjusts, introducing spurious edges.}
+	\end{minipage}
 	\label{fig:sampleGraphOnObservables}
 	\end{minipage}
 \end{figure}
-\vspace{-3mm}
 \FloatBarrier
 
 For example, consider $O_1$ in Figure \ref{fig:sampleGraph}.  We can write:
 \begin{equation}
-O_1 = \beta_0 + \beta_6V_6 + \beta_5V_5 + \beta_4V_4 + \beta_7V_7 + \beta_uU + \xi_1, \qquad \xi_1 \sim \mathcal{N}(0, \sigma_{O_1}).
+\begin{split}
+O_1 = \beta_0 + \beta_6V_6 + \beta_5V_5 + \beta_4V_4 + \beta_7V_7 + \beta_uU + \xi_1,\\ \xi_1 \sim \mathcal{N}(0, \sigma_{O_1}).
+\end{split}
 \end{equation}
 
 For any variable N that has parents in $G_u$, we can group variables in $P^N$ into three subsets: $X_U \in \{P^U, C^U\}$, $X_{\cancel{U}} \notin \{P^U, C^U\}$, and the set $U$ itself, and write down the following general form using matrix notation:
 \begin{equation}
-N = \beta_{N0} + B_U X_U + B_{\cancel{U}} X_{\cancel{U}} + \beta_U U + \xi_N, \qquad \xi_N \sim \mathcal{N}(0, \sigma_{N}).
+\begin{split}
+N = \beta_{N0} + B_U X_U + B_{\cancel{U}} X_{\cancel{U}} + \beta_U U + \xi_N,\\\xi_N \sim \mathcal{N}(0, \sigma_{N}).
+\end{split}
 \label{eq:linearForm}
 \end{equation}
 
@@ -432,7 +436,6 @@ Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10
       iteration of algorithm \ref{alg:latentEM}.}
   \end{minipage}
 \end{figure}
-\vspace{-5mm}
 \begin{figure}[ht]
   \centering
   \begin{minipage}[t]{0.52\linewidth}
