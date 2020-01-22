@@ -1,26 +1,19 @@
 \documentclass{article}
 
-% if you need to pass options to natbib, use, e.g.:
-%     \PassOptionsToPackage{numbers, compress}{natbib}
-% before loading neurips_2018
+% Use the following line for the initial blind version submitted for review:
+%\usepackage{icml2020}
 
-% ready for submission
-% \usepackage{neurips_2018}
+% If accepted, instead use the following line for the camera-ready submission:
+\usepackage[accepted]{icml2020}
 
-% to compile a preprint version, e.g., for submission to arXiv, add add the
-% [preprint] option:
-%     \usepackage[preprint]{neurips_20189}
 \usepackage{natbib}
-
-% to compile a camera-ready version, add the [final] option, e.g.:
-\usepackage{neurips_2019}
-
-% to avoid loading the natbib package, add option nonatbib:
-%     \usepackage[nonatbib]{neurips_2018}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
 \usepackage{amsfonts}       % blackboard math symbols
@@ -30,12 +23,9 @@
 \usepackage{subfig}					% for laying out multi-panel figures and tables 
 \usepackage{cancel}					% for crossing out characters
 \usepackage{amsmath}				% for splitting multi-line equations
-\usepackage[ruled,vlined]{algorithm2e}  % for algorithm writing
-\usepackage{placeins}				% for table positioning
+\usepackage{placeins}				% for table and figure positioning
 \usepackage{mathtools}			% for \vdotswithin{}
-\usepackage{algpseudocode}  % for algorithm layout side-by-side
 \usepackage{resizegather}   % for gathering multi-lines to one line
-\usepackage{caption}				% for resizing caption sizes
 %packages for graph layout
 \usepackage{graphicx}
 \usepackage[pdf]{graphviz}
@@ -46,59 +36,44 @@
 \titlespacing{\subsection}{0pt}{1ex}{0ex}
 \titlespacing{\subsubsection}{0pt}{0.5ex}{0ex}
 
-%\setlength{\belowcaptionskip}{-5pt}
 \setlength{\textfloatsep}{3pt}
 
-%OLD TITLE
-%\title{Identification of Latent Variables From Their \\
-%           Footprint In Bayesian Network Residuals}
-%NEW TITLE
-\title{DeepCausal: An Algorithm For Calculating Average Causal Effects Of Interventions In The Presence Of Pleiotropic Latent Variables Using Belief Networks and Deep Learning}
-
-% The \author macro works with any number of authors. There are two commands
-% used to separate the names and addresses of multiple authors: \And and \AND.
-%
-% Using \And between authors leaves it to LaTeX to determine where to break the
-% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
-% authors names on the first line, and the last on the second line, try using
-% \AND instead of \And before the third author name.
-
-\author{%
-  Boris Hayete \thanks{Equal contribution}\space\space\thanks{Corresponding author}\\
-  Precision Medicine Research\\
-  GNS Healthcare\\
-  Cambridge, MA 02142 \\
-  \texttt{boris@gnshealthcare.com} \And 
-  Fred Gruber \footnotemark[1]\\
-  Precision Medicine Research\\
-  GNS Healthcare\\
-  Cambridge, MA 02142 \\
-  \texttt{fred@gnshealthcare.com} \And
-  Anna Decker\\
-  Precision Medicine\\
-  GNS Healthcare\\
-  Cambridge, MA 02142 \\
-  \texttt{adecker@gnshealthcare.com} \And
-  Raymond Yan
-  Precision Medicine\\
-  GNS Healthcare\\
-  Cambridge, MA 02142 \\
-  \texttt{ryan@gnshealthcare.com}
-
-}
+\icmltitlerunning{Identification of Latent Variables From Residuals}
 
 \begin{document}
+
+\twocolumn[
+\icmltitle{Identification of Latent Variables From Their
+Footprint In Bayesian Network Residuals}
+
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Boris Hayete}{equal,former}
+\icmlauthor{Fred Gruber}{equal,gns}
+\icmlauthor{Anna Decker}{former}
+\icmlauthor{Raymond Yan}{gns}
+\end{icmlauthorlist}
+
+\icmlaffiliation{former}{Work completed at GNS Healthcare, Cambridge, Massachusetts, USA 02142}
+\icmlaffiliation{gns}{Department Of Precision Medicine, GNS Healthcare, Cambridge, Massachusetts, USA 02142}
+
+\icmlcorrespondingauthor{Boris Hayete}{boris@borisland.com}
+\icmlcorrespondingauthor{Fred Gruber}{fred@gnshealthcare.com}
+
+\icmlkeywords{Machine Learning, ICML, Computational Biology, Bayes Nets, Latent Variables} %revise!!!!!!!!!!!!!!!!!
+\vskip 0.1in
+]
+
 % Set sizes of skips before/after equations, figures, and tables
 \setlength{\abovedisplayskip}{4pt}
 \setlength{\belowdisplayskip}{4pt} 
 \setlength{\belowcaptionskip}{-5pt}
 
-\maketitle
-
 \begin{abstract}
 Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency, that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" highlights the need for continued attention to the unobserved confounder problem.  
 
-We present a novel method that aims to control for the latent structure of the data in the estimation of causal effects by iteratively deriving proxies for the latent space from the residuals of the inferred graphical model.  Under mild assumptions, our method improves structural inference and allows for identifiability of the causal effect. In addition, when the model is being used to predict outcomes, this method un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that such improvement of the predictive model is intrinsically capped and cannot be improved beyond a certain limit as compared to the confounded model.  Furthermore, we propose an algorithm for computing a ceiling for the dimensionality of the latent space which may be useful in future approaches to the problem.
+We present a novel method that aims to control for the latent structure of the data in the estimation of causal effects by iteratively deriving proxies for the latent space from the entirety of residuals of the inferred graphical model.  Under mild assumptions, our method improves structural inference and allows for identifiability of the causal effect. In addition, when the model is being used to predict outcomes, this method un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that such improvement of the predictive model is intrinsically capped and cannot be improved beyond a certain limit as compared to the confounded model.  Furthermore, we propose an algorithm for computing a ceiling for the dimensionality of the latent space which may be useful in future approaches to the problem.
 \end{abstract}
 
 \section{Introduction}
@@ -110,9 +85,9 @@ Hitherto, the literature has largely focused on addressing the subset of problem
 
 Intuitively, the presence of unobserved confounding leads to violations of conditional independence among the affected variables downstream from any latent confounder.  Likelihood methods for GM construction aim to minimize unexplained variance for all variables in the network by accounting for conditional independencies in the data (\cite{pearl_causality:_2000}, \cite{friedman_being_2013}).  Lack of observability of a causally important variable will induce dependencies among its descendants in the graph that cannot be fully ascribed to any single child node of the latent variable except by chance due to noise.  Such unexplained interdependency results in model residuals that are correlated with the latent variable and not fully explained by any putative graph parents. Thus, we observe inferred connectivity that is excessive compared to the true network.  (\cite{elidan_discovering_2001}).  
 
-Previously, methods have been proposed for inferring latent variables affecting GMs by the means of EM (as far back as \cite{friedman1997learning}, \cite{friedman1998bayesian}).  However, for a large enough network local gradients do not provide a reliable guide, nor do they address the cardinality of the latent space.  Methods for using near-cliques for detection of latent variables in directed acyclic graphs (DAGs) (\cite{elidan_discovering_2001}), including with gaussian graphical models (GGMs), have been proposed (\cite{silva_learning_2006}) that address both problems by analyzing near-cliques in DAGs.  A method related to ours has been proposed for calculating latent variables in a greedy fashion in linear and "invertible continuous" networks, and relating such estimates to observed data to speed up structure search and enable discovery of hidden variables (\cite{elidan_ideal_2007}). However... [limitations of this method and how ours is different...]
+Previously, methods have been proposed for inferring latent variables affecting GMs by the means of EM (as far back as \cite{friedman1997learning}, \cite{friedman1998bayesian}).  However, for a large enough network local gradients do not provide a reliable guide, nor do they address the cardinality of the latent space.  Methods for using near-cliques for detection of latent variables in directed acyclic graphs (DAGs) (\cite{elidan_discovering_2001}), including with gaussian graphical models (GGMs), have been proposed (\cite{silva_learning_2006}) that address both problems by analyzing near-cliques in DAGs.  A method related to ours has been proposed for calculating latent variables in a greedy fashion in linear and "invertible continuous" networks, and relating such estimates to observed data to speed up structure search and enable discovery of hidden variables (\cite{elidan_ideal_2007}). However, with clique-driven approach it would be impossible to tell whether, first of all, any cliques shared parents or, importantly, whether any signal remained to be modeled, leaving score-based testing to reject proposed "ideal parents".  
 
-We show that there exist circumstances when causal sufficiency can be asymptotically achieved, and thus exchangeability ensured, even when the causal drivers of outcome are confounded by a number of latent variables.  This can be achieved when the confounding is \textbf{pleiotropic}, that is,  when the latent variable affects a "large enough" number of variables, some driving an outcome of interest and others not (\cite{anandkumar_learning_2013}).  Notably, this objective cannot be achieved when confounding affects only the variables of interest and their causal parents (\cite{damour_multi-cause_2019}). We detail an algorithm for diagnosing and accounting for latent confounding in closed form for a GGM example, demonstrate the implementation in a simulated data set, and discuss extensions to other functional forms. 
+We show that there exist circumstances when causal sufficiency can be asymptotically achieved, and thus exchangeability ensured, even when the causal drivers of outcome are confounded by a number of latent variables.  This can be achieved when the confounding is \textbf{pleiotropic}, that is,  when the latent variable affects a "large enough" number of variables, some driving an outcome of interest and others not (\cite{anandkumar_learning_2013}).  Notably, this objective cannot be achieved when confounding affects only the variables of interest and their causal parents (\cite{damour_multi-cause_2019}). We detail an algorithm for diagnosing and accounting for latent confounding in closed form for a GGM example, demonstrate the implementation in a simulated data set, and discuss extensions to other functional forms.  Importantly, our approach uses an indication of latent space that is global, though only locally optimal, being derived from the totality of network residuals, and allows one-step derivation of the best local approximation of latent space, leading to the  iterative algorithm proposed below.
 
 \section{Background And Notation}
 \label{Background}
@@ -121,9 +96,8 @@ Consider a factorized joint probability distribution over a set of observed and 
 
 
 \begin{table}[h]
-\captionsetup{font=small}
 \centering
-\scalebox{0.7}{
+\scalebox{0.85}{
 \begin{tabular}{ c|c|c } 
  Set & Meaning & Indexing \\ 
  \hline
@@ -143,7 +117,6 @@ Consider a factorized joint probability distribution over a set of observed and 
 \caption{Notation}
 \label{tab:notation}
 \end{table}
-\vspace{-6mm}
 
 Assume that the joint distribution $D_{u}$ or $D$ is factorized as a directed acyclic graph, $G_{u}$ or $G$.  We will consider individual conditional probabilities describing nodes and their parents, $P(V | Pa{V}, \theta)$, where $\theta$ refers to the parameters linking  the parents of $V$ to $V$.  $\hat{\theta}$ will refer to an estimate of these parameters.  We will further assume that $G$ is constructed subject to regularization and using unbiased estimators for $P(V | Pa{V}), \hat{\theta})$.  We will further assume that $D_u$ plus any given constraints are sufficient to infer the true graph up to Markov equivalence.  For convenience, we'll focus on the actual true graph's parameters, so that, using unbiased estimators, $E[\hat{\theta_m}|D_u] = \theta_m, \forall m$.
 
@@ -155,15 +128,16 @@ Here, we consider the special case of Gaussian graphical models where our approa
 
 Recall that, for some $V_j \in \{V, U, O\}$, $P^{V_j}_k$ denotes the $k$th parent of $V_j$.  For GGMs, we can write down a fragment of any DAG G as a linear equation where a child node is parameterized as a linear function of its parents:
 \begin{equation}
-V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j, \qquad \xi_j \sim \mathcal{N}(0, \sigma_j).
-\end{equation}
-\vspace{-10mm}
+\begin{align*}
+V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j,\\\xi_j \sim \mathcal{N}(0, \sigma_j).
+\end{align*}
+\end{equation}	
 
 \FloatBarrier
 \begin{figure}[h]
 	\centering
-	\begin{minipage}[t]{\dimexpr0.56\textwidth}
-	\digraph[scale=0.35]{g}{
+	\begin{minipage}[t]{\dimexpr0.6\textwidth}
+	\digraph[scale=0.5]{g}{
 			graph[ranksep=0.1];
       node [shape=circle, style="filled"];
       U [fillcolor=red];
@@ -178,11 +152,13 @@ V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j, 
       O2 [fillcolor=green, label=<O<SUB>2</SUB>>];
       V1 -> U; U -> V2; U -> V3; U-> V4; U-> V5; U -> V6; V1 -> O2; V2 -> O2; V4-> O1; V5 -> O1; V6 -> O1; U -> O2; U -> O1; V1 -> V2; V5 -> V6; V7 -> O1
 	}
+	\begin{minipage}{\dimexpr0.8\textwidth}
 	\caption{Graph $G_u$.  $U$ influences the outcomes $O$, and a number of predictors $V$, confounding many of the $V_j \rightarrow O_k$ relationships.  Gray nodes are affected by $U$.}
+	\end{minipage}
 	\label{fig:sampleGraph}
 	\end{minipage}\hfill
-	\begin{minipage}[t]{\dimexpr0.4\textwidth}
-	\digraph[scale=0.35]{g2}{
+	\begin{minipage}[t]{\dimexpr0.6\textwidth}
+	\digraph[scale=0.5]{g2}{
 			graph[ranksep=0.1];
       node [shape=circle, style="filled"];
       V1 [fillcolor=white, label=<V<SUB>1</SUB>>];
@@ -196,21 +172,26 @@ V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j, 
       O2 [fillcolor=green, label=<O<SUB>2</SUB>>];
       V1 -> V3; V3 -> V2; V3 -> V4; V3 -> V6; V3 -> V5; V4 -> V6; V6 -> V5; V1 -> O2; V2 -> O2; V4-> O1; V5 -> O1; V6 -> O1; V7 -> O1; V3 -> O2; V4 -> V5; V5 -> O2; V1 -> V2; V2 -> V5; V3 -> O1
 	}
+	\begin{minipage}{\dimexpr0.8\textwidth}
 	\caption{Graph $G$.  With $U$ latent, the graph adjusts, introducing spurious edges.}
+	\end{minipage}
 	\label{fig:sampleGraphOnObservables}
 	\end{minipage}
 \end{figure}
-\vspace{-3mm}
 \FloatBarrier
 
 For example, consider $O_1$ in Figure \ref{fig:sampleGraph}.  We can write:
 \begin{equation}
-O_1 = \beta_0 + \beta_6V_6 + \beta_5V_5 + \beta_4V_4 + \beta_7V_7 + \beta_uU + \xi_1, \qquad \xi_1 \sim \mathcal{N}(0, \sigma_{O_1}).
+\begin{split}
+O_1 = \beta_0 + \beta_6V_6 + \beta_5V_5 + \beta_4V_4 + \beta_7V_7 + \beta_uU + \xi_1,\\ \xi_1 \sim \mathcal{N}(0, \sigma_{O_1}).
+\end{split}
 \end{equation}
 
 For any variable N that has parents in $G_u$, we can group variables in $P^N$ into three subsets: $X_U \in \{P^U, C^U\}$, $X_{\cancel{U}} \notin \{P^U, C^U\}$, and the set $U$ itself, and write down the following general form using matrix notation:
 \begin{equation}
-N = \beta_{N0} + B_U X_U + B_{\cancel{U}} X_{\cancel{U}} + \beta_U U + \xi_N, \qquad \xi_N \sim \mathcal{N}(0, \sigma_{N}).
+\begin{split}
+N = \beta_{N0} + B_U X_U + B_{\cancel{U}} X_{\cancel{U}} + \beta_U U + \xi_N,\\\xi_N \sim \mathcal{N}(0, \sigma_{N}).
+\end{split}
 \label{eq:linearForm}
 \end{equation}
 
@@ -225,15 +206,12 @@ The residual term $R_N$ is simply equal to the direct contribution of $U$ to $N$
 \begin{equation}
 R_N = \beta_0 + \beta_1 U + \xi_N.
 \label{eq:residualColumn}
-\vspace{-5mm}
 \end{equation}
-\vspace{-5mm}
 
 \begin{center}
 \begin{table}[ht]
 \centering
-\captionsetup{font=small}
-\scalebox{0.8}{
+\scalebox{1}{
 \begin{tabular}{c|c|c|c|c|}
 &\multicolumn{4}{c}{Variables}\\
 \hline
@@ -246,7 +224,7 @@ R_N = \beta_0 + \beta_1 U + \xi_N.
 \qquad
 \qquad
 \qquad
-\scalebox{0.8}{
+\scalebox{1}{
 \begin{tabular}{c|c|c|c|c|}
 &\multicolumn{4}{c}{Residuals}\\
 \hline
@@ -255,9 +233,8 @@ R_N = \beta_0 + \beta_1 U + \xi_N.
 &\vdots&\vdots&\vdots&\vdots\\
 &$R_{s1}$&$R_{s2}$&\dots&$R_{sv}$\\
 \end{tabular}}
-\caption{The training data frame (left) implies a matching residual data frame (right) once the joint distribution of all variables is specified via a graph and its parameterization}
+\caption{The training data frame (Variables) implies a matching data frame (Residuals) once the joint distribution of all variables is specified via a graph and its parameterization}
 \label{tab:MatchingResiduals}
-\vspace{-4mm}
 \end{table}
 \end{center}
 
@@ -282,7 +259,7 @@ Note that this approach is similar, in the linear case, to that in \cite{elidan_
 
 \section{Confounding of causal effects}
 
-The most important utility of causal modeling is to identify drivers as well as drivers of drivers of outcomes of interest.  These drivers of drivers may have practical importance. For example, in the development of a drug, direct predictors of an outcome (e.g. $V_6$ pointing to $O_{1}$ in Figure \ref{fig:sampleGraph) may not be viable targets but upstream variables (e.g. $V_{5}$ may be promising targets and the direct parents of the outcome mediate the effect. In the presence of latent confounding, the identifiability of causal effects of outcomes is jeopardized \cite{hernan_estimating_2006}.  For example, in Figure \ref{fig:sampleGraph} $U$ induces correlation among $V_3$, $V_4$, $V_5$, and $V_6$ even when these variables are conditionally independent given $U$.  
+The most important utility of causal modeling is to identify drivers as well as drivers of drivers of outcomes of interest.  These drivers of drivers may have practical importance. For example, in the development of a drug, direct predictors of an outcome (e.g. $V_6$ pointing to $O_{1}$ in Figure \ref{fig:sampleGraph} may not be viable targets but upstream variables (e.g. $V_{5}$ may be promising targets and the direct parents of the outcome mediate the effect. In the presence of latent confounding, the identifiability of causal effects of outcomes is jeopardized \cite{hernan_estimating_2006}.  For example, in Figure \ref{fig:sampleGraph} $U$ induces correlation among $V_3$, $V_4$, $V_5$, and $V_6$ even when these variables are conditionally independent given $U$.  
 
 The extent of the problem of unmeasured confounding can be quantified in more detail.  Suppose we model $O_1$ without controlling for $U$ (\ref{fig:sampleGraphOnObservables}): $$O_1 = \beta_0 + \beta_3 V_3 + \beta_4 V_4 + \beta_5 V_5 + \beta_6 V_6 + \dots.$$  Setting the coefficient of determination for the model $$V_3 = \alpha_0 + \alpha_4 V_4 + \alpha_5 V_5 + \alpha_6 V_6 + \dots.$$ equal to $\rho_3^2$.  Then the estimated variance of $\beta_3$ in the presence of collinearity can be related to that when collinearity is absent via the following formula (\cite{rawlings_applied_1998}):
 \begin{equation}
@@ -303,22 +280,22 @@ O_i = \beta_{i0} + B_W W + B_{X \setminus W} (X \setminus W)) + \xi_i \qquad (b)
 O_i^U = \beta_{i0}^U + B_Z^U Z + B^U U + \xi_i \qquad (c).
 \end{split}
 \end{equation}
-Model (a) is the model that was actually accepted, subject to regularization, in G.  Model (b) is the "oracular" model of $O_i$ that controls for $U$ non-parsimoniously by controlling for all variables affected by $U$ and not originally in the model.  The third model, (c), is the ideal parsimonious model when U is known.  We can compare the quality of these models by Bayesian Score, and the full score, in large sample sizes, can be approximated by BIC - the Bayesian Information Criterion (\cite{koller_probabilistic_2009}.  We assume that the third of these equations would have the lowest BIC (being the best model), and the first being the second highest, since we know that the set of variables $X \setminus W$ didn't make it into the first equation subject to regularization by BIC.  Assuming $n$ samples,
+Model (a) is the model that was actually accepted, subject to regularization, in G.  Model (b) is the "complete" model of $O_i$ that controls for $U$ non-parsimoniously by controlling for all variables affected by $U$ and not originally in the model.  The third model, (c), is the ideal parsimonious model when U is known.  We can compare the quality of these models by Bayesian Score, and the full score, in large sample sizes, can be approximated by BIC - the Bayesian Information Criterion (\cite{koller_probabilistic_2009}.  We assume that the third of these equations would have the lowest BIC (being the best model), and the first being the second highest, since we know that the set of variables $X \setminus W$ didn't make it into the first equation subject to regularization by BIC.  Assuming $n$ samples,
 \begin{equation}
 \begin{split}
 BIC(O_i = \beta_{i0} + B_W W + \xi_i) = b_a \qquad (a)\\
-BIC(O_i = \beta_{i0} + B_W W + B_{X \setminus W} (X \setminus W) + \xi_i) = b_b = b_c + |X \setminus W| log(n) \qquad (b)\\
+BIC(O_i = \beta_{i0} + B_W W + B_{X \setminus W} (X \setminus W) + \xi_i) \\= b_b = b_c + |X \setminus W| log(n) \qquad (b)\\
 BIC(O_i^U = \beta_{i0}^U + B_Z^U Z + B^U U + \xi_i) = b_c \qquad (c).
 \end{split}
 \label{eq:ceilingTheoremPrep}
 \end{equation}
 
-The "oracular model" - model (b) - includes all of the true predictors of $O_j$.  Therefore its score will be the same as that of the true model - model (c) - plus the BIC penalty, $log(n)$, for each extra term, minus the cost of having $U$ in the true model (that is, the cardinality of the relevant part of the latent space).  We know that the extra information carried by this model was not big enough to improve upon model (a), that is $b_a < b_c + k \log(n)$ for some $k$.  Rearranging:
+The "complete model" - model (b) - includes all of the true predictors of $O_j$.  Therefore its score will be the same as that of the true model - model (c) - plus the BIC penalty, $log(n)$, for each extra term, minus the cost of having $U$ in the true model (that is, the cardinality of the relevant part of the latent space).  We know that the extra information carried by this model was not big enough to improve upon model (a), that is $b_a < b_c + k \log(n)$ for some $k$.  Rearranging:
 \begin{equation}
     b_c - b_a > -k\log(n).
     \label{eq:ceilingTheorem}
 \end{equation}
-Any improvement in $G_{\bar{U}}$ owing to modeling of $\bar{U}$ cannot, therefore, exceed $k\log(n)$ logs, where $k = |X \setminus W| - |U|$: the information contained in the "oracular" model is smaller than its cost.
+Any improvement in $G_{\bar{U}}$ owing to modeling of $\bar{U}$ cannot, therefore, exceed $k\log(n)$ logs, where $k = |X \setminus W| - |U|$: the information contained in the "complete" model is smaller than its cost.
 
 Although the available improvement in predictive power is also capped in some way, it is still important to aim for that limit.  The reason is, correct inference of causality, especially in the presence of latent variables, is the only way to ensure transportability of models in real-world (heterogeneous-data) applications (see, e.g., \cite{bareinboim_causal_2016}).
 
@@ -327,74 +304,77 @@ This approach is a generalization of work presented in \cite{anandkumar_learning
 \section{Implementation}
 Algorithm \ref{alg:latentEM} below describes our approach to learning the latent space and can be viewed as a type of an expectation-maximization algorithm, possibly nested, if EM is used to learn the DAG at each step.
 
-How do we learn $\bar{U} = f(R_{\bar{U}})$?  In the linear case, we can use PCA, as described above, and in the non-linear case, we can use non-linear PCA, autoencoders, or other methods, as alluded to above as well.  However, the linear case provides a useful constraint on dimensionality, and this constraint can be derived quickly.  A useful notion of the ceiling constraint on the linear latent space dimensionality can be found in \cite{gavish_optimal_2014}.  From a practical standpoint, the dimensionality can be even tighter, and we propose a permutation-test-based method for inferring $ceiling(|U|)$ in Algorithm \ref{alg:linearPCA}.
+How do we learn $\bar{U} = f(R_{\bar{U}})$?  In the linear case, we can use PCA, as described above, and in the non-linear case, we can use non-linear PCA, autoencoders, or other methods, as alluded to above.  However, the linear case provides a useful constraint on dimensionality, and this constraint can be derived quickly.  A useful notion of the ceiling constraint on the linear latent space dimensionality can be found in \cite{gavish_optimal_2014}.  From a practical standpoint, the dimensionality can be even tighter, and we propose a permutation-test-based method for inferring $ceiling(|U|)$ in Algorithm \ref{alg:linearPCA}.
 
 The integral should converge faster than the count of times variance explained by $U^{*}$ on true residuals exceeds that obtained from shuffled residuals, but the permutation test approach of PCA cardinality is also workable, albeit with more iterations.  Note that it is necessary to correct for the number of tests performed, and that we use Bonferroni correction as a simple and conservative stand-in. Alternatively, networks built using structural priors of the form proposed in \cite{friedman_being_2013} may not need to perform this step.
 
 Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elidan_learning_2005}.  If we consider $Y = f(X)$, where $Y$ are all DAG outputs and $X$ are all inputs, and $f$ is a suitably parameterized DAG, PCA over residuals (linear or not) normalized by PCA over shuffled residuals provides a measure of "compressibility" of residual space.  In other words, we propose a minimum description length algorithm for detecting the latent variables so that the residual space is no longer compressible.
 
-\FloatBarrier
-\begin{center}
-\scalebox{0.5}{
-\begin{minipage}[t]{0.9\textwidth}
-\begin{algorithm}[H]
-\DontPrintSemicolon
-\SetAlgoLined
-\KwData{The set of observed variables $\{V, O\}$}
-\KwResult{Graph $G_{\bar{U}}(V, O, \bar{U})$}
- Construct $G = G(V, O)$\;
- Compute $S_0 = BIC_{G}$\;
- Estimate $\bar{U} = f(R)$\;
- Construct $G_{\bar{U}} = G(V, O, \bar{U})$\;
- Compute $S_{\bar{U}} = BIC(G_{\bar{U}})$\;
- \While{$S_{\bar{U}} - S_0 > \epsilon$} {
-  Set $S_0 = S_{\bar{U}}$\;
-  Calculate $R_{\bar{U}}$:\;
-  Set $\bar{U}$ to arbitrary constant values\;
-  \ForEach{child node $C \in G_{\bar{U}}, C \notin \bar{U}$}{
-  	Set parents to training data\;
-  	$\bar{C} = C|parents(C)$\;
-  	Set $R_C = PSR(\bar{C}, C)$\;
-  }
-  Estimate $\bar{U} = f(R_{\bar{U}})$\;
-  Construct $G_{\bar{U}} = G(V, O, \bar{U})$\;
-  Compute $S_{\bar{U}} = BIC(G_{\bar{U}})$\;
- }
+%\FloatBarrier
+%\begin{center}
+%\scalebox{0.5}{
+%\begin{minipage}[t]{0.9\textwidth}
+\begin{algorithm}%[H]
  \caption{Learning $\bar{U}$ from structure residuals via EM}
  \label{alg:latentEM}
+\begin{algorithmic}
+%\DontPrintSemicolon
+%\SetAlgoLined
+ \STATE foobar
+ \STATE \textbf{Data:} The set of observed variables $\{V, O\}$
+ \STATE \textbf{Result:} Graph $G_{\bar{U}}(V, O, \bar{U})$
+ \STATE Construct $G = G(V, O)$\;
+ \STATE Compute $S_0 = BIC_{G}$\;
+ \STATE Estimate $\bar{U} = f(R)$\;
+ \STATE Construct $G_{\bar{U}} = G(V, O, \bar{U})$\;
+ \STATE Compute $S_{\bar{U}} = BIC(G_{\bar{U}})$\;
+ \WHILE{$S_{\bar{U}} - S_0 > \epsilon$} 
+  \STATE Set $S_0 = S_{\bar{U}}$\;
+  \STATE Calculate $R_{\bar{U}}$:\;
+  \STATE Set $\bar{U}$ to arbitrary constant values\;
+  \FORALL{child node $C \in G_{\bar{U}}, C \notin \bar{U}$}
+  	\STATE Set parents to training data\;
+  	\STATE $\bar{C} = C|parents(C)$\;
+  	\STATE Set $R_C = PSR(\bar{C}, C)$\;
+  \ENDFOR
+  \STATE Estimate $\bar{U} = f(R_{\bar{U}})$\;
+  \STATE Construct $G_{\bar{U}} = G(V, O, \bar{U})$\;
+  \STATE Compute $S_{\bar{U}} = BIC(G_{\bar{U}})$\;
+ \ENDWHILE
+\end{algorithmic}
 \end{algorithm}
-\end{minipage}
+%\end{minipage}
 \hspace{1cm}
-\begin{minipage}[t]{1\textwidth}
-\begin{algorithm}[H]
-\DontPrintSemicolon
-\SetAlgoLined
-\KwData{The set of residuals $R_{\bar{U}}$ from modeling $D$ with $G_{\bar{U}}$}
-\KwResult{Linear approximation to $\bar{U}$}
- Set significance threshold $\alpha$ (e.g. $\alpha = 0.05$)\;
- Learn $\bar{U} = PCA(R_{\bar{U}})$\;
- Calculate column-wise variance explained $V_E^{0}$ for $\bar{U}^{*}$\;
- Set $V_E^s = 0 \times rank(R_{\bar{U}})$, matrix of variances explained by shuffling\;
- \While{$se(\bar{U}) > \epsilon$} {
-  $R_{\bar{U}}^{*} = shuffle(R_{\bar{U}})$ (column-wise)\;
-  Calculate $\bar{U}^{*} = PCA(R_{\bar{U}}^{*})$\;
-  Calculate $V_E^{*}$ for $\bar{U}^{*}$\;
-  Concatenate row-wise: $V_E^s = \{V_E^s; V_E^{*}\}$\;
-  Fit $B(i)$ beta distributions to each column $i$ of $V_E$\;
-  For each column $i$ of $\bar{U}$, calculate:\;
+%\begin{minipage}[t]{1\textwidth}
+\begin{algorithm}%[H]
+ \caption{Inferring linearly optimal $\bar{U}$ and assessing its cardinality by permutations}
+ \label{alg:linearPCA}
+\begin{algorithmic}
+\STATE {\bfseries Data:} The set of residuals $R_{\bar{U}}$ from modeling $D$ with $G_{\bar{U}}$
+\STATE \textbf{Result:} Linear approximation to $\bar{U}$
+ \STATE Set significance threshold $\alpha$ (e.g. $\alpha = 0.05$)\;
+ \STATE Learn $\bar{U} = PCA(R_{\bar{U}})$\;
+ \STATE Calculate column-wise variance explained $V_E^{0}$ for $\bar{U}^{*}$\;
+ \STATE Set $V_E^s = 0 \times rank(R_{\bar{U}})$, matrix of variances explained by shuffling\;
+ \WHILE{$se(\bar{U}) > \epsilon$} 
+  \STATE $R_{\bar{U}}^{*} = shuffle(R_{\bar{U}})$ (column-wise)\;
+  \STATE Calculate $\bar{U}^{*} = PCA(R_{\bar{U}}^{*})$\;
+  \STATE Calculate $V_E^{*}$ for $\bar{U}^{*}$\;
+  \STATE Concatenate row-wise: $V_E^s = \{V_E^s; V_E^{*}\}$\;
+  \STATE Fit $B(i)$ beta distributions to each column $i$ of $V_E$\;
+  \STATE For each column $i$ of $\bar{U}$, calculate:\;
   \begin{gather*}
   P(V_E^{0}(i) | V_E^s(i)) = \lim_{|V_E^s(i)| \to \infty} \frac{|V_E^s(i) > V_E^{0}(i)|}{|V_E^s(i)|} \approx 1 - \int_{-\infty}^{V_E^{0}(i)} PDF(B_i)
   \end{gather*}\;
- }
- $P(V_E^{0}(i) | V_E^s(i)) = P(V_E^{0}(i) \sim V_E^s(i)) \times rank(V_E)$\;
- Drop $V_E^{0}(i)$ for which $P(V_E^{0}(i) \sim V_E^s(i)) > \alpha$
- \caption{Inferring linearly optimal $\bar{U}$ and assessing its cardinality by permutations}
- \label{alg:linearPCA}
+ \ENDWHILE
+ \STATE $P(V_E^{0}(i) | V_E^s(i)) = P(V_E^{0}(i) \sim V_E^s(i)) \times rank(V_E)$\;
+ \STATE Drop $V_E^{0}(i)$ for which $P(V_E^{0}(i) \sim V_E^s(i)) > \alpha$
+\end{algorithmic}
 \end{algorithm}
-\end{minipage}
-}
-\end{center}
-\FloatBarrier
+%\end{minipage}
+%}
+%\end{center}
+%\FloatBarrier
 
 \section{Numerical Demonstration}
 To illustrate  the algorithms described in the previous sections we
@@ -456,7 +436,6 @@ Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10
       iteration of algorithm \ref{alg:latentEM}.}
   \end{minipage}
 \end{figure}
-\vspace{-5mm}
 \begin{figure}[ht]
   \centering
   \begin{minipage}[t]{0.52\linewidth}
@@ -500,7 +479,9 @@ rank(U) = \frac{1}{\beta_i} rank(R_i) + \frac{1}{\beta_j} rank(R_j) + \dots + \x
 When $U$ consists of multiple variables that are independent of each other, the relationship between $N$ and $U$ can be written down using the mutual information chain rule (\cite{mackay_information_2003}) and simplified taking advantage of mutual independence of the latent sources:
 \begin{equation}
 \label{eq:rankSetRelationship}
-I(N; U) = I(N; U_1, U_2, \dots, U_U) = \sum_{i=1}^{u}{I(N; X_i | X_{i-1}, \dots, X_1)} = \sum_{i=1}^{u}{I(N; X_i)}.
+\begin{split}
+I(N; U) = I(N; U_1, U_2, \dots, U_U) \\= \sum_{i=1}^{u}{I(N; X_i | X_{i-1}, \dots, X_1)} = \sum_{i=1}^{u}{I(N; X_i)}.
+\end{split}
 \end{equation}
 
 If interactions among $U$ are present, it may still be possible to approximate the latent space with a suitably regularized nonlinear basis, but we do not, at present, know of specific conditions when this may or may not work.  Novel methods for encoding basis sets, such as nonlinear PCA (implemented in the accompanying code), autoencoders, and others, may be brought to bear to collapse the linearly independent basis down to non-linearly independent (i.e. in the mutual information sense) components.
@@ -511,9 +492,9 @@ While approximate inference of latent variables for GMs built over invertible fu
 In principle, PSRs can be extended to the case of non-ordinal categorical variables by modeling binary in/out of class label, deviance being correct/false.  These models would lack the smooth gradient allowed by ranks and would probably converge far worse and offer more local minima for EM to get stuck in.  
 
 \section{Conclusions and Future Directions}
-In this work we present a method for describing the latent variable space that is optimal under linearity, up to rank-linearity.  When we cannot provide such guarantees, the method will still identify the terms of the model matrix of the latent space, including any interactions, for models in the GGM family, making it possible to attempt to infer the original (compact) latent space by non-linear modeling and regularization.  The method does not place \textit{a priori} constraints on the number of latent variables, and will infer the upper bound on this dimensionality automatically.  This method is a generalization of prior work, both in terms of the global treatment of the residual space, and in terms of stronger statements of applicability in cases when probability-scale residuals are applicable.
+In this work we present a method for describing the latent variable space that is optimal under linearity, up to rank-linearity.  When we cannot provide such guarantees, the method will still identify the terms of the model matrix of the latent space, including any interactions, for models in the GGM family, making it possible to attempt to infer the original (compact) latent space by non-linear modeling and regularization.  The method does not place \textit{a priori} constraints on the number of latent variables, and will infer the upper bound on this dimensionality automatically.  This method is a generalization of prior work, both in terms of the global treatment of the residual space, and in terms of stronger statements of applicability in cases when probability-scale residuals are applicable.  
 
-In the future, we hope to assess the compressibility of the latent space with deep-learning models, using linear PCA to set the ceiling for the cardinality of the latent space.  Using autoencoders has been shown to be of high utility when the structure is known (\cite{louizos_causal_2017}).  Learning structure over observed data as well as unconstrained latent space via autoencoders would result in a hybrid "deep causal" model that would be useful, for instance, in epidemiological problems.  In that space, it is typically highly desirable to retain original features for explainability but also helpful to introduce latent variables to account for unobserved pleiotropic confounding.  As noted above, calculation of ACE in epidemiological problems is one specific use case.  Applications of such "deep causal networks" should also arise outside of the traditional causal domain - epidemiology.  For instance, in computer vision coupled with sensor data, or in the nascent internet-of-things paradigm, retention of some features coupled with the discovery of latent compressed structure may enable inference of cause-and-effect and robust learning.
+To address cases where the internal wiring of the latent case is unimportant and the confounding may be non-linera, we provide an autoencoder implementation to supplement our PCA and rank-PCA approaches.  In this case, we use linear PCA (\ref{alg:linearPCA}) to set the cardinality of the bottleneck layer of the autoencoder.  Using autoencoders has been shown to be of high utility when the structure of the causal model is already known (\cite{louizos_causal_2017}).  Learning structure over observed data as well as unconstrained latent space via autoencoders, as in our work, result in a hybrid "deep causal" model that would be useful, for instance, in epidemiological problems, when, in general, neither the model structure, nor the latent space are well-understood \textit{a priori}.  In epidemiological applications, it is highly desirable to retain original features of the data for explainability but is also helpful to introduce latent variables to account for unobserved (pleiotropic) confounding.  As noted above, calculation of ACE in epidemiological problems is one specific use case.  Applications of such "deep causal networks" should also arise outside of the realm of epidemiology, the traditional causal domain.  For instance, in computer vision coupled with sensor data, or in the nascent internet-of-things paradigm, retention of some features explicitly coupled with the discovery of latent compressed structure may enable inference of cause-and-effect and robust learning, resulting in structures simpler than those generated by multi-layer deep networks.
 
 \clearpage
 % \section*{Acknowledgments}
@@ -521,6 +502,6 @@ In the future, we hope to assess the compressibility of the latent space with de
  
 \small
 \bibliography{LatentVars}
-\bibliographystyle{plainnat}
+\bibliographystyle{icml2020}
 
 \end{document}
