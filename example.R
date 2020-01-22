@@ -8,7 +8,7 @@
     ##source("/users/fred/Documents/gitRepos/latentconfounder/LatentConfounder.R")
   ##  devtools::load_all("~/Documents/gitRepos/gnsutils/gnsutils")
   ##devtools::load_all("/Users/fred/Documents/projects/gnsutils/gnsutils")
-  load("final_model_nolvp_novp.RData", verbose = T) 
+  load("final_model_nolvp_novp.RData", verbose = T)
 figtrue = igraph::graph_from_data_frame(datalist$coef)
 
 igtruelv = igraph::graph_from_data_frame(
@@ -44,7 +44,7 @@ plotIgraph(figtrue, layout = 'neato', sep = 0.0001,
 
 ## [[file:~/Documents/gitRepos/latentconfounder/LatentConfounderBNlearn.org::*With%20all%20data][With all data:1]]
 train = datalist$data_noisy
-    library(bnlearn)
+library(bnlearn)
 
 
 
@@ -55,7 +55,7 @@ train = datalist$data_noisy
 
 ##REFSfs:::registerDoSGE() ## this is how you would do it in GNS to use nodes, Should remove this line before we share this publicly
 library(doParallel)
-  cl <- makeCluster(50) ## for multi-threading
+  cl <- makeCluster(5) ## for multi-threading
   registerDoParallel(cl)
 
 library(pracma)
@@ -83,10 +83,10 @@ pdf("Paper/images/res_alldata.pdf", width = 5, height = 5)
 ## With all data:1 ends here
 
 ## [[file:~/Documents/gitRepos/latentconfounder/LatentConfounderBNlearn.org::*With%20all%20data][With all data:2]]
-plot(res_alldata,"Z",0, cutoff = 0.5,maxpath=2,nodesep=0.01,sep = 0.01, 
+plot(res_alldata,"Z",0, cutoff = 0.5,maxpath=2,nodesep=0.01,sep = 0.01,
      layout = 'neato', edge_labels = 'frequency',
      edgeweights=T,
-     edgelabelsFilter = 0.5, 
+     edgelabelsFilter = 0.5,
      edge_color=tribble(~input,~output,~color,"V1","Z","red","V2","Z","red",
                         "U1.out", "Z", "red",
                         "U2.out", "Z", "red"),
@@ -119,24 +119,33 @@ toc() ## about 50 seconds
 
 save(res_missing, file = "~/latentconfounderotf/latent_Discovery/res_missing.RData")
 
+load("res_missing.RData", verbose = T)
+
 test = latentDiscovery(
     res_missing,
-    nItera=10, 
-    data = trainlv, 
+    nItera=100,
+    data = trainlv,
     "Z",
+    workpath="aetest4",
     freqCutoff = 0.01,
     maxpath = 1,
     alpha = 0.05,
     scale. = TRUE,
     method = "autoencoder",
-    latent_iterations = 10000, 
+    latent_iterations = 300,
     truecoef = datalist$coef %>% filter(output=="Z"),
     truelatent=datalist$data %>% dplyr::select("U1.out","U2.out"),
     include_downstream = TRUE,
-    multiple_comparison_correction = T, 
+    include_output = TRUE,
+    multiple_comparison_correction = T,
     debug = FALSE,
-    parallel = TRUE
+    parallel = TRUE,
+    drRate = 0.1,
+    batch_size = 32,
+    optimizer = "RMSprop",
+    metrics = 'mse'
 )
+
 ## Missing U1 and U2:1 ends here
 
 ## Run Latent discovery with repetitions
@@ -152,8 +161,8 @@ for(iis in 1:Nreps){
     set.seed(seed)
     simple_evo_repeat = latentDiscovery(
         res_missing,
-        nItera=niter, 
-        data = trainlv, 
+        nItera=niter,
+        data = trainlv,
         "Z",
 	seed=seed,
         workpath="latentDiscoveryRep",
@@ -162,15 +171,15 @@ for(iis in 1:Nreps){
         alpha = 0.05,
         scale. = TRUE,
         method = "linear",
-        latent_iterations = 100, 
+        latent_iterations = 100,
         truecoef = datalist$coef %>% filter(output=="Z"),
         truelatent=datalist$data %>% dplyr::select("U1.out","U2.out"),
         include_downstream = TRUE,
-        multiple_comparison_correction = T, 
-        debug = F,
+        multiple_comparison_correction = T,
+        debug = F,include_output=FALSE,
         parallel = TRUE
     )
-    cres=simple_evo_repeat$details$Diagnostics %>% 
+    cres=simple_evo_repeat$details$Diagnostics %>%
          mutate(Repeat=iis)
     if(iis==1)
        res=cres
@@ -202,32 +211,32 @@ figtrue = igraph::graph_from_data_frame(datalist$coef)
 ppPlotIgraph(figtrue, layout = 'neato', sep = 0.001,
                        fill = list("U.*" = 'red',
                                    "Z" = 'green',
-                                   "^V1$|^V2$" = 'skyblue', 
+                                   "^V1$|^V2$" = 'skyblue',
                                    "V.*" = "gray"
                                    ),
              node_labels = list("U1.out" = 'U1',
-                        "U2.out" = "U2"), 
+                        "U2.out" = "U2"),
              edgelabels = TRUE,
              edgelabelsFilter=0.49,
              fontsize=14,
              filename="Paper/images/true_network.pdf",
              width=10,
              height=10,
-             start = 3421, 
-             edgelabelsFontSize=20, 
+             start = 3421,
+             edgelabelsFontSize=20,
              saveToFile=TRUE)
 
 ppPlotIgraph(figtrue, layout = 'neato',nodesep = 0.001, sep = 0.001,
                        fill = list("U.*" = 'red',
                                    "Z" = 'green',
-                                   "^V1$|^V2$" = 'skyblue', 
+                                   "^V1$|^V2$" = 'skyblue',
                                    "V.*" = "gray"
                                    ),
              edgelabels=TRUE,
-             start = 3421, 
+             start = 3421,
              node_labels = list("U1.out" = 'U1',
-                                "U2.out" = "U2"), 
-             edgelabelsFilter=0.49,edgelabelsFontSize=14, 
+                                "U2.out" = "U2"),
+             edgelabelsFilter=0.49,edgelabelsFontSize=14,
              fontsize=10)
 ## True Reconstruction:1 ends here
 
@@ -235,13 +244,13 @@ ppPlotIgraph(figtrue, layout = 'neato',nodesep = 0.001, sep = 0.001,
 
 ## [[file:~/Documents/gitRepos/latentconfounder/LatentConfounderBNlearn.org::*Reconstruction%20with%20all%20data][Reconstruction with all data:1]]
 plot(res_alldata, "Z", layout = 'neato',
-     cutoff = 0.4, 
+     cutoff = 0.4,
      sep = 0.00001,
-     pack = TRUE, 
-     maxpath = 1, 
+     pack = TRUE,
+     maxpath = 1,
      fill = list("U.*" = 'red',
                  "Z" = 'green',
-                 "^V1$|^V2$" = 'skyblue', 
+                 "^V1$|^V2$" = 'skyblue',
                  "V.*" = "gray"
                  ),
      node_labels = list("U1.out" = 'U1',
@@ -249,9 +258,9 @@ plot(res_alldata, "Z", layout = 'neato',
      edge_labels = "coefficients",
      labels_regex = "Z|^V1$|^V2$",
      label_pad = 0,
-     start = 1235, 
+     start = 1235,
      edgeweights=F,
-     lwdmin=0, 
+     lwdmin=0,
      edgelabelsFontSize=20,
      title_size = 2,
      fontsize=12,
@@ -262,21 +271,21 @@ plot(res_alldata, "Z", layout = 'neato',
 
 
 plot(res_alldata, "Z", layout = 'neato',
-     cutoff = 0.4, 
+     cutoff = 0.4,
      sep = 0.00001,
      fill = list("U.*" = 'red',
                  "Z" = 'green',
-                 "^V1$|^V2$" = 'skyblue', 
+                 "^V1$|^V2$" = 'skyblue',
                  "V.*" = "gray"
-                 ), 
+                 ),
      edge_labels = "coefficients",
-     labels_regex = "Z|^V1$|^V2$", 
+     labels_regex = "Z|^V1$|^V2$",
      node_labels = list("U1.out" = 'U1',
-                        "U2.out" = "U2"), 
+                        "U2.out" = "U2"),
      label_pad = 0.1,
-     start = 1324, 
+     start = 1324,
      edgeweights=F,
-     lwdmin=0, 
+     lwdmin=0,
      edgelabelsFontSize=15,
      title="Estimated Network with All Data",
      title_size = 2,
@@ -289,13 +298,13 @@ plot(res_alldata, "Z", layout = 'neato',
 plot(res_missing, "Z",
      layout = 'dot',
      cutoff = 0.4,
-     maxpath = 2, 
+     maxpath = 2,
      freqth = 0.1,
-     nodesep = 0.01, 
-     pack = FALSE, 
+     nodesep = 0.01,
+     pack = FALSE,
      fill = list("U.*" = 'red',
-                 "Z" = 'green', 
-                 "^V1$|^V2$" = 'skyblue', 
+                 "Z" = 'green',
+                 "^V1$|^V2$" = 'skyblue',
                  "V.*" = "gray"
                  ),
      edge_labels="coef",
@@ -303,11 +312,11 @@ plot(res_missing, "Z",
          ~ inp, ~ out, ~ color,
          "V1", "Z", 'red',
          "V2", "Z", "red"
-     ), 
+     ),
      labels_regex="Z|^V1$|^V2$",
-     start = 1334324, 
+     start = 1334324,
      edgeweights=F,
-     lwdmin=0, 
+     lwdmin=0,
      edgelabelsFontSize=32,
      fontsize=12,
      filename ="Paper/images/estimated_network_missingdata.pdf",
@@ -319,21 +328,21 @@ plot(res_missing, "Z",
 plot(res_missing, output = "Z",
      layout = 'dot',
      cutoff = 0.4,
-     maxpath = 2, 
+     maxpath = 2,
      freqth = 0.1,
-     nodesep = 0.01, 
+     nodesep = 0.01,
      sep = 0.001,
      fill = list("U.*" = 'red',
                  "Z" = 'green',
-                 "^V1$|^V2$" = 'skyblue', 
+                 "^V1$|^V2$" = 'skyblue',
                  "V.*" = "gray"
                  ),
      edge_labels="coef",
      labels_regex="Z",
      label_pad = 0,
-     start = 13324, 
+     start = 13324,
      edgeweight=T,
-     lwdmin=0, 
+     lwdmin=0,
      edgelabelsFontSize=15,
      fontsize=14
      )
@@ -348,13 +357,13 @@ plot(res_lastitera, "Z",
      layout = 'dot',
      cutoff = 0.4,
      freqth = 0.1,
-     maxpath = 2, 
+     maxpath = 2,
      nodesep = 0.01,
-     pack = F, 
+     pack = F,
      sep = 0.01,
      fill = list("LV.*" = 'red',
-                 "Z" = 'green', 
-                 "^V1$|^V2$" = 'skyblue', 
+                 "Z" = 'green',
+                 "^V1$|^V2$" = 'skyblue',
                  "V.*" = "gray"
                  ),
      edge_labels="coef",
@@ -363,12 +372,12 @@ plot(res_lastitera, "Z",
          "V1", "Z", 'red',
          "V2", "Z", "red",
          "LV.*", "Z", "red"
-     ), 
+     ),
      labels_regex="Z|^V1$|^V2$",
-     label_pad = 0.4, 
-     start = 133434, 
+     label_pad = 0.4,
+     start = 133434,
      edgeweights=F,
-     lwdmin=0, 
+     lwdmin=0,
      edgelabelsFontSize=30,
      fontsize=12,
      filename ="Paper/images/estimated_network_infered.pdf",
@@ -381,21 +390,21 @@ plot(res_lastitera, "Z",
      layout = 'dot',
      cutoff = 0.4,
      freqth = 0.2,
-     maxpath = 2, 
-     nodesep = 0.01, 
+     maxpath = 2,
+     nodesep = 0.01,
      sep = 0.001,
      fill = list("LV.*" = 'red',
                  "Z" = 'green',
-                 "^V1$|^V2$" = 'skyblue', 
+                 "^V1$|^V2$" = 'skyblue',
                  "V.*" = "gray"
                  ),
      edge_labels="coef",
      labels_regex="Z|^V1$|^V2$",
      label_pad = 0.01,
      pack = TRUE,
-     start = 134, 
+     start = 134,
      edgeweights = T,
-     lwdmin=0, 
+     lwdmin=0,
      edgelabelsFontSize=15,
      fontsize=14
      )
@@ -414,12 +423,12 @@ label_latex <- function(vs, am) {
 }
 
 ## mylabels = c(
-##     "R2a_U1.out" = ("$R^2$ for $U_1$"), 
+##     "R2a_U1.out" = ("$R^2$ for $U_1$"),
 ##     "R2a_U2.out" = ("$R^2$ for $U_2$")
 ## )
 
 mylabels = c(
-     "R2a_U1.out" = TeX("$U_1$"), 
+     "R2a_U1.out" = TeX("$U_1$"),
     "R2a_U2.out" = TeX("$U_2$")
 )
 
@@ -434,18 +443,18 @@ tst = latvar$details$Diagnostics %>%
 ##     TeX("$U_1$"),
 ##     TeX("$U_2$")
 ## )
-      
+
 if(0){
 ggp = tst %>%
     ggplot(aes(x = Iteration, y = val)) +
     geom_point()  + geom_smooth(span = 0.8) +
     facet_wrap( ~ var, nrow = 1, labeller = label_parsed) +
     ggpubr::theme_pubclean() +    ylab(TeX("R^2"))  +
-##    ggtitle(TeX("Latent Variables Prediction $R^2$")) + 
+##    ggtitle(TeX("Latent Variables Prediction $R^2$")) +
     theme(strip.text=element_text(size = rel(1.5)),
           axis.title=element_text(size = rel(1.5)),
           plot.title = element_text(size = rel(1.5), hjust=0.5),
-          ) 
+          )
 }
 
 ggp = tst %>%
@@ -456,18 +465,18 @@ ggp = tst %>%
     scale_colour_manual(values = c("skyblue", "orange"),
                         labels = expression(U[1], U[2])) +
     scale_fill_manual(values = c("skyblue", "orange"),
-                      labels = expression(U[1], U[2])) + 
+                      labels = expression(U[1], U[2])) +
     theme(strip.text=element_text(size = rel(1.5)),
           legend.text=element_text(size = rel(1.1)),
           legend.position = c(0.5, 0.2),
-          legend.direction ="horizontal", 
+          legend.direction ="horizontal",
           axis.title=element_text(size = rel(1)),
           plot.title = element_text(size = rel(1.5), hjust=0.5),
           legend.title=element_blank( )
-          ) 
+          )
 
 
-            
+
 
 pdf("Paper/images/fig_paper_r2lat.pdf", width = 5, height = 5)
 print(ggp)
@@ -483,7 +492,7 @@ library("latex2exp")
 
 
 mylabels = c(
-    "R2a_U1.out" = ("$R^2$ for $U_1$"), 
+    "R2a_U1.out" = ("$R^2$ for $U_1$"),
     "R2a_U2.out" = ("$R^2$ for $U_2$")
 )
 
@@ -493,12 +502,12 @@ errall = latvar$details$Diagnostics %>%
 
 err = errall %>%
     filter(True_coef >= 0.02)
-	  ##            input != colnames(true)) %>% 
+	  ##            input != colnames(true)) %>%
 	  ##     dplyr::select(-coef, -Estimate) %>%
 	  ##     mutate(input=otfname2name(varmap,input))
 
 err = err %>%
-    mutate(Error = abs(error)) %>% 
+    mutate(Error = abs(error)) %>%
     dplyr::select(
                Iteration, Variable = input, Error
            )
@@ -526,33 +535,33 @@ allerror_alldata = rbind(
 
 ## plot
 ggp = allerror %>%
-    ggplot(aes(x = Iteration, y = Error, colour = Variable, fill = Variable)) + 
+    ggplot(aes(x = Iteration, y = Error, colour = Variable, fill = Variable)) +
     geom_point() +
     geom_line() +
     geom_hline(data = allerror_alldata,
                aes(yintercept = Error, colour = Variable), linetype = 'dashed') +
     ## annotate("text", x = 0, y = max(allerror_alldata$Error), label = "Obs. All Variables",
-    ##          vjust = -1) + 
-    ylab("Error in Coefficients") + 
-    ggpubr::theme_pubclean() +    
+    ##          vjust = -1) +
+    ylab("Error in Coefficients") +
+    ggpubr::theme_pubclean() +
     theme(strip.text=element_text(size = rel(1)),
           axis.title=element_text(size = rel(1)),
           legend.position = c(0.5, 0.7),
-          legend.text = element_text(size = rel(1)), 
-          legend.direction='horizontal', 
-          plot.title = element_text(size = rel(1.5), hjust=0.5))  
+          legend.text = element_text(size = rel(1)),
+          legend.direction='horizontal',
+          plot.title = element_text(size = rel(1.5), hjust=0.5))
 
 ## ggpe = err %>%
 ## 	      ggplot(aes(x = Iteration, y = abs(error), colour = input)) +
 ## 	      geom_point() +
-## 	      geom_line() + 
+## 	      geom_line() +
 ## 	      ##ylim(0, max(err$error)) +
 ##     ggtitle("Error In Drivers of Outcome") + ##+ geom_smooth()+
-##     ylab("Absolute Error") + 
-##     ggpubr::theme_pubclean() +    
+##     ylab("Absolute Error") +
+##     ggpubr::theme_pubclean() +
 ##     theme(strip.text=element_text(size = rel(1.5)),
 ##           axis.title=element_text(size = rel(2)),
-##           plot.title = element_text(size = rel(1.5), hjust=0.5)) 
+##           plot.title = element_text(size = rel(1.5), hjust=0.5))
 
 ## ggpet = latvar$details$Diagnostics %>%
 ## 	      ggplot(aes(x = Iteration, y = Error_rmse)) +
@@ -560,14 +569,14 @@ ggp = allerror %>%
 ## 	      geom_line() +
 ##     ggtitle("Total Error") +
 ##     ylab("RMSE") +
-##     ggpubr::theme_pubclean() +    
+##     ggpubr::theme_pubclean() +
 ##     theme(strip.text=element_text(size = rel(1.5)),
 ##           axis.title=element_text(size = rel(2)),
-##           plot.title = element_text(size = rel(1.5), hjust=0.5)) 
+##           plot.title = element_text(size = rel(1.5), hjust=0.5))
 
 
 ## ggpall = cowplot::plot_grid(ggpe, ggpet, ncol = 2)
-            
+
 
 pdf("Paper/images/fig_paper_errors.pdf", width = 5, height = 5)
 print(ggp)
@@ -588,12 +597,12 @@ latvars_resp = readRDS("/Users/fred/Documents/projects/latentconfounder/Paper/im
 library("latex2exp")
 
 ## mylabels = c(
-##     "R2a_U1.out" = ("$R^2$ for $U_1$"), 
+##     "R2a_U1.out" = ("$R^2$ for $U_1$"),
 ##     "R2a_U2.out" = ("$R^2$ for $U_2$")
 ## )
 
 mylabels = c(
-     "R2a_U1.out" = TeX("$U_1$"), 
+     "R2a_U1.out" = TeX("$U_1$"),
     "R2a_U2.out" = TeX("$U_2$")
 )
 
@@ -608,7 +617,7 @@ tstrep = latvars_resp %>%
 ##     TeX("$U_1$"),
 ##     TeX("$U_2$")
 ## )
-      
+
 
 ggp = tstrep %>%
     ggplot(aes(x = Iteration, y = val, colour = var, fill = var)) +
@@ -618,18 +627,18 @@ ggp = tstrep %>%
     scale_colour_manual(values = c("skyblue", "orange"),
                         labels = expression(U[1], U[2])) +
     scale_fill_manual(values = c("skyblue", "orange"),
-                      labels = expression(U[1], U[2])) + 
+                      labels = expression(U[1], U[2])) +
     theme(strip.text=element_text(size = rel(1.5)),
           legend.text=element_text(size = rel(1.1)),
           legend.position = c(0.5, 0.2),
-          legend.direction ="horizontal", 
+          legend.direction ="horizontal",
           axis.title=element_text(size = rel(1)),
           plot.title = element_text(size = rel(1.5), hjust=0.5),
           legend.title=element_blank( )
-          ) 
+          )
 
 
-            
+
 
 pdf("Paper/images/fig_paper_r2lat_rep.pdf", width = 5, height = 5)
 print(ggp)
@@ -645,7 +654,7 @@ library("latex2exp")
 
 
 mylabels = c(
-    "R2a_U1.out" = ("$R^2$ for $U_1$"), 
+    "R2a_U1.out" = ("$R^2$ for $U_1$"),
     "R2a_U2.out" = ("$R^2$ for $U_2$")
 )
 
@@ -655,12 +664,12 @@ errallresp = latvars_resp %>%
 
 errresp = errallresp %>%
     filter(True_coef >= 0.02)
-	  ##            input != colnames(true)) %>% 
+	  ##            input != colnames(true)) %>%
 	  ##     dplyr::select(-coef, -Estimate) %>%
 	  ##     mutate(input=otfname2name(varmap,input))
 
 errresp = errresp %>%
-    mutate(Error = abs(error)) %>% 
+    mutate(Error = abs(error)) %>%
     dplyr::select(
                Iteration, Variable = input, Error
            )
@@ -688,33 +697,33 @@ allerror_alldata = rbind(
 
 ## plot
 (ggp = allerrorresp %>%
-    ggplot(aes(x = Iteration, y = Error, colour = Variable, fill = Variable)) + 
+    ggplot(aes(x = Iteration, y = Error, colour = Variable, fill = Variable)) +
     ggbeeswarm::geom_beeswarm() +
     geom_smooth(se = TRUE) +
     geom_hline(data = allerror_alldata,
                aes(yintercept = Error, colour = Variable), linetype = 'dashed') +
     ## annotate("text", x = 0, y = max(allerror_alldata$Error), label = "Obs. All Variables",
-    ##          vjust = -1) + 
-    ylab("Error in Coefficients") + 
-    ggpubr::theme_pubclean() +    
+    ##          vjust = -1) +
+    ylab("Error in Coefficients") +
+    ggpubr::theme_pubclean() +
     theme(strip.text=element_text(size = rel(1)),
           axis.title=element_text(size = rel(1)),
           legend.position = c(0.5, 0.7),
-          legend.text = element_text(size = rel(1)), 
-          legend.direction='horizontal', 
-          plot.title = element_text(size = rel(1.5), hjust=0.5))  
+          legend.text = element_text(size = rel(1)),
+          legend.direction='horizontal',
+          plot.title = element_text(size = rel(1.5), hjust=0.5))
 )
 ## ggpe = err %>%
 ## 	      ggplot(aes(x = Iteration, y = abs(error), colour = input)) +
 ## 	      geom_point() +
-## 	      geom_line() + 
+## 	      geom_line() +
 ## 	      ##ylim(0, max(err$error)) +
 ##     ggtitle("Error In Drivers of Outcome") + ##+ geom_smooth()+
-##     ylab("Absolute Error") + 
-##     ggpubr::theme_pubclean() +    
+##     ylab("Absolute Error") +
+##     ggpubr::theme_pubclean() +
 ##     theme(strip.text=element_text(size = rel(1.5)),
 ##           axis.title=element_text(size = rel(2)),
-##           plot.title = element_text(size = rel(1.5), hjust=0.5)) 
+##           plot.title = element_text(size = rel(1.5), hjust=0.5))
 
 ## ggpet = latvar$details$Diagnostics %>%
 ## 	      ggplot(aes(x = Iteration, y = Error_rmse)) +
@@ -722,14 +731,14 @@ allerror_alldata = rbind(
 ## 	      geom_line() +
 ##     ggtitle("Total Error") +
 ##     ylab("RMSE") +
-##     ggpubr::theme_pubclean() +    
+##     ggpubr::theme_pubclean() +
 ##     theme(strip.text=element_text(size = rel(1.5)),
 ##           axis.title=element_text(size = rel(2)),
-##           plot.title = element_text(size = rel(1.5), hjust=0.5)) 
+##           plot.title = element_text(size = rel(1.5), hjust=0.5))
 
 
 ## ggpall = cowplot::plot_grid(ggpe, ggpet, ncol = 2)
-            
+
 
 pdf("Paper/images/fig_paper_errors_rep.pdf", width = 5, height = 5)
 print(ggp)
@@ -741,10 +750,10 @@ print(ggp)
 ## other stuff
 
 ## [[file:~/Documents/gitRepos/latentconfounder/LatentConfounderBNlearn.org::*other%20stuff][other stuff:1]]
-plot.bnlearn_ens(res_missing,"Z",0, cutoff = 0.5,maxpath=2,nodesep=0.01,sep = 0.01, 
+plot.bnlearn_ens(res_missing,"Z",0, cutoff = 0.5,maxpath=2,nodesep=0.01,sep = 0.01,
      layout = 'neato', edgelabels = T,
      edgeweights=T,
-     edgelabelsFilter = 0.5, 
+     edgelabelsFilter = 0.5,
      edge_color=tribble(~inp,~out,~color,"V1","Z","red","V2","Z","red"
 			),
      fill = list("U.*" = 'darksalmon',
@@ -766,11 +775,11 @@ datalist_med = datalist
 figtrue_med = igraph::graph_from_data_frame(
 			  datalist_med$coef %>%
 			  filter(input %in% c(paste0("P", 1:10),
-					      paste0("V", 45:50), 
-					      paste0("V", 1:5), 
+					      paste0("V", 45:50),
+					      paste0("V", 1:5),
 					      "U1.out", "U2.out", 'Z'),
 				 output %in% c("Z","U1.out", "U2.out",
-					       paste0("V", 40:50), 
+					       paste0("V", 40:50),
 					      paste0("V", 1:10)))
 )
 
@@ -861,7 +870,7 @@ res_missing_med = getEnsemble2(trainlv_med, blacklist = blacklistlv_med,
 			    algorithm = 'hc',
 			    parallel = TRUE
 			    )
-toc() ## about 
+toc() ## about
 
 save(res_missing_med, file = "/home/fred/Documents/gitRepos/latentconfounder/latent_Discovery/res_missing_med.RData")
 ## Missing latent variables:1 ends here
@@ -874,8 +883,8 @@ seed = 123
 set.seed(seed)
 medium_evo = latentDiscovery(
 	res_missing_med,
-	nItera=niter, 
-	data = trainlv_med, 
+	nItera=niter,
+	data = trainlv_med,
 	"Z",
 	seed=seed,
 	workpath="latentDiscovery_med",
@@ -884,11 +893,11 @@ medium_evo = latentDiscovery(
 	alpha = 0.05,
 	scale. = TRUE,
 	method = "robustLinear",
-	latent_iterations = 100, 
+	latent_iterations = 100,
 	truecoef = datalist_med$coef %>% filter(output=="Z"),
 	truelatent=datalist_med$data %>% dplyr::select("U1.out","U2.out"),
 	include_downstream = TRUE,
-	multiple_comparison_correction = TRUE, 
+	multiple_comparison_correction = TRUE,
 	debug = F,
 	parallel = TRUE
     )
@@ -910,12 +919,12 @@ datalist_com = datalist
 figtrue_com = igraph::graph_from_data_frame(
 			  datalist_com$coef %>%
 			  filter(input %in% c(paste0("P", 1:10),
-					      paste0("Up", 1:10), 
-					      paste0("V", 45:50), 
-					      paste0("V", 1:5), 
+					      paste0("Up", 1:10),
+					      paste0("V", 45:50),
+					      paste0("V", 1:5),
 					      "U1.out", "U2.out", 'Z'),
 				 output %in% c("Z","U1.out", "U2.out",
-					       paste0("V", 40:50), 
+					       paste0("V", 40:50),
 					      paste0("V", 1:10)))
 )
 
@@ -1005,7 +1014,7 @@ res_missing_com = getEnsemble2(trainlv_com, blacklist = blacklistlv_com,
 			    algorithm = 'hc',
 			    parallel = TRUE
 			    )
-toc() ## about 
+toc() ## about
 
 save(res_missing_com, file = "/home/fred/Documents/gitRepos/latentconfounder/latent_Discovery/res_missing_com.RData")
 ## Missing latent variables:1 ends here
@@ -1019,8 +1028,8 @@ set.seed(seed)
 
 complicated_evo = latentDiscovery(
 	res_missing_com,
-	nItera=niter, 
-	data = trainlv_com, 
+	nItera=niter,
+	data = trainlv_com,
 	"Z",
 	seed=seed,
 	workpath="latentDiscovery_com",
@@ -1029,11 +1038,11 @@ complicated_evo = latentDiscovery(
 	alpha = 0.05,
 	scale. = TRUE,
 	method = "robustLinear",
-	latent_iterations = 100, 
+	latent_iterations = 100,
 	truecoef = datalist_com$coef %>% filter(output=="Z"),
 	truelatent=datalist_com$data %>% dplyr::select("U1.out","U2.out"),
 	include_downstream = TRUE,
-	multiple_comparison_correction = TRUE, 
+	multiple_comparison_correction = TRUE,
 	debug = F,
 	parallel = TRUE
     )

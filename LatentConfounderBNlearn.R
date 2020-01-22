@@ -555,7 +555,7 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
 fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
                         optimizer = 'adagrad', metrics = 'cosine_proximity', drRate = 0.3,
                         summarize=TRUE, fname='aeRunSummary.pdf', valData=NULL,
-                        epochs=100, batch_size = NULL, activation = 'relu', use_batch_norm = TRUE) {
+                        epochs=100, batch_size = NULL, activation = 'relu', use_batch_norm = TRUE, learning_rate=0.001) {
     ## reticulate::conda_list()
     ## reticulate::use_condaenv("tensorflow_p36")
     stopifnot(keras::is_keras_available())
@@ -576,15 +576,34 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
         print(paste('Analyzing a matrix of', nrow(x_train), 'samples x', ncol(x_train), 'features'))
     }
     input_layer <- layer_input(shape = c(ncol(x_train)))
+    ## dense1 = layer_dense(units = architecture[1])
+    ## dense2 = layer_dense(units = architecture[2])
+    ## denselat = layer_dense(units = architecture[length(architecture)])
+    ## dense1_a = layer_tied_dense(master_layer = dense1)
+    ## dense2_a = layer_tied_dense(master_layer = dense2)
+    ## ouput = input_layer %>%
+    ##     dense1() %>%
+    ##     layer_activation(activation) %>%
+    ##     dense2() %>%
+    ##     layer_activation(activation) %>%
+    ##     denselat() %>%
+    ##     layer_activation(activation) %>%
+    ##     dense2_a() %>%
+    ##     layer_activation(activation) %>%
+    ##     dense1_a()
     encoder <- input_layer
-
     ##construct the encoder
+    mylayers = list()
     if(length(architecture) > 1){
         for (li in 1:(length(architecture)-1)) {
             curL = architecture[li]
+            curLs = as.character(curL)
+            mylayers[[curLs]] = layer_dense(units = curL,
+                                            kernel_constraint=keras::constraint_unitnorm())
             encoder <-
                 encoder %>%
-                layer_dense(units = curL, activation = activation)
+                mylayers[[curLs]]() %>%
+                                layer_activation(activation)
             if(use_batch_norm)
                 encoder = encoder %>% layer_batch_normalization()
             encoder = encoder %>%
@@ -594,36 +613,44 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
     ##add middle layer
     ##This should probably be PCA-constrained or at worst constrained from Donoho:
     ##https://arxiv.org/abs/1305.5870
-    encoder <- encoder %>% layer_dense(units = architecture[length(architecture)])
+    middla = architecture[length(architecture)]
+    middlal = as.character(middla)
+    mylayers[[middlal]] = layer_dense(units = middla)
+    encoder <- encoder %>% mylayers[[middlal]]()
     if(use_batch_norm)
         encoder = encoder %>% layer_batch_normalization()
     encoder = encoder %>%
         layer_dropout(rate = drRate)
-
+    ##browser()
     ##construct the decoder
+    message("build decoder")
     decoder <- encoder
+    mylayersdec = list()
     if(length(architecture) > 1){
-        for (li in 1:(length(architecture) - 1)) {
-            curL = rev(architecture)[li + 1]
-
+        for (li in 1:(length(architecture))) {
+            curL = rev(architecture)[li]
+            curLn = as.character(curL)
+            myl = layer_dense(units = curL,
+                              kernel_constraint=keras::constraint_unitnorm())
+            ##myl = layer_tied_dense(master_layer = mylayers[[curLn]])
+            mylayersdec[[curLn]] = myl
             decoder <- decoder %>%
-                layer_dense(units = curL, activation = activation)
+                myl() %>%
+                layer_activation(activation)
             if(use_batch_norm)
                 decoder = decoder %>% layer_batch_normalization()
             decoder = decoder %>%
                 layer_dropout(rate = drRate)
         }
     }
-
     ##return to the original dimensions
-    decoder <- decoder %>% layer_dense(units = ncol(x_train))
+    decoder <- decoder %>% layer_dense(units = ncol(x_train), activation = 'linear')
 
     autoencoder_model <- keras_model(inputs = input_layer, outputs = decoder)
-
     autoencoder_model %>% compile(
                               loss=lossFunction,
                               optimizer=optimizer,
-                              metrics = metrics)
+                              metrics = metrics, learning_rate = learning_rate)
 
     if (summarize) {
         print(summary(autoencoder_model))
@@ -636,17 +663,18 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
                    epochs=epochs,
                    batch_size=ifelse(is.null(batch_size), nrow(x_train), batch_size),
                    shuffle=TRUE,
-                   ##validation_data= list(x_train, x_train)
                    validation_split = 0.1
                    )
     if (summarize) {
-        pdf(fname, width=11)
-        plot(history)
-        dev.off()
+        message('Saving training history in ', fname)
+        ##pdf(file = fname, width=11 )
+        ggsave(fname, plot(history), width=11)
+        ##dev.off()
     }
     ##self.encoder = Model(inputs=self.autoencoder.input,
     ##  outputs=self.autoencoder.get_layer('encoder').output)
     ##return only the encoder!
+    message("Finished autoencder fitting. returning.")
     return(keras_model(inputs = input_layer, outputs = encoder))
 }
 
@@ -665,7 +693,8 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
                            multiple_comparison_correction = TRUE,
                            architecture = NULL, activation = 'relu', drRate=0.3,
                            use_batch_norm = TRUE, batch_size = NULL,
-                           optimizer = 'adagrad', metrics = 'cosine_proximity'
+                           optimizer = 'adagrad', metrics = 'cosine_proximity', learning_rate = 0.1,
+                           fname = "aeRunSummary.pdf"
                            ) {
     ## check for missingness
     missing = which(!complete.cases(resDev))
@@ -712,8 +741,9 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
         ##hacked # of layers
         if(is.null(architecture))
             architecture = rev(round(exp(seq(log(nLatent), log(min(200, ncol(resDev)/2)), length.out=4))))
-        encoder <- fitAeLatent(data=resDev, architecture=architecture, valData=resDev, epochs=nIter, activation = activation, drRate = drRate, use_batch_norm = use_batch_norm, batch_size = batch_size, metrics = metrics, optimizer = optimizer)
-        encoded = encoder %>% predict(as.matrix(resDev), verbose=0, callbacks=None, max_queue_size=10, workers=10, use_multiprocessing=True) %>% as.data.frame
+        encoder <- fitAeLatent(data=resDev, architecture=architecture, valData=resDev, epochs=nIter, activation = activation, drRate = drRate, use_batch_norm = use_batch_norm, batch_size = batch_size, metrics = metrics, optimizer = optimizer, learning_rate = learning_rate,
+                               fname = fname)
+        encoded = encoder %>% predict(as.matrix(resDev), verbose=0, max_queue_size=10, workers=10, use_multiprocessing=True) %>% as.data.frame
         pr = encoder
         pr$x = encoded #append the predicted latent space to pr
     } else {
@@ -1932,3 +1962,143 @@ getCoef = function(ens, outcome, as.regex = FALSE){
     }
     return(allcoef)
 }
+
+## tied weights autoencoder:
+## https://github.com/dfalbel/deep-autoencoder-netflix/blob/master/tied-dense-layer.R#L4
+## TiedDenseLayer <- R6::R6Class(
+##   "TiedDenseLayer",
+##   inherit = KerasLayer,
+##   public = list(
+##     master_layer = NULL,
+##     kernel = NULL,
+##     bias = NULL,
+##     output_dim = NULL,
+##     initialize = function(output_dim, master_layer) {
+##       self$master_layer <- master_layer
+##     },
+##     build = function(input_shape) {
+##         self$kernel <- k_transpose(self$master_layer$kernel)
+##         self$output_dim <- self$kernel$shape$as_list()[[2]]
+##         self$bias <- self$add_weight(
+##                               name = 'bias',
+##                               shape = list(self$output_dim),
+##                               initializer = initializer_constant(0),
+##                               trainable = TRUE
+##                           )
+##     },
+##     call = function(x, mask = NULL) {
+##         k_dot(x, self$kernel) + self$bias
+##     },
+##     compute_output_shape = function(input_shape) {
+##         list(input_shape[[1]], self$output_dim)
+##     }
+##   )
+##   )
+
+## layer_tied_dense <- function(object, master_layer, name = NULL, trainable = TRUE) {
+##     create_layer(TiedDenseLayer, object, list(
+##                                              master_layer = master_layer,
+##                                              name = name,
+##                                              trainable = trainable
+##                                          ))
+## }
+
+
+TiedDenseLayer <- R6::R6Class(
+  "TiedDenseLayer",
+  inherit = KerasLayer,
+  public = list(
+    master_layer = NULL,
+    kernel = NULL,
+    bias = NULL,
+    output_dim = NULL,
+    initialize = function(master_layer) {
+        self$master_layer <- master_layer
+    },
+    build = function(input_shape) {
+        browser()
+      self$kernel <- k_transpose(self$master_layer$kernel)
+      self$output_dim <- self$kernel$shape$as_list()[[2]]
+      ## self$bias <- self$add_weight(
+      ##   name = 'bias',
+      ##   shape = list(self$output_dim),
+      ##   initializer = initializer_constant(0),
+      ##   trainable = TRUE
+      ##   )
+     },
+    call = function(x, mask = NULL) {
+      k_dot(x, self$kernel) ##+ self$bias
+    },
+    compute_output_shape = function(input_shape) {
+      list(input_shape[[1]], self$output_dim)
+    }
+  )
+)
+
+layer_tied_dense <- function(object, master_layer, name = NULL, trainable = TRUE) {i
+  create_layer(TiedDenseLayer, object, list(
+    master_layer = master_layer,
+    name = name,
+    trainable = trainable
+  ))
+}
+
+
+## TiedDenseLayer <- R6::R6Class(
+##   "TiedDenseLayer",
+##   inherit = KerasLayer,
+##   public = list(
+
+##     master_layer = NULL,
+##     W = NULL,
+##     b = NULL,
+##     output_dim = NULL,
+
+##     initialize = function(output_dim, master_layer) {
+##       self$master_layer <- master_layer
+##     },
+
+##     build = function(input_shape) {
+##         message("build function")
+##         cw = self$master_layer$weights
+##         if(length(cw) == 0){
+##             self$W = list()
+## p            self$output_dim = 0
+##         }else if(length(cw > 1)){
+##             self$W <- k_transpose(self$master_layer$weights[[1]])
+##             self$output_dim <- self$W$shape$as_list()[[2]]
+##         }else{
+##             self$W = k_transpose(self$master_layer$weights)
+##             self$output_dim <- self$W$shape$as_list()[[2]]
+##         }
+
+##       self$b <- self$add_weight(
+##         name = 'bias',
+##         shape = list(self$output_dim),
+##         initializer = initializer_constant(0),
+##         trainable = TRUE
+##       )
+
+##     },
+
+##     call = function(x, mask = NULL) {
+##         message("call function")
+##       k_dot(x, self$W) + self$b
+##     },
+
+##     compute_output_shape = function(input_shape) {
+##       list(input_shape[[1]], self$output_dim)
+##     }
+
+##   )
+## )
+
+## layer_tied_dense <- function(object, master_layer, name = NULL, trainable = TRUE) {
+##   create_layer(TiedDenseLayer, object, list(
+##     master_layer = master_layer,
+##     name = name,
+##     trainable = trainable
+##   ))
+## }
+
+
