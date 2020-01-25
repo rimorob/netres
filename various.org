@@ -15,7 +15,8 @@ https://towardsdatascience.com/build-the-right-autoencoder-tune-and-optimize-usi
 
 * Test autoencoders
 #+begin_src R
-source("LatentConfounderBNlearn.R")
+source("LatentConfounderBNlearnv2.R")
+source_python("aupy.py")
 load("/Users/fred/Documents/projects/latvar/res_alldata.RData", verbose = T)
 load("final_model_nolvp_novp.RData", verbose = T)
 reticulate::conda_list()
@@ -107,11 +108,35 @@ tstaelin = findLatentVars(resDev,
                           fname = "fitae_rmsprop_lr005_itera500.pdf"
                      )
 
+tstaelin = findLatentVars(resDev,
+                          scale. = T, 
+                          method = 'autoencoder',
+                          architecture=NULL, 
+                          activation = 'sigmoid',
+                          activation_coding = "sigmoid",
+                          activation_output = "linear", 
+                          drRate=0.2,
+                          use_batch_norm=T,
+                          nIter =100,
+                          batch_size = 16,
+                          optimizer = "RMSprop",
+                          metrics = 'mse', 
+                          fname = "fitae_rmsprop_lr005_itera500_new.pdf"
+                     )
+
+plot_history(tstaelin$details$pcObj$history)
+
+qplot(tstaelin$confounders[[1]])
+
+qplot(tstaelin$confounders[[2]])
+
+
 tstaelin$confounders %>%
     cor(train$U1.out)
 
 tstaelin$confounders %>%
     cor(train$U2.out)
+
 
 myplot(tstaelin, train)
 
@@ -671,6 +696,9 @@ autoencoder.fit(X_train_scaled, X_train_scaled,
                 batch_size=batch_size,
                 shuffle=True,
                 verbose=0)
+
+
+
 train_predictions = autoencoder.predict(X_train_scaled)
 print('Train reconstrunction error\n', sklearn.metrics.mean_squared_error(X_train_scaled, train_predictions))
 test_predictions = autoencoder.predict(X_test_scaled)
@@ -681,11 +709,14 @@ latvar=encoder.predict(X_train_scaled)
 
 train_predictions = autoencoder.predict(X_train_scaled)
 
+
+
 autoencoder.fit(df_scaled,df_scaled,
                 epochs=nb_epoch,
                 batch_size=batch_size,
                 shuffle=True,
                 verbose=0)
+
 
 enc=Sequential()
 enc.add(encoder)
@@ -703,6 +734,23 @@ np.savetxt("predae.csv", train_predictions_enc, delimiter=",")
 #+end_src
 ** function
 #+begin_src python :tangle aupy.py
+from numpy.random import seed
+seed(123)
+import sklearn
+from sklearn import datasets
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn import decomposition
+import scipy
+import tensorflow as tf
+from keras.models import Model, load_model
+from keras.layers import Input, Dense, Layer, InputSpec
+from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras import regularizers, activations, initializers, constraints, Sequential
+from keras import backend as K
+from keras.constraints import UnitNorm, Constraint
+import pandas as pd
 class DenseTied(Layer):
     def __init__(self, units,
                  activation=None,
@@ -820,6 +868,123 @@ class UncorrelatedFeaturesConstraint (Constraint):
     def __call__(self, x):
         self.covariance = self.get_covariance(x)
         return self.weightage * self.uncorrelated_feature(x)
+
+
+#+end_src
+** Calling from R?
+#+begin_src R
+library(reticulate)
+library(tidyverse)
+source_python("aupy.py")
+sk = import("sklearn", convert = FALSE)
+keras = import("keras", convert = FALSE)
+K = keras$backend
+library(data.table)
+df = fread("/Users/fred/Documents/projects/latvar/resDev.csv", data.table = F)
+
+minmax = sk$preprocessing$MinMaxScaler
+
+scaler = minmax()
+scaler$fit(df) 
+
+df_scaled = scaler$transform(df)
+
+nb_epoch = 500L
+batch_size = 16L
+input_dim = df_scaled$shape[1] #num of predictor variables, 
+
+
+encoding_dim = 2L
+learning_rate = 1e-3
+
+
+shap0 = 10L
+shap1 = 5L
+encoder0 = Dense(shap0,
+                activation = 'relu',
+                input_shape = list(input_dim), 
+                use_bias = TRUE
+                )
+encoder1 = Dense(shap1,
+                activation = 'relu',
+                input_shape = list(shap0), 
+                use_bias = TRUE
+                )
+encoder = Dense(encoding_dim,
+                activation = 'linear',
+                input_shape = list(shap1), 
+                use_bias = TRUE,
+                kernel_regularizer=WeightsOrthogonalityConstraint(encoding_dim, weightage=1., axis=0L),
+                kernel_constraint=UnitNorm(axis=0L),
+                activity_regularizer=UncorrelatedFeaturesConstraint(encoding_dim, weightage = 1.)
+                )
+
+decoder = DenseTied(shap1, activation="relu", tied_to=encoder, use_bias = TRUE)
+decoder1 = DenseTied(shap0, activation="relu", tied_to=encoder1, use_bias = TRUE)
+decoder0 = DenseTied(input_dim, activation="linear", tied_to=encoder0, use_bias = TRUE)
+
+
+autoencoder = Sequential()
+autoencoder$add(encoder0)
+autoencoder$add(encoder1)
+autoencoder$add(encoder)
+autoencoder$add(decoder)
+autoencoder$add(decoder1)
+autoencoder$add(decoder0)
+
+autoencoder$compile(metrics=list('mse'),
+                    loss="mean_squared_error",
+                    optimizer='adam')
+
+autoencoder$summary()
+
+history = autoencoder$fit(df_scaled, df_scaled, 
+                epochs=as.integer(1000),
+                batch_size=16L,
+                validation_split = 0.1, 
+                shuffle=TRUE
+                )
+
+plot_history(history,"mse")
+
+
+
+
+
+
+
+res %>% names
+
+res$vas_loss
+
+lossdf = tibble(val_loss = as.numeric(res$val_loss),
+                loss = as.numeric(res$loss), 
+                Epoch = 1:length(loss)
+                )
+
+gather(lossdf, key, value, -Epoch) %>% ggplot(aes(x = Epoch, y = value, colour = key)) + geom_point() + geom_line()
+
+
+
+
+enc=Sequential()
+enc$add(encoder0)
+enc$add(encoder1)
+enc$add(encoder)
+
+
+latevar = enc$predict(df_scaled)
+
+cor(latevar, train$U1.out)
+cor(latevar, train$U2.out)
+
+qplot(latevar[, 1])
+qplot(latevar[, 2])
+qplot(latevar[, 1], train$U2.out)+ ggtitle("cor=", signif(cor(latevar[, 1], train$U1.out), 2))
+qplot(latevar[, 1], train$U2.out)+ ggtitle("cor=", signif(cor(latevar[, 1], train$U2.out), 2))
+qplot(latevar[, 2], train$U2.out)+ ggtitle("cor=", signif(cor(latevar[, 2], train$U2.out), 2))
+qplot(latevar[, 2], train$U1.out) + ggtitle("cor=", signif(cor(latevar[, 2], train$U1.out), 2))
+
 
 
 #+end_src
