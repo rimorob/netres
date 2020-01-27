@@ -96,6 +96,11 @@ library(bnlearn)
   library(foreach)
   library(igraph)
 getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, output = NULL, ...){
+    if(!is.null(output)){
+        if(!output %in% colnames(train)){
+            stop("output ", output, " is not in train")
+        }
+    }
     if(parallel){
             print(paste('Distributing ensemble learning'))
 	  `%op%` <-  `%dopar%`
@@ -1043,6 +1048,8 @@ latentDiscovery = function(
 	message("At beginning...")
 	browser()
     }
+    if(!output %in% colnames(data))
+        stop("output ", output, " is not in data")
     message("Create directory")
     dir.create(workpath)
     if(is.null(node) & !is.null(output))
@@ -1268,7 +1275,9 @@ latentDiscovery = function(
 	browser()
     }
     message("Finished bnlearn Runs")
-    latVars$details$Diagnostics = allrs
+    if(!is.null(truelatent) & !is.null(truecoef)){
+        latVars$details$Diagnostics = allrs
+        }
     finaldataloc = file.path(
 	    workpath,
 	    "train_final.csv"
