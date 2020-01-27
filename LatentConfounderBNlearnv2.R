@@ -95,7 +95,7 @@ getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, outp
 library(bnlearn)
   library(foreach)
   library(igraph)
-getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, output = "Z", ...){
+getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, output = NULL, ...){
     if(parallel){
             print(paste('Distributing ensemble learning'))
 	  `%op%` <-  `%dopar%`
@@ -148,13 +148,17 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ou
 	##   	   function(ff){
 	##   	       bn.fit(ff, train)
 	##   	   })
-      message("calculate coefficients")
-      allcoef = purrr::map_df(1:length(pdaboot$fitmodels),
-			 function(ii){
-			     pdaboot$fitmodels[[ii]][[output]]$coefficients %>% t() %>%
+    message("calculate coefficients")
+    if(!is.null(output)){
+        allcoef = purrr::map_df(1:length(pdaboot$fitmodels),
+                                function(ii){
+                                  pdaboot$fitmodels[[ii]][[output]]$coefficients %>% t() %>%
 				 as.data.frame %>% mutate(Boot = ii)
 			 })
       allcoef[is.na(allcoef)] = 0
+    }else{
+        allcoef = NULL
+      }
       structure(list(
 	  Nboot = Nboot,
 	  boot_orders = pdaboot$boot_order,

@@ -130,8 +130,7 @@ res_missing_test = getEnsemble2(trainlv, blacklist = blacklistlv2,
 			  prior = "vsp",
 			  score = "bge",
 			  algorithm = 'hc',
-			  parallel = TRUE,
-                          output = "myout"
+			  parallel = TRUE
 			  )
 
 load("res_missing.RData", verbose = T)
