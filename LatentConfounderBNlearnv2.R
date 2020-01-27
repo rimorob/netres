@@ -11,7 +11,7 @@ library(data.table)
 library(igraph)
 library(Rgraphviz)
 library(tidyverse)
-getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, ...){
+getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, output = "Z", ...){
     message("Bootstrapping bnlearn ", Nboot, " times.")
     pdaboot = bn.boot(train, statistic = function(x) x,
 		      algorithm.args = list(...),
@@ -39,7 +39,7 @@ getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, ...)
     message("calculate coefficients")
     allcoef = purrr::map_df(1:length(allmod),
 			    function(ii){
-				allmod[[ii]]$Z$coefficients %>% t() %>%
+				allmod[[ii]][[output]]$coefficients %>% t() %>%
 				    as.data.frame %>% mutate(Boot = ii)
 			    })
     allcoef[is.na(allcoef)] = 0
@@ -95,7 +95,7 @@ getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, ...)
 library(bnlearn)
   library(foreach)
   library(igraph)
-getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ...){
+getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, output = "Z", ...){
     if(parallel){
             print(paste('Distributing ensemble learning'))
 	  `%op%` <-  `%dopar%`
@@ -151,7 +151,7 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ..
       message("calculate coefficients")
       allcoef = purrr::map_df(1:length(pdaboot$fitmodels),
 			 function(ii){
-			     pdaboot$fitmodels[[ii]]$Z$coefficients %>% t() %>%
+			     pdaboot$fitmodels[[ii]][[output]]$coefficients %>% t() %>%
 				 as.data.frame %>% mutate(Boot = ii)
 			 })
       allcoef[is.na(allcoef)] = 0

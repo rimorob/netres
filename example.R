@@ -3,7 +3,7 @@
 ## [[file:~/Documents/gitRepos/latentconfounder/LatentConfounderBNlearn.org::*Simple%20example][Simple example:1]]
 ##setwd("~/Documents/projects//latentconfounder")
 ##setwd("~/Documents/gitRepos/latentconfounder")
-  source("LatentConfounderBNlearn.R")
+source("LatentConfounderBNlearnv2.R")
 
     ##source("/users/fred/Documents/gitRepos/latentconfounder/LatentConfounder.R")
   ##  devtools::load_all("~/Documents/gitRepos/gnsutils/gnsutils")
@@ -119,7 +119,23 @@ toc() ## about 50 seconds
 
 save(res_missing, file = "~/latentconfounderotf/latent_Discovery/res_missing.RData")
 
+
+trainlv$myout=trainlv$Z
+trainlv$Z=NULL
+blacklistlv2 = rbind(data.frame(from = "myout", to = colnames(trainlv)))
+
+
+res_missing_test = getEnsemble2(trainlv, blacklist = blacklistlv2,
+			  restart = 15, Nboot = 10,
+			  prior = "vsp",
+			  score = "bge",
+			  algorithm = 'hc',
+			  parallel = TRUE,
+                          output = "myout"
+			  )
+
 load("res_missing.RData", verbose = T)
+
 
 test = latentDiscovery(
     res_missing,
@@ -1018,6 +1034,16 @@ res_missing_com = getEnsemble2(trainlv_com, blacklist = blacklistlv_com,
 			    parallel = TRUE
 			    )
 toc() ## about
+
+res_missing_comtest = getEnsemble2(trainlv_com, blacklist = blacklistlv_com,
+			    restart = 50, Nboot = 10,
+			    prior = "vsp",
+			    score = "bge",
+			    algorithm = 'hc',
+			    parallel = TRUE,
+                            output = "Z")
+
+
 
 save(res_missing_com, file = "/home/fred/Documents/gitRepos/latentconfounder/latent_Discovery/res_missing_com.RData")
 ## Missing latent variables:1 ends here
