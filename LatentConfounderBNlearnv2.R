@@ -562,9 +562,9 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
 ##  Variational autoencoders seem to work worse
 ##For now, train and validate on the same data, but consider doing cross-validation later
 fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
-                        optimizer = 'adagrad', metrics = 'cosine_proximity', drRate = 0.3,
+                        optimizer = 'RMSprop', metrics = 'mse', drRate = 0.2,
                         summarize=TRUE, fname='aeRunSummary.pdf', valData=NULL,
-                        epochs=100, batch_size = NULL, activation = 'relu', activation_coding = "linear", activation_output = "linear", use_batch_norm = TRUE, learning_rate=0.001, validation_split = 0.1) {
+                        epochs=100, batch_size = NULL, activation = 'sigmoid', activation_coding = "sigmoid", activation_output = "linear", use_batch_norm = TRUE, learning_rate=0.001, validation_split = 0.1) {
     ## reticulate::conda_list()
     ## reticulate::use_condaenv("tensorflow_p36")
     stopifnot(keras::is_keras_available())
