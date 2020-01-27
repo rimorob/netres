@@ -1149,7 +1149,8 @@ latentDiscovery = function(
 		prior = ens$other_params$prior,
 		algorithm = ens$algorithm,
 		score = ens$other_params$score,
-		parallel = parallel
+		parallel = parallel,
+                output = output
 	    )
 	## }else{
 	##     newens = getEnsemble(
