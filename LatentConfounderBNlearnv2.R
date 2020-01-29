@@ -11,7 +11,7 @@ library(data.table)
 library(igraph)
 library(Rgraphviz)
 library(tidyverse)
-getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, ...){
+getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, output = "Z", ...){
     message("Bootstrapping bnlearn ", Nboot, " times.")
     pdaboot = bn.boot(train, statistic = function(x) x,
 		      algorithm.args = list(...),
@@ -39,7 +39,7 @@ getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, ...)
     message("calculate coefficients")
     allcoef = purrr::map_df(1:length(allmod),
 			    function(ii){
-				allmod[[ii]]$Z$coefficients %>% t() %>%
+				allmod[[ii]][[output]]$coefficients %>% t() %>%
 				    as.data.frame %>% mutate(Boot = ii)
 			    })
     allcoef[is.na(allcoef)] = 0
@@ -95,7 +95,12 @@ getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, ...)
 library(bnlearn)
   library(foreach)
   library(igraph)
-getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ...){
+getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, output = NULL, ...){
+    if(!is.null(output)){
+        if(!output %in% colnames(train)){
+            stop("output ", output, " is not in train")
+        }
+    }
     if(parallel){
             print(paste('Distributing ensemble learning'))
 	  `%op%` <-  `%dopar%`
@@ -148,13 +153,17 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ..
 	##   	   function(ff){
 	##   	       bn.fit(ff, train)
 	##   	   })
-      message("calculate coefficients")
-      allcoef = purrr::map_df(1:length(pdaboot$fitmodels),
-			 function(ii){
-			     pdaboot$fitmodels[[ii]]$Z$coefficients %>% t() %>%
+    message("calculate coefficients")
+    if(!is.null(output)){
+        allcoef = purrr::map_df(1:length(pdaboot$fitmodels),
+                                function(ii){
+                                  pdaboot$fitmodels[[ii]][[output]]$coefficients %>% t() %>%
 				 as.data.frame %>% mutate(Boot = ii)
 			 })
       allcoef[is.na(allcoef)] = 0
+    }else{
+        allcoef = NULL
+      }
       structure(list(
 	  Nboot = Nboot,
 	  boot_orders = pdaboot$boot_order,
@@ -539,12 +548,15 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
         }
         devX[, vi] = dX
     }
+    ##order variables by name
+    allvars = sort(colnames(devX))
+    devX = devX[, allvars]
     return(devX)
 }
 
 ##Identify latent variables using an autoencoder
 ##Accepts:
-## data - an m samples by n features matrix/data frame from which to fit the latent space
+## data - an m samples by n features matrix/data frame from which to fit the latenspace
 ## architecture - the list of encoder layer geometries, left to right
 ##   This list will be mirrored in the decoder.
 ##   Last layer is PC layer and should be set from PCA or similar
@@ -553,29 +565,28 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
 ##  Variational autoencoders seem to work worse
 ##For now, train and validate on the same data, but consider doing cross-validation later
 fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
-                        optimizer = 'adagrad', metrics = 'cosine_proximity', drRate = 0.3,
+                        optimizer = 'RMSprop', metrics = 'mse', drRate = 0.2,
                         summarize=TRUE, fname='aeRunSummary.pdf', valData=NULL,
-                        epochs=100, batch_size = NULL, activation = 'relu', use_batch_norm = TRUE, learning_rate=0.001) {
+                        epochs=100, batch_size = NULL, activation = 'sigmoid', activation_coding = "sigmoid", activation_output = "linear", use_batch_norm = TRUE, learning_rate=0.001, validation_split = 0.1) {
     ## reticulate::conda_list()
     ## reticulate::use_condaenv("tensorflow_p36")
     stopifnot(keras::is_keras_available())
-
     library(ggplot2)
     library(keras)
     library(tidyverse)
     library(caret)
-
+    library(reticulate)
     x_train = as.matrix(data)
     if (is.null(valData)) {
         x_test = as.matrix(data)
     } else {
         x_test = as.matrix(valData)
     }
-
     if (summarize) {
         print(paste('Analyzing a matrix of', nrow(x_train), 'samples x', ncol(x_train), 'features'))
     }
-    input_layer <- layer_input(shape = c(ncol(x_train)))
+    input_dim = ncol(x_train)
+    input_layer <- layer_input(shape = c(input_dim))
     ## dense1 = layer_dense(units = architecture[1])
     ## dense2 = layer_dense(units = architecture[2])
     ## denselat = layer_dense(units = architecture[length(architecture)])
@@ -591,91 +602,147 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
     ##     dense2_a() %>%
     ##     layer_activation(activation) %>%
     ##     dense1_a()
-    encoder <- input_layer
+    ##encoder <- input_layer
     ##construct the encoder
+    encoder = Sequential()
     mylayers = list()
     if(length(architecture) > 1){
         for (li in 1:(length(architecture)-1)) {
             curL = architecture[li]
             curLs = as.character(curL)
-            mylayers[[curLs]] = layer_dense(units = curL,
-                                            kernel_constraint=keras::constraint_unitnorm())
-            encoder <-
-                encoder %>%
-                mylayers[[curLs]]() %>%
-                                layer_activation(activation)
+            if(li == 1){
+                linput = as.integer(input_dim)
+                mylayers[[as.character(li)]] = Dense(as.integer(curL),
+                                       activation = activation,
+                                       input_shape = list(linput),
+                                       use_bias = TRUE
+                                       )
+            }else{
+                linput = as.integer(architecture[li - 1])
+                mylayers[[as.character(li)]] = Dense(as.integer(curL),
+                                       activation = activation,
+                                       use_bias = TRUE
+                                       )
+            }
+            encoder$add(mylayers[[as.character(li)]])
+            ## layer_dense(units = curL,
+            ##                                 kernel_constraint=keras::constraint_unitnorm())
+            ## encoder <-
+            ##     encoder %>%
+            ##     mylayers[[curLs]]() %>%
+            ##                     layer_activation(activation)
             if(use_batch_norm)
-                encoder = encoder %>% layer_batch_normalization()
-            encoder = encoder %>%
-                layer_dropout(rate = drRate)
+                encoder$add(BatchNormalization())
+            ##     encoder = encoder %>% layer_batch_normalization()
+            encoder$add(Dropout(rate = drRate))
         }
     }
-    ##add middle layer
+    ##add middle layer or coding layer
     ##This should probably be PCA-constrained or at worst constrained from Donoho:
     ##https://arxiv.org/abs/1305.5870
-    middla = architecture[length(architecture)]
+    ii = length(architecture)
+    middla = architecture[length(architecture)] %>% as.integer
     middlal = as.character(middla)
-    mylayers[[middlal]] = layer_dense(units = middla)
-    encoder <- encoder %>% mylayers[[middlal]]()
+    linput = as.integer(architecture[length(architecture) - 1])
+    mylayers[[as.character(ii)]] = Dense(middla,
+                                activation = activation_coding,
+                                    kernel_regularizer = WeightsOrthogonalityConstraint(middla, weightage=1., axis=0L),
+                                kernel_constraint=UnitNorm(axis=0L),
+                                activity_regularizer=UncorrelatedFeaturesConstraint(middla, weightage = 1.)
+                                )
+    encoder$add(mylayers[[as.character(ii)]])
     if(use_batch_norm)
-        encoder = encoder %>% layer_batch_normalization()
-    encoder = encoder %>%
-        layer_dropout(rate = drRate)
+        encoder$add(BatchNormalization())
+    Nlayenc = length(encoder$layers)
+    ## start decoder
+    message("build decoder")
+    mylayersdec = list()
+    ## mylayersdec[[middlal]] = DenseTied(linput,
+    ##                         tied_to = mylayers[[middla]],
+    ##                         activation = activation,
+    ##                         use_bias = TRUE
+    ##                         )
+    ## encoder$add(mylayers[[middladt]])
+    ## encoder = encoder %>%
+    ##     layer_dropout(rate = drRate)
     ##browser()
     ##construct the decoder
-    message("build decoder")
     decoder <- encoder
-    mylayersdec = list()
     if(length(architecture) > 1){
-        for (li in 1:(length(architecture))) {
-            curL = rev(architecture)[li]
-            curLn = as.character(curL)
-            myl = layer_dense(units = curL,
-                              kernel_constraint=keras::constraint_unitnorm())
+        myarch = rev(architecture)
+        alliids = rev(1:length(architecture))
+        for (li in 1:(length(myarch) - 1)) {
+            ##curL = myarch[li + 1]
+            ii = as.character(alliids[li])
+            ##curLn = as.character(curL)
+            clin = as.integer(myarch[li + 1])
+            myl = DenseTied(clin,
+                            tied_to = mylayers[[ii]],
+                            activation = activation,
+                            use_bias = TRUE
+                            )
+            ##myl = layer_dense(units = curL,
+            ##                              kernel_constraint=keras::constraint_unitnorm())
             ##myl = layer_tied_dense(master_layer = mylayers[[curLn]])
-            mylayersdec[[curLn]] = myl
-            decoder <- decoder %>%
-                myl() %>%
-                layer_activation(activation)
+            mylayersdec[[li]] = myl
+            decoder$add(myl)
             if(use_batch_norm)
-                decoder = decoder %>% layer_batch_normalization()
-            decoder = decoder %>%
-                layer_dropout(rate = drRate)
+                decoder$add(BatchNormalization())
+            ##     encoder = encoder %>% layer_batch_normalization()
+            decoder$add(Dropout(rate = drRate))
         }
+        ## output layer: for the last layer use linear activation
+        ii = as.character(alliids[length(alliids)])
+        ##curL = myarch[length(myarch)]
+        ##curLn = as.character(curL)
+        clin = as.integer(input_dim)
+        myl = DenseTied(clin,
+                    tied_to = mylayers[[ii]],
+                    activation = activation_output,
+                    use_bias = TRUE
+                    )
+        mylayersdec[[ii]] = myl
+        decoder$add(myl)
     }
-    ##return to the original dimensions
-    decoder <- decoder %>% layer_dense(units = ncol(x_train), activation = 'linear')
-
-    autoencoder_model <- keras_model(inputs = input_layer, outputs = decoder)
-    autoencoder_model %>% compile(
-                              loss=lossFunction,
-                              optimizer=optimizer,
-                              metrics = metrics, learning_rate = learning_rate)
-
+    ##decoder$add(Dense(as.integer(input_dim), activation = "linear"))
+    message("compile")
+    decoder$compile(
+                loss=lossFunction,
+                optimizer=optimizer,
+                metrics = list(metrics)
+                )
     if (summarize) {
-        print(summary(autoencoder_model))
+        print(summary(decoder))
     }
-
-    history <-
-        autoencoder_model %>%
-        keras::fit(x_train,
-                   x_train,
-                   epochs=epochs,
-                   batch_size=ifelse(is.null(batch_size), nrow(x_train), batch_size),
-                   shuffle=TRUE,
-                   validation_split = 0.1
-                   )
+    message("Fit")
+    history <- decoder$fit(
+                    x_train,
+                    x_train,
+                    epochs = as.integer(epochs),
+                    batch_size=as.integer(ifelse(is.null(batch_size),
+                                                 nrow(x_train),
+                                                 batch_size)),
+                    shuffle=TRUE,
+                    validation_split = validation_split
+                )
     if (summarize) {
         message('Saving training history in ', fname)
         ##pdf(file = fname, width=11 )
-        ggsave(fname, plot(history), width=11)
+        ggsave(fname, plot_history(history, metrics), width=11)
         ##dev.off()
     }
     ##self.encoder = Model(inputs=self.autoencoder.input,
     ##  outputs=self.autoencoder.get_layer('encoder').output)
     ##return only the encoder!
-    message("Finished autoencder fitting. returning.")
-    return(keras_model(inputs = input_layer, outputs = encoder))
+    message("building encoder with trained layers")
+    encoder = Sequential()
+    for(li in 1:Nlayenc){
+        ll = decoder$layers[[li]]
+        encoder$add(ll)
+    }
+    message("Finished autoencoder fitting. returning.")
+    encoder$history = history
+    return(encoder)
 }
 
 ##Find latent PCs in the deviance residuals matrix (formally, this is a type of ICA on residuals)
@@ -691,9 +758,12 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
                            number_of_groups = 3,
                            maxLatentVars = Inf,
                            multiple_comparison_correction = TRUE,
-                           architecture = NULL, activation = 'relu', drRate=0.3,
-                           use_batch_norm = TRUE, batch_size = NULL,
-                           optimizer = 'adagrad', metrics = 'cosine_proximity', learning_rate = 0.1,
+                           architecture = NULL, activation = 'sigmoid',
+                           activation_coding = "sigmoid",
+                           activation_output ="linear",
+                           drRate=0.2,
+                           use_batch_norm = TRUE, batch_size = 32,
+                           optimizer = 'RMSprop', metrics = 'mse', learning_rate = 0.1,validation_split = 0.1,
                            fname = "aeRunSummary.pdf"
                            ) {
     ## check for missingness
@@ -741,9 +811,9 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
         ##hacked # of layers
         if(is.null(architecture))
             architecture = rev(round(exp(seq(log(nLatent), log(min(200, ncol(resDev)/2)), length.out=4))))
-        encoder <- fitAeLatent(data=resDev, architecture=architecture, valData=resDev, epochs=nIter, activation = activation, drRate = drRate, use_batch_norm = use_batch_norm, batch_size = batch_size, metrics = metrics, optimizer = optimizer, learning_rate = learning_rate,
+        encoder <- fitAeLatent(data=resDev, architecture=architecture, valData=resDev, epochs=nIter, activation = activation, drRate = drRate, use_batch_norm = use_batch_norm, batch_size = batch_size, metrics = metrics, optimizer = optimizer, learning_rate = learning_rate,activation_coding = activation_coding, activation_output = activation_output,validation_split = validation_split,
                                fname = fname)
-        encoded = encoder %>% predict(as.matrix(resDev), verbose=0, max_queue_size=10, workers=10, use_multiprocessing=True) %>% as.data.frame
+        encoded = encoder$predict(as.matrix(resDev)) %>% as.data.frame
         pr = encoder
         pr$x = encoded #append the predicted latent space to pr
     } else {
@@ -980,6 +1050,8 @@ latentDiscovery = function(
 	message("At beginning...")
 	browser()
     }
+    if(!output %in% colnames(data))
+        stop("output ", output, " is not in data")
     message("Create directory")
     dir.create(workpath)
     if(is.null(node) & !is.null(output))
@@ -1090,7 +1162,8 @@ latentDiscovery = function(
 		prior = ens$other_params$prior,
 		algorithm = ens$algorithm,
 		score = ens$other_params$score,
-		parallel = parallel
+		parallel = parallel,
+                output = output
 	    )
 	## }else{
 	##     newens = getEnsemble(
@@ -1204,7 +1277,9 @@ latentDiscovery = function(
 	browser()
     }
     message("Finished bnlearn Runs")
-    latVars$details$Diagnostics = allrs
+    if(!is.null(truelatent) & !is.null(truecoef)){
+        latVars$details$Diagnostics = allrs
+        }
     finaldataloc = file.path(
 	    workpath,
 	    "train_final.csv"
@@ -1218,6 +1293,10 @@ latentDiscovery = function(
 		workpath,
 		"latVars.RDS")
 	    )
+    ## add parameters
+    latVars$details$isOrdinal = isOrdinal
+    latVars$details$missing_code = missing_code
+    latVars$useResiduals = useResiduals
     return(latVars)
 }
 
@@ -2102,3 +2181,71 @@ layer_tied_dense <- function(object, master_layer, name = NULL, trainable = TRUE
 ## }
 
 
+plot_history = function(history, type = "loss"){
+    res = history$history
+    if(type == "loss"){
+        lossdf = tibble(val_loss = as.numeric(res$val_loss),
+                loss = as.numeric(res$loss),
+                Epoch = 1:length(loss)
+                )
+    gather(lossdf, key, value, -Epoch) %>% ggplot(aes(x = Epoch, y = value, colour = key)) + geom_point() + geom_line()
+    }else{
+        val = paste0("val_", type)
+        msedf = tibble(
+            val_error = as.numeric(res[[val]]),
+            error = as.numeric(res[[type]]),
+            Epoch = 1:length(error))
+        colnames(msedf)[1:2] = c(val, type)
+        gather(msedf, key, value, -Epoch) %>% ggplot(aes(x = Epoch, y = value, colour = key)) + geom_point() + geom_line()
+    }
+
+}
+
+
+predict.robustLinear <- function(pr, newdata) {
+    as.matrix(newdata %*% t(pr$L.svd$vt))
+}
+
+##Note that, for out of sample data, the details section never gets modified,
+##keeping the origins of the derivation of the confounder within reach
+predict.LatentConfounder <- function(latConf,
+                                     newdata = NULL,
+                                     ens,
+                                     allPCs = FALSE
+                                     ) {
+    if (is.null(newdata)) { #use original residuals from training
+        newdata = latConf$details$originalData
+    }else{
+        if(latConf$details$useResiduals){
+            ## calculate the residuals
+            allvars = latConf$details$originalData %>% colnames
+            message("Calculating REFS residuals")
+            resList = getREFSresiduals(
+                ens,
+                allvars
+            )
+            message("Calculating PSR")
+            resDev = residualDeviance(newdata,
+                                      resList,
+                                      isOrdinal=latConf$details$isOrdinal,
+                                      missing_code = latConf$details$missing_code
+                                      )
+            newdata = resDev
+        }
+    }
+    ##res = predict(latConf$details$pcObj, newdata)
+    if(latConf$details$method == 'kernel'){
+        varsel = colnames(kernlab::xmatrix(latConf$details$pcObj))
+        res = kernlab::predict(latConf$details$pcObj,
+                               x = as.matrix(newdata[, varsel, drop = F])
+                               )
+    }else
+        res = predict(latConf$details$pcObj, as.matrix(newdata))
+    if (!allPCs) {#then significant PCs only
+        res = res[, latConf$details$sigPcIdx, drop = F]
+    }
+    ##colnames(res) = gsub('PC', 'LV_', colnames(res))
+    colnames(res) = paste('LV', 1:ncol(res), sep = '_')
+    latConf$confounders = res
+    return(latConf)
+}
