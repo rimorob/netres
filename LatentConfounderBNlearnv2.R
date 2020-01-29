@@ -548,12 +548,15 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
         }
         devX[, vi] = dX
     }
+    ##order variables by name
+    allvars = sort(colnames(devX))
+    devX = devX[, allvars]
     return(devX)
 }
 
 ##Identify latent variables using an autoencoder
 ##Accepts:
-## data - an m samples by n features matrix/data frame from which to fit the latent space
+## data - an m samples by n features matrix/data frame from which to fit the latenspace
 ## architecture - the list of encoder layer geometries, left to right
 ##   This list will be mirrored in the decoder.
 ##   Last layer is PC layer and should be set from PCA or similar
@@ -712,8 +715,7 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
         print(summary(decoder))
     }
     message("Fit")
-    history <-
-        decoder$fit(
+    history <- decoder$fit(
                     x_train,
                     x_train,
                     epochs = as.integer(epochs),
@@ -726,7 +728,7 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
     if (summarize) {
         message('Saving training history in ', fname)
         ##pdf(file = fname, width=11 )
-        ggsave(fname, plot_history(history), width=11)
+        ggsave(fname, plot_history(history, metrics), width=11)
         ##dev.off()
     }
     ##self.encoder = Model(inputs=self.autoencoder.input,
@@ -756,12 +758,12 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
                            number_of_groups = 3,
                            maxLatentVars = Inf,
                            multiple_comparison_correction = TRUE,
-                           architecture = NULL, activation = 'relu',
-                           activation_coding = "linear",
+                           architecture = NULL, activation = 'sigmoid',
+                           activation_coding = "sigmoid",
                            activation_output ="linear",
-                           drRate=0.3,
-                           use_batch_norm = TRUE, batch_size = NULL,
-                           optimizer = 'adagrad', metrics = 'cosine_proximity', learning_rate = 0.1,validation_split = 0.1,
+                           drRate=0.2,
+                           use_batch_norm = TRUE, batch_size = 32,
+                           optimizer = 'RMSprop', metrics = 'mse', learning_rate = 0.1,validation_split = 0.1,
                            fname = "aeRunSummary.pdf"
                            ) {
     ## check for missingness
@@ -1291,6 +1293,10 @@ latentDiscovery = function(
 		workpath,
 		"latVars.RDS")
 	    )
+    ## add parameters
+    latVars$details$isOrdinal = isOrdinal
+    latVars$details$missing_code = missing_code
+    latVars$useResiduals = useResiduals
     return(latVars)
 }
 
@@ -2175,7 +2181,7 @@ layer_tied_dense <- function(object, master_layer, name = NULL, trainable = TRUE
 ## }
 
 
-plot_history = function(history, type = 'mse'){
+plot_history = function(history, type = "loss"){
     res = history$history
     if(type == "loss"){
         lossdf = tibble(val_loss = as.numeric(res$val_loss),
@@ -2184,13 +2190,62 @@ plot_history = function(history, type = 'mse'){
                 )
     gather(lossdf, key, value, -Epoch) %>% ggplot(aes(x = Epoch, y = value, colour = key)) + geom_point() + geom_line()
     }else{
-
+        val = paste0("val_", type)
         msedf = tibble(
-            val_mse = as.numeric(res$val_mean_squared_error),
-            mse = as.numeric(res$mean_squared_error),
-            Epoch = 1:length(mse))
-
+            val_error = as.numeric(res[[val]]),
+            error = as.numeric(res[[type]]),
+            Epoch = 1:length(error))
+        colnames(msedf)[1:2] = c(val, type)
         gather(msedf, key, value, -Epoch) %>% ggplot(aes(x = Epoch, y = value, colour = key)) + geom_point() + geom_line()
     }
 
+}
+
+
+predict.robustLinear <- function(pr, newdata) {
+    as.matrix(newdata %*% t(pr$L.svd$vt))
+}
+
+##Note that, for out of sample data, the details section never gets modified,
+##keeping the origins of the derivation of the confounder within reach
+predict.LatentConfounder <- function(latConf,
+                                     newdata = NULL,
+                                     ens,
+                                     allPCs = FALSE
+                                     ) {
+    if (is.null(newdata)) { #use original residuals from training
+        newdata = latConf$details$originalData
+    }else{
+        if(latConf$details$useResiduals){
+            ## calculate the residuals
+            allvars = latConf$details$originalData %>% colnames
+            message("Calculating REFS residuals")
+            resList = getREFSresiduals(
+                ens,
+                allvars
+            )
+            message("Calculating PSR")
+            resDev = residualDeviance(newdata,
+                                      resList,
+                                      isOrdinal=latConf$details$isOrdinal,
+                                      missing_code = latConf$details$missing_code
+                                      )
+            newdata = resDev
+        }
+    }
+    ##res = predict(latConf$details$pcObj, newdata)
+    if(latConf$details$method == 'kernel'){
+        varsel = colnames(kernlab::xmatrix(latConf$details$pcObj))
+        res = kernlab::predict(latConf$details$pcObj,
+                               x = as.matrix(newdata[, varsel, drop = F])
+                               )
+    }else
+        res = predict(latConf$details$pcObj, as.matrix(newdata))
+    if (!allPCs) {#then significant PCs only
+        res = res[, latConf$details$sigPcIdx, drop = F]
+    }
+    ##colnames(res) = gsub('PC', 'LV_', colnames(res))
+    colnames(res) = paste('LV', 1:ncol(res), sep = '_')
+    latConf$confounders = res
+    return(latConf)
 }

@@ -16,11 +16,12 @@ https://towardsdatascience.com/build-the-right-autoencoder-tune-and-optimize-usi
 * Test autoencoders
 #+begin_src R
 source("LatentConfounderBNlearnv2.R")
+reticulate::conda_list()
+reticulate::use_condaenv("tensorflowv1")
 source_python("aupy.py")
 load("/Users/fred/Documents/projects/latvar/res_alldata.RData", verbose = T)
 load("final_model_nolvp_novp.RData", verbose = T)
-reticulate::conda_list()
-reticulate::use_condaenv("tensorflowv1")
+
 library(keras)
 keras::is_keras_available()
 tensorflow::tf_version()

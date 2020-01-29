@@ -119,29 +119,83 @@ toc() ## about 50 seconds
 
 save(res_missing, file = "~/latentconfounderotf/latent_Discovery/res_missing.RData")
 
+trainlv2 = trainlv
+trainlv2$myout=trainlv$Z
+trainlv2$Z=NULL
+blacklistlv2 = rbind(data.frame(from = "myout", to = colnames(trainlv2)))
 
-trainlv$myout=trainlv$Z
-trainlv$Z=NULL
-blacklistlv2 = rbind(data.frame(from = "myout", to = colnames(trainlv)))
 
-
-res_missing_test = getEnsemble2(trainlv, blacklist = blacklistlv2,
+res_missing_test = getEnsemble2(trainlv2, blacklist = blacklistlv2,
 			  restart = 15, Nboot = 10,
 			  prior = "vsp",
 			  score = "bge",
 			  algorithm = 'hc',
-			  parallel = TRUE
+			  parallel = TRUE,
+                          output = "myout"
 			  )
+
+
+test2 = latentDiscovery(
+    res_missing_test,
+    nItera=3,
+    data = trainlv2,
+    "myout",
+    workpath="aetestnew3",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.05,
+    scale. = TRUE,
+    method = "autoencoder",
+    latent_iterations = 100,
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = FALSE,
+    parallel = TRUE,
+    drRate = 0.2,
+    batch_size = 16,
+    optimizer = "RMSprop",
+    activation = 'sigmoid',
+    activation_coding = "sigmoid",
+    activation_output = "linear",
+    metrics = 'mse'
+)
+
 
 load("res_missing.RData", verbose = T)
 
 
-test = latentDiscovery(
+testlin =  latentDiscovery(
     res_missing,
-    nItera=100,
+    nItera=3,
     data = trainlv,
     "Z",
-    workpath="aetestnew2",
+    workpath="pcatest",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.05,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=datalist$data %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = FALSE,
+    parallel = TRUE
+)
+
+tst = predict(testlin, newdata = trainlv, ens = res_missing)
+cor(testlin$confounders, tst$confounders)
+
+
+test = latentDiscovery(
+    res_missing,
+    nItera=3,
+    data = trainlv,
+    "Z",
+    workpath="aetestnew4",
     freqCutoff = 0.01,
     maxpath = 1,
     alpha = 0.05,
@@ -853,7 +907,10 @@ res_alldata_med = getEnsemble2(train_med, blacklist = blacklist,
 			   parallel = T
 			   )
 
-save(res_alldata_med, file = "/home/fred/Documents/gitRepos/latentconfounder/latent_Discovery/res_alldata_med.RData")
+##save(res_alldata_med, file = "/home/fred/Documents/gitRepos/latentconfounder/latent_Discovery/res_alldata_med.RData")
+
+
+save(res_alldata_med, file = "res_alldata_med.RData")
 
 plot(res_alldata_med, 'Z', layout = 'dot', sep = 0.01, edge_labels = "coef")
 
@@ -880,7 +937,7 @@ library(tictoc)
 
 REFSfs:::registerDoSGE()
 
-tic()
+##tic()
 res_missing_med = getEnsemble2(trainlv_med, blacklist = blacklistlv_med,
 			    restart = 100, Nboot = 50,
 			    prior = "vsp",
@@ -888,15 +945,17 @@ res_missing_med = getEnsemble2(trainlv_med, blacklist = blacklistlv_med,
 			    algorithm = 'hc',
 			    parallel = TRUE
 			    )
-toc() ## about
+##toc() ## about
 
-save(res_missing_med, file = "/home/fred/Documents/gitRepos/latentconfounder/latent_Discovery/res_missing_med.RData")
+##save(res_missing_med, file = "/home/fred/Documents/gitRepos/latentconfounder/latent_Discovery/res_missing_med.RData")
+save(res_missing_med, file = "res_missing_med.RData")
+
 ## Missing latent variables:1 ends here
 
 ## Causal Discovery
 
 ## [[file:~/Documents/gitRepos/latentconfounder/LatentConfounderBNlearn.org::*Causal%20Discovery][Causal Discovery:1]]
-niter = 10
+niter = 5
 seed = 123
 set.seed(seed)
 medium_evo = latentDiscovery(
@@ -905,12 +964,12 @@ medium_evo = latentDiscovery(
 	data = trainlv_med,
 	"Z",
 	seed=seed,
-	workpath="latentDiscovery_med",
+	workpath="latentDiscovery_med_linear",
 	freqCutoff = 0.01,
 	maxpath = 1,
 	alpha = 0.05,
 	scale. = TRUE,
-	method = "robustLinear",
+	method = "linear",
 	latent_iterations = 100,
 	truecoef = datalist_med$coef %>% filter(output=="Z"),
 	truelatent=datalist_med$data %>% dplyr::select("U1.out","U2.out"),
@@ -921,7 +980,37 @@ medium_evo = latentDiscovery(
     )
 
 
-save(medium_evo, file = "/home/fred/Documents/gitRepos/latentconfounder/latent_Discovery/evo_discovery_med.RData")
+
+seed = 123
+set.seed(seed)
+medium_evo_auto= latentDiscovery(
+	res_missing_med,
+	nItera=niter,
+	data = trainlv_med,
+	"Z",
+	seed=seed,
+	workpath="latentDiscovery_med_ae",
+	freqCutoff = 0.01,
+	maxpath = 1,
+	alpha = 0.05,
+	scale. = TRUE,
+	method = "autoencoder",
+	latent_iterations = 100,
+	truecoef = datalist_med$coef %>% filter(output=="Z"),
+	truelatent=datalist_med$data %>% dplyr::select("U1.out","U2.out"),
+	include_downstream = TRUE,
+	multiple_comparison_correction = TRUE,
+	debug = F,
+	parallel = TRUE
+    )
+
+tst = predict(medium_evo_auto)
+cor(tst$confounders, medium_evo_auto$confounders
+    )
+tst=predict(medium_evo_auto,newdata = trainlv_med, res_missing_med)
+
+
+##save(medium_evo, file = "/home/fred/Documents/gitRepos/latentconfounder/latent_Discovery/evo_discovery_med.RData")
 ## Causal Discovery:1 ends here
 
 ## Complicated Example
