@@ -122,7 +122,7 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ou
 	  list(allnet = c(xx[[1]], yy[[1]]), fitmodels = c(xx[[2]], yy[[2]]),
 	       edges = rbind(xx[[3]], yy[[3]]),
 	       boot_order = c(xx[[4]], yy[[4]]))
-	}
+      }
       pdaboot = foreach(ii = 1:Nboot,
 			.combine = mycomb, .packages = c("bnlearn", "foreach", "igraph","dplyr")) %op%{
 			    bootorder = sample(1:nrow(train), nrow(train), replace = TRUE)
@@ -565,7 +565,7 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
 ##  Variational autoencoders seem to work worse
 ##For now, train and validate on the same data, but consider doing cross-validation later
 fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
-                        optimizer = 'RMSprop', metrics = 'mse', drRate = 0.2,
+                        optimizer = 'RMSprop', metrics = 'mean_squared_error', drRate = 0.2,
                         summarize=TRUE, fname='aeRunSummary.pdf', valData=NULL,
                         epochs=100, batch_size = NULL, activation = 'sigmoid', activation_coding = "sigmoid", activation_output = "linear", use_batch_norm = TRUE, learning_rate=0.001, validation_split = 0.1) {
     ## reticulate::conda_list()
@@ -763,7 +763,8 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
                            activation_output ="linear",
                            drRate=0.2,
                            use_batch_norm = TRUE, batch_size = 32,
-                           optimizer = 'RMSprop', metrics = 'mse', learning_rate = 0.1,validation_split = 0.1,
+                           optimizer = 'RMSprop',
+                           metrics = 'mean_squared_error', learning_rate = 0.1,validation_split = 0.1,
                            fname = "aeRunSummary.pdf"
                            ) {
     ## check for missingness
@@ -1044,6 +1045,7 @@ latentDiscovery = function(
 			   debug = F,
 			   discretize_confounders = F,
 			   missing_code = NA,
+                           testdata = NULL,
                            ...
 			   ){
     if(debug){
@@ -1153,6 +1155,7 @@ latentDiscovery = function(
 	    message("\n\nAbout to run bnlearn ...")
 	    browser()
 	}
+        oldens = newens
 	message("Run bnlearn")
 	    newens = getEnsemble2(
 		newdata,
@@ -1220,13 +1223,29 @@ latentDiscovery = function(
 	    if(debug){
 		browser()
 	    }
+            if(!is.null(testdata)){
+                ## predict latent variables
+                message("predicting latent variables in test set")
+                latVars_test = predict(latVars,
+                                       testdata,
+                                       isOrdinal = isOrdinal,
+                                       missing_code = missing_code,
+                                       useResiduals = useResiduals,
+                                       ens = oldens, allPCs=TRUE)
+                allpcs = latVars_test$confounders
+                sigpc = latVars_test$details$sigPcIdx
+                latVars_test$confounders = latVars_test$confounders[, sigpc]
+            }else
+                latVars_test = latVars
 	    allrs = getScores(allrs,
 			      ens=newens,
 			      truecoef=truecoef,
 			      truelatent = truelatent,
-			      lat_estimates = latVars,
+			      lat_estimates = latVars_test,
 			      output=output,
-			      ignore = "U.*|LV.*")
+			      ignore = "U.*|LV.*",
+                              allpcs = allpcs
+                              )
 	    if(debug){
 		message("About to save plot diagnostics")
 		browser()
@@ -1777,11 +1796,10 @@ refitLatent = function(latobj,
     }else{
 	latVars = latobj
     }
-    message("predict latent variables in test set")
     allvars = latVars$details$originalData %>% colnames
     testdfsel = testdf %>% dplyr::select_(.dots = allvars)
     testdfsel = testdfsel[, allvars, drop = F]
-    latVars_test = predict(latVars, testdfsel)
+    latVars_test = predict(latVars, testdfsel, )
     return(latVars_test)
 }
 
@@ -1818,7 +1836,7 @@ insertRow <- function(existingDF, newrow, r) {
 
 
 
-getScores = function(res = NULL, ens, truecoef, truelatent = NULL, lat_estimates, output, ignore = "U.*|LV.*"){
+getScores = function(res = NULL, ens, truecoef, truelatent = NULL, lat_estimates, output, ignore = "U.*|LV.*", allpcs = NULL){
     currentRepeat=max(res$Repeat)
     coefmean0= getCoef(ens, output)
     latVars = lat_estimates
@@ -1841,7 +1859,8 @@ getScores = function(res = NULL, ens, truecoef, truelatent = NULL, lat_estimates
     alldf = inner_join(
 	dplyr::select(truecoef, input, output, True_coef = wcoef),
 	dplyr::select(coefmean0, input, output, Est_coef = wcoef),
-	by = c("input", "output")
+
+        by = c("input", "output")
     ) %>% mutate(error = True_coef - Est_coef)
     rmseval = alldf %>% summarise(rmse=sqrt(mean(error^2))) %>% with(rmse)
     crs = tibble(
@@ -1876,10 +1895,10 @@ getScores = function(res = NULL, ens, truecoef, truelatent = NULL, lat_estimates
 				trace = 0,
 				direction = 'both')
 	}
-	if(method == 'linear'){
-	    pcs = latVars$details$pcObj$x %>%
-		as.data.frame
-
+        if(is.null(allpcs)){
+            if(method == 'linear'){
+            pcs = latVars$details$pcObj$x %>%
+                    as.data.frame
 	} else if(method == 'robustLinear'){
 	    pcs = svd(latVars$details$pcObj$L)$u %>%
 					     as.data.frame
@@ -1892,6 +1911,10 @@ getScores = function(res = NULL, ens, truecoef, truelatent = NULL, lat_estimates
 	    pcs = latVars$details$pcObj@pcv %>%
 		as.data.frame
 	}
+        }else{
+            pcs = allpcs %>%
+                as.data.frame
+        }
 	crs$PCAs = list(pcs)
 	tst2 = list()
 	for(uu in colnames(truelatent)){
@@ -2211,12 +2234,22 @@ predict.robustLinear <- function(pr, newdata) {
 predict.LatentConfounder <- function(latConf,
                                      newdata = NULL,
                                      ens,
-                                     allPCs = FALSE
+                                     allPCs = FALSE,
+                                     isOrdinal = NULL,
+                                     missing_code = NULL,
+                                     useResiduals = NULL
                                      ) {
     if (is.null(newdata)) { #use original residuals from training
         newdata = latConf$details$originalData
     }else{
-        if(latConf$details$useResiduals){
+        message("Calculating residuals on new dataset")
+        if(is.null(useResiduals))
+            useResiduals = latConf$details$useResiduals
+        if(useResiduals){
+            if(is.null(isOrdinal))
+                isOrdinal = latConf$details$isOrdinal
+            if(is.null(missing_code))
+                missing_code = latConf$details$missing_code
             ## calculate the residuals
             allvars = latConf$details$originalData %>% colnames
             message("Calculating REFS residuals")
@@ -2227,8 +2260,8 @@ predict.LatentConfounder <- function(latConf,
             message("Calculating PSR")
             resDev = residualDeviance(newdata,
                                       resList,
-                                      isOrdinal=latConf$details$isOrdinal,
-                                      missing_code = latConf$details$missing_code
+                                      isOrdinal=isOrdinal,
+                                      missing_code = missing_code
                                       )
             newdata = resDev
         }

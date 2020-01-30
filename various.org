@@ -565,6 +565,11 @@ model$layers[[4]]$kernel
 model$layers[[9]]$kernel
 #+end_src
 ** python
+https://stackoverflow.com/questions/53751024/tying-autoencoder-weights-in-a-dense-keras-layer
+
+https://stackoverflow.com/questions/53751024/tying-autoencoder-weights-in-a-dense-keras-layer
+
+
 #+begin_src python
 class DenseTied(Layer):
     def __init__(self, units,
@@ -734,6 +739,11 @@ train_predictions_enc = enc.predict(df_scaled)
 np.savetxt("predae.csv", train_predictions_enc, delimiter=",")
 #+end_src
 ** function
+https://stackoverflow.com/questions/53751024/tying-autoencoder-weights-in-a-dense-keras-layer
+
+https://stackoverflow.com/questions/53751024/tying-autoencoder-weights-in-a-dense-keras-layer
+
+
 #+begin_src python :tangle aupy.py
 from numpy.random import seed
 seed(123)
