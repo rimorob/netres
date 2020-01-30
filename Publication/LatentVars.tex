@@ -1,10 +1,10 @@
 \documentclass{article}
 
 % Use the following line for the initial blind version submitted for review:
-%\usepackage{icml2020}
+\usepackage{icml2020}
 
 % If accepted, instead use the following line for the camera-ready submission:
-\usepackage[accepted]{icml2020}
+%\usepackage[accepted]{icml2020}
 
 \usepackage{natbib}
 
@@ -75,7 +75,7 @@ Footprint In Bayesian Network Residuals}
 \begin{abstract}
 Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency, that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" highlights the need for continued attention to the unobserved confounder problem.  
 
-We present a novel method that aims to control for the latent structure of the data in the estimation of causal effects by iteratively deriving proxies for the latent space from the entirety of residuals of the inferred graphical model.  Under mild assumptions, our method improves structural inference and allows for identifiability of the causal effect. In addition, when the model is being used to predict outcomes, this method un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that such improvement of the predictive model is intrinsically capped and cannot be improved beyond a certain limit as compared to the confounded model.  Furthermore, we propose an algorithm for computing a ceiling for the dimensionality of the latent space which may be useful in future approaches to the problem.
+We present a novel method that aims to control for the latent structure of the data in the estimation of causal effects by iteratively deriving proxies for the latent space from the entirety of residuals of the inferred graphical model.  When used for gaussian graphical models, under mild assumptions our method improves structural inference and allows for identifiability of the causal effect. In addition, when the model is being used to predict outcomes, this method un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that such improvement of the predictive model is intrinsically capped and cannot be improved beyond a certain limit as compared to the confounded model.  Furthermore, we propose an algorithm for computing a ceiling for the dimensionality of the latent space which may be useful in future approaches to the problem.  We extend our methodology beyond GGMs to ordinal variables and nonlinear cases.  Our R package provides both PCA and autoencoder implementations of the methodology, suitable for GGMs with some guarantees and for better performance in general cases but without such guarantees. 
 \end{abstract}
 
 \section{Introduction}
