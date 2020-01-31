@@ -208,7 +208,7 @@ plot.bnlearn_ens = function(obj, output, ensid = 0,freqth = 0.5, cutoff = 0.5, m
 	else if(direction == "both")
 	    model = "all"
 	else
-	    stop("direction not recognized. Only: 'upstream','downsteam', and 'both'.")
+	    stop("direction not recognized. Only: 'upstream','downstream', and 'both'.")
 	##parents = names(igraph::neighborhood(ig, order = maxpath, output, mode = mode)[[1]])
         parents = getDrivers(obj,
                              output = output,
