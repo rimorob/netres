@@ -203,7 +203,7 @@ plot.bnlearn_ens = function(obj, output, ensid = 0,freqth = 0.5, cutoff = 0.5, m
         allnodes = names(igraph::V(ig))
 	if(direction == 'upstream')
 	    mode = 'in'
-	else if(direction == "downsteam")
+	else if(direction == "downstream")
 	    mode = 'out'
 	else if(direction == "both")
 	    model = "all"
