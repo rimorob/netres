@@ -1046,6 +1046,9 @@ latentDiscovery = function(
 			   discretize_confounders = F,
 			   missing_code = NA,
                            testdata = NULL,
+                           height = 8,
+                           width = 10,
+                           showplots = TRUE,
                            ...
 			   ){
     if(debug){
@@ -1259,7 +1262,6 @@ latentDiscovery = function(
 				     truecoef)
 	    }else{
 		message("Saving plot to disk: ", filename)
-
 		cairo_pdf(file.path(workpath, filename), width = 15, height = 10)
 		diagnosticPlots(allrs,
 				ii,
@@ -1271,8 +1273,9 @@ latentDiscovery = function(
 				varmap = varmap,
                                 pvalue=FALSE)
 		dev.off()
+                if(showplots){
 		if(ii == 1)
-		    dev.new(width = 15, height = 10)
+		    dev.new(width = width, height = height)
 		if(debug){
 		    message("About to plot...")
 		    browser()
@@ -1290,6 +1293,7 @@ latentDiscovery = function(
 		## ggplot2:::print.ggplot(
 		##     ggpall
 		## )
+                }
 	    }
 	}
     }
