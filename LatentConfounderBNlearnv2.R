@@ -1235,8 +1235,10 @@ latentDiscovery = function(
                 allpcs = latVars_test$confounders
                 sigpc = latVars_test$details$sigPcIdx
                 latVars_test$confounders = latVars_test$confounders[, sigpc]
-            }else
+            }else{
                 latVars_test = latVars
+                allpcs = NULL
+                }
 	    allrs = getScores(allrs,
 			      ens=newens,
 			      truecoef=truecoef,
