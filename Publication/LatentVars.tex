@@ -73,7 +73,7 @@ Footprint In Bayesian Network Residuals}
 \setlength{\belowcaptionskip}{-5pt}
 
 \begin{abstract}
-Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency, that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" highlights the need for continued attention to the unobserved confounder problem.  
+Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency: that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" highlights the need for continued attention to the unobserved confounder problem.  
 
 We present a novel method that aims to control for the latent structure of the data in the estimation of causal effects by iteratively deriving proxies for the latent space from the entirety of residuals of the inferred graphical model.  When used for gaussian graphical models, under mild assumptions our method improves structural inference and enhances identifiability of the causal effect. In addition, when the model is being used to predict outcomes, this method un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that such improvement of the predictive model is intrinsically capped and cannot rise beyond a certain limit as compared to the confounded model.  Furthermore, we propose an algorithm for computing a ceiling for the dimensionality of the latent space which may be useful in future approaches to the problem.  We extend our methodology beyond GGMs to ordinal variables and nonlinear cases.  Our R package provides both PCA and autoencoder implementations of the methodology, suitable for GGMs with some guarantees and for better performance in general cases but without such guarantees. 
 \end{abstract}
@@ -158,8 +158,8 @@ V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j,\
 	}
 	\begin{minipage}{\dimexpr0.8\textwidth}
 	\caption{Graph $G_u$.  $U$ influences the outcomes $O$, and a number of predictors $V$, confounding many of the $V_j \rightarrow O_k$ relationships.  Gray nodes are affected by $U$.}
-	\end{minipage}
 	\label{fig:sampleGraph}
+	\end{minipage}
 	\end{minipage}\hfill
 	\begin{minipage}[t]{\dimexpr0.6\textwidth}
 	\digraph[scale=0.5]{g2}{
@@ -178,8 +178,8 @@ V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j,\
 	}
 	\begin{minipage}{\dimexpr0.8\textwidth}
 	\caption{Graph $G$.  With $U$ latent, the graph adjusts, introducing spurious edges.}
-	\end{minipage}
 	\label{fig:sampleGraphOnObservables}
+	\end{minipage}
 	\end{minipage}
 \end{figure}
 \FloatBarrier
