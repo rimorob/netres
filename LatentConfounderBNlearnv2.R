@@ -206,10 +206,11 @@ plot.bnlearn_ens = function(obj, output, ensid = 0,freqth = 0.5, cutoff = 0.5, m
 	else if(direction == "downstream")
 	    mode = 'out'
 	else if(direction == "both")
-	    model = "all"
+	    mode = "all"
 	else
 	    stop("direction not recognized. Only: 'upstream','downstream', and 'both'.")
 	##parents = names(igraph::neighborhood(ig, order = maxpath, output, mode = mode)[[1]])
+        if(!missing(output)){
         parents = getDrivers(obj,
                              output = output,
                              maxpath = maxpath,
@@ -217,6 +218,9 @@ plot.bnlearn_ens = function(obj, output, ensid = 0,freqth = 0.5, cutoff = 0.5, m
                              direction = direction)$Drivers
         subnode = c(output, parents)
         subnode = subnode[subnode %in% allnodes]
+        }else{
+            subnode = allnodes
+        }
         if(length(subnode > 1))
             sig = igraph::induced.subgraph(ig, vids = subnode)
         else
@@ -2052,7 +2056,7 @@ getDrivers = function(ens,output, maxpath =4, cutoff = 0.5, direction = 'upstrea
     else if(direction == "downstream")
 	mode = 'out'
     else if(direction == "both")
-	model = "all"
+	mode = "all"
     else
 	stop("direction not recognized. Only: 'upstream','downstream', and 'both'.")
     allres = purrr::map_df(1:nnet, function(ii){
