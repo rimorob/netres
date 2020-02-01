@@ -404,7 +404,7 @@ expandDfRegex = function(mydf, allnames){
     return(newlist)
 }
 
-getREFSresiduals = function(obj, variables){
+getGraphResiduals = function(obj, variables){
     Nboot = length(obj$fitmodels)
     ## first marginalize latent variables if present
     trainmarg = obj$data
@@ -415,6 +415,7 @@ getREFSresiduals = function(obj, variables){
     Ndatasamp = length(obj$fitmodels[[1]][[1]]$fitted.values)
     res = array(rep(0, Nboot * Ndatasamp * 1), dim = c(Ndatasamp, Nboot, 1), dimnames = list(paste0("samp", 1:Ndatasamp), paste0('Boot', 1:Nboot), "Sample1"))
     resall = list()
+
     for(bb in 1:Nboot){
 	bootdata = obj$fitmodels[[bb]]
 	## remove input only
@@ -454,12 +455,14 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
     for (vi in 1:length(modelPrediction$variables)) {
         ep = modelPrediction$variables[[vi]]
         Xbar = modelPrediction$predProb[[vi]] #model
+
         if (is.null(dim(Xbar))) { #just one state
             dim(Xbar) = c(length(Xbar), 1)
         }
         print(paste('vi:', vi))
         X = trainingData[, ep] #data
-        ##For ordinal data:
+
+        ##For discrete ordinal data:
         ##compute distance from this paper (Shepherd et al):
         ##https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5364820/
         ##these are probability-scale residuals:
@@ -481,29 +484,31 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
                     ## - should I use the 2nd column as I'm doing here
                     ## - or should  I use column called "1"
                     ##
-                    dX[ri] = X[ri] - Xbar[ri, 2]
+                    dX[ri] = X[ri] - Xbar[ri, 2, 1] ##note the extra column from GNS REFS usage
                 } else if (isDiscrete(X)) {
                     ##probably broken because of posterior dimensionality; needs to be fixed
                      ##will crash as-is
                     ## assuming the level on the first column is the lowest
                     ## FG: fixed now.
                     ## FG: assuming
-                    if(X[ri] == missing_code){
+
+                    ##BH (1/31/20): changing in the following ways:
+                    ##1. ordinal variable is assumed to be represented as integer levels
+                    ##(this should change into as.ordered() representation later)
+                    ##2. results are presumed to be numeric
+                    print('What is discrete?!')
+                    browser()
+                    if ((is.na(missing_code) & is.na(X[ri])) ||
+                        (!is.na(missing_code) & X[ri] == missing_code)) {
                         dX[ri] = NA
                     }else{
-                        ## remove -1 column if present
+                        ## remove -1 column if present (BH: what is the -1 level???)
                         selcol = colnames(Xbar)
                         selcol = selcol[selcol != "-1"]
-                        Xbar = Xbar[, selcol, drop = F]
-                        lowlev = colnames(Xbar)[1]
-                        ##colnames(Xbar) = as.character(X[ri]:max(X))
-                        cols = as.character(X[ri]:max(X))
-                        cols = cols[cols %in% colnames(Xbar)]
-                        massAbove = sum(Xbar[ri, cols]) - Xbar[ri, as.character(X[ri])]
-                        ##massBelow = sum(Xbar[ri, as.character(seq_len(X[ri] - 1))])
-                        cols = as.character(lowlev:X[ri])
-                        cols = cols[cols %in% colnames(Xbar)]
-                        massBelow = sum(Xbar[ri, cols]) - Xbar[ri, as.character(X[ri])]
+                        Xbar = Xbar[, selcol, 1, drop=F]
+                        
+                        massBelow = length(which(Xbar[ri,,] < X[ri]))
+                        massAbove = length(which(Xbar[ri,,] > X[ri]))
                         dX[ri] = massBelow - massAbove #as per definition of PSR in Shepherd et al
                     }
 
@@ -881,8 +886,13 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
         sigPc = 1:ncol(pr$x)
     } else {
         ##for each principal component, estimate its p-value using beta distribution
+        library(Matrix) #for calculating rank
         p.val = c()
         for (pci in 1:ncol(prVarShuf)) {
+            if (pci == rankMatrix(resDev)) { #special case - do not fit!
+                p.val[pci] = 1
+                next
+            }
             ve = prVarShuf[, pci]
             if(pval_method == 'beta'){
                 library(fitdistrplus)
@@ -988,7 +998,7 @@ library(foreach)
 ##' @param path path for the OTF run
 ##' @param ensloc location of ensemble to use
 ##' @param dataloc location of data to use
-##' @param output
+##' @param output output variable whose parents will be used for latent variable discovery; if null, all variables will be used (this can be slow for large networks)
 ##' @param freqCutoff
 ##' @param maxpath
 ##' @param expand restrict search to parents of vars, which are presumed to be endpoints, else use just the vars
@@ -1011,7 +1021,7 @@ library(foreach)
 latentDiscovery = function(
 			   ens,
 			   data,
-			   output,
+			   output = NULL,
 			   freqCutoff = 0.1,
 			   maxpath = 6,
 			   alpha = 0.05,
@@ -1055,7 +1065,7 @@ latentDiscovery = function(
 	message("At beginning...")
 	browser()
     }
-    if(!output %in% colnames(data))
+    if(!is.null(output) && !output %in% colnames(data))
         stop("output ", output, " is not in data")
     message("Create directory")
     dir.create(workpath)
@@ -1070,10 +1080,19 @@ latentDiscovery = function(
     }
     if(!is.null(seed))
 	set.seed(seed)
-    vars = getDrivers(ens, output, maxpath = maxpath, cutoff = freqCutoff)$Drivers
-    if(include_output){
-	vars = c(vars, output)
+    ##if output is not null, use its drivers to infer the latent variable
+    ##if it is null, use all variables
+    if (!is.null(output)) {
+        vars = getDrivers(ens, output, maxpath = maxpath, cutoff = freqCutoff)$Drivers
+    } else {
+        vars = colnames(data)
     }
+    if(include_output){
+	vars = unique(c(vars, output)) #unique in case output is already in vars
+    }
+    ##remove fixed vars from consideration for residual space since they can never be explained away by the graph
+    vars = setdiff(vars, getFixedVars(ens)) #only use non-fixed vars
+
     nnet = ens$Nboot
     newdata = data
     newens = ens
@@ -1102,7 +1121,7 @@ latentDiscovery = function(
 	##  residuals
 	message("Calculate Residuals")
 	if(useResiduals){
-	    resList = getREFSresiduals (newens,
+	    resList = getGraphResiduals (newens,
 					newvars)
 	    ## deviance
 	    message("Calculates deviances")
@@ -1151,6 +1170,19 @@ latentDiscovery = function(
 	    blacklist = rbind(blacklist,
 			      addblacklist)
 	}
+        ##also ensure the latent variables never drive the true fixed variables
+        ##whether they themselves are defined as fixed or not
+        trueFixed = unique(ens$other_params$blacklist$to)
+        addblacklist = map_df(colnames(df_toadd),
+                              function(vv) {
+                                  data.frame(
+                                      from = vv,
+                                      to = trueFixed,
+                                      stringsAsFactors=F
+                                  )
+                              })
+        blacklist = rbind(blacklist,
+                          addblacklist)        
 	#################
 	## run bnlearn ##
 	#################
@@ -1988,22 +2020,29 @@ getAvgPredictions = function(ens, variables){
 }
 
 getFixedVars = function(ens, vars = ".*"){
-    if(length(vars) == 1)
+    if (length(vars) == 1) {
 	allvars = grep(vars, colnames(ens$data), value = T)
-    else
+    } else {
 	allvars = vars
-    all_inputonly = map(1:ens$Nboot,
+    }
+
+    all_inputonly = purrr::map(1:ens$Nboot,
 			function(bb){
 			    logv = map_lgl(allvars,
-				    function(vv){
-					if(length(ens$fitmodels[[bb]][[vv]]$parents) > 0)
-					    FALSE
-					else
-					    TRUE
-				    })
+                                           function(vv){
+                                               if(length(ens$fitmodels[[bb]][[vv]]$parents) > 0)
+                                                   FALSE
+                                               else
+                                                   TRUE
+                                           })
 			    allvars[logv]
 			})
-    return(all_inputonly)
+    counts = table(unlist(all_inputonly))
+    library(mclust)
+    res = Mclust(counts)
+    ##use the cluster with the highest counts, discard the others
+    keepIdx = which(res$classification == max(res$classification))
+    return(names(keepIdx))
 }
 
 getDrivers = function(ens,output, maxpath =4, cutoff = 0.5, direction = 'upstream'){
@@ -2259,7 +2298,7 @@ predict.LatentConfounder <- function(latConf,
             ## calculate the residuals
             allvars = latConf$details$originalData %>% colnames
             message("Calculating REFS residuals")
-            resList = getREFSresiduals(
+            resList = getGraphResiduals(
                 ens,
                 allvars
             )
