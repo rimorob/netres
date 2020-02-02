@@ -408,16 +408,25 @@ expandDfRegex = function(mydf, allnames){
     return(newlist)
 }
 
-getGraphResiduals = function(obj, variables){
+getGraphResiduals = function(obj, variables, data = NULL){
     Nboot = length(obj$fitmodels)
     ## first marginalize latent variables if present
-    trainmarg = obj$data
+    if(is.null(data))
+        trainmarg = obj$data
+    else
+        trainmarg = data
     latvars = grep("LV_.*", colnames(trainmarg), value = TRUE)
+    if(length(latvars) > 0)
+        message("Marginalizing latent variables")
     for(ll in latvars){
 	trainmarg[[ll]] = mean(trainmarg[[ll]])
     }
-    Ndatasamp = length(obj$fitmodels[[1]][[1]]$fitted.values)
-    res = array(rep(0, Nboot * Ndatasamp * 1), dim = c(Ndatasamp, Nboot, 1), dimnames = list(paste0("samp", 1:Ndatasamp), paste0('Boot', 1:Nboot), "Sample1"))
+    Ndatasamp = nrow(trainmarg)
+    ##Ndatasamp = length(obj$fitmodels[[1]][[1]]$fitted.values)
+    res = array(rep(0, Nboot * Ndatasamp * 1),
+                dim = c(Ndatasamp, Nboot, 1),
+                dimnames = list(paste0("samp", 1:Ndatasamp),
+                                paste0('Boot', 1:Nboot), "Sample1"))
     resall = list()
 
     for(bb in 1:Nboot){
@@ -432,14 +441,14 @@ getGraphResiduals = function(obj, variables){
 			   inonly,
 			   latvars
 		       ))
-	bootorder = obj$boot_orders[[bb]]
-	mod = bn.fit(net, trainmarg[bootorder, ])
+	##bootorder = obj$boot_orders[[bb]]
 	for(vv in vars){
-	    tmp = bootdata[[vv]]
+	    ##tmp = bootdata[[vv]]
+            pred = predict(bootdata,vv, trainmarg)
 	    cres = resall[[vv]]
 	    if(is.null(cres))
 		cres= res
-	    cres[, paste0("Boot", bb), 1] = tmp$fitted.values
+	    cres[, paste0("Boot", bb), 1] = pred##tmp$fitted.values
 	    resall[[vv]] = cres
 	}
     }
@@ -1126,7 +1135,8 @@ latentDiscovery = function(
 	message("Calculate Residuals")
 	if(useResiduals){
 	    resList = getGraphResiduals (newens,
-					newvars)
+                                         newvars,
+                                         newdata)
 	    ## deviance
 	    message("Calculates deviances")
 	    resDev = residualDeviance(newdata,
@@ -1141,7 +1151,7 @@ latentDiscovery = function(
 	    browser()
 	newlatVars = findLatentVars(resDev,
 				 scale. = scale.,
-				 method=method,
+				 method = method,
 				 kernel = kernel,
 				 maxLatentVars = maxLatentVars,
 				 discretize_confounders = discretize_confounders,
@@ -1270,10 +1280,10 @@ latentDiscovery = function(
                                        isOrdinal = isOrdinal,
                                        missing_code = missing_code,
                                        useResiduals = useResiduals,
-                                       resList = resList, allPCs=TRUE)
+                                       ens = oldens, allPCs=TRUE)
                 allpcs = latVars_test$confounders
                 sigpc = latVars_test$details$sigPcIdx
-                latVars_test$confounders = latVars_test$confounders[, sigpc]
+                latVars_test$confounders = latVars_test$confounders[, sigpc, drop = F]
             }else{
                 latVars_test = latVars
                 allpcs = NULL
@@ -1357,9 +1367,9 @@ latentDiscovery = function(
     ## add parameters
     latVars$details$isOrdinal = isOrdinal
     latVars$details$missing_code = missing_code
-    latVars$useResiduals = useResiduals
-    latVars$final_ensemble = newens
-    latVars$resList = resList
+    latVars$details$useResiduals = useResiduals
+    latVars$details$final_ensemble = newens
+    latVars$details$latvar_ensemble = oldens
     return(latVars)
 }
 
@@ -2284,7 +2294,7 @@ predict.robustLinear <- function(pr, newdata) {
 ##keeping the origins of the derivation of the confounder within reach
 predict.LatentConfounder <- function(latConf,
                                      newdata = NULL,
-                                     resList = NULL,
+                                     ens = NULL,
                                      allPCs = FALSE,
                                      isOrdinal = NULL,
                                      missing_code = NULL,
@@ -2303,12 +2313,13 @@ predict.LatentConfounder <- function(latConf,
                 missing_code = latConf$details$missing_code
             ## calculate the residuals
             allvars = latConf$details$originalData %>% colnames
-            if(is.null(resList))
-                resList = latConf$details$resList
-            ## resList = getGraphResiduals(
-            ##     ens,
-            ##     allvars
-            ## )
+            if(is.null(ens))
+                ens = latConf$details$latvar_ensemble
+            resList = getGraphResiduals(
+                ens,
+                allvars,
+                data = newdata
+             )
             message("Calculating PSR")
             resDev = residualDeviance(newdata,
                                       resList,
@@ -2319,6 +2330,7 @@ predict.LatentConfounder <- function(latConf,
         }
     }
     ##res = predict(latConf$details$pcObj, newdata)
+    message("predicting latent variables")
     if(latConf$details$method == 'kernel'){
         varsel = colnames(kernlab::xmatrix(latConf$details$pcObj))
         res = kernlab::predict(latConf$details$pcObj,
