@@ -408,7 +408,7 @@ expandDfRegex = function(mydf, allnames){
     return(newlist)
 }
 
-getGraphResiduals = function(obj, variables, data = NULL){
+getGraphResiduals = function(obj, variables, data = NULL, wrongway = FALSE){
     Nboot = length(obj$fitmodels)
     ## first marginalize latent variables if present
     if(is.null(data))
@@ -443,12 +443,15 @@ getGraphResiduals = function(obj, variables, data = NULL){
 		       ))
 	##bootorder = obj$boot_orders[[bb]]
 	for(vv in vars){
-	    ##tmp = bootdata[[vv]]
+	    tmp = bootdata[[vv]]
             pred = predict(bootdata,vv, trainmarg)
 	    cres = resall[[vv]]
 	    if(is.null(cres))
 		cres= res
-	    cres[, paste0("Boot", bb), 1] = pred##tmp$fitted.values
+            if(wrongway)
+                cres[, paste0("Boot", bb), 1] = tmp$fitted.values
+            else
+                cres[, paste0("Boot", bb), 1] = pred##tmp$fitted.values
 	    resall[[vv]] = cres
 	}
     }
@@ -1072,6 +1075,7 @@ latentDiscovery = function(
                            height = 8,
                            width = 10,
                            showplots = TRUE,
+                           wrongway = FALSE,
                            ...
 			   ){
     if(debug){
@@ -1136,7 +1140,8 @@ latentDiscovery = function(
 	if(useResiduals){
 	    resList = getGraphResiduals (newens,
                                          newvars,
-                                         newdata)
+                                         newdata,
+                                         wrongway = wrongway)
 	    ## deviance
 	    message("Calculates deviances")
 	    resDev = residualDeviance(newdata,

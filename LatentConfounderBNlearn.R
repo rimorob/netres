@@ -1178,7 +1178,7 @@ latentDiscovery = function(
                                 pvalue=FALSE)
 		dev.off()
 		if(ii == 1)
-		    dev.new(width = 15, height = 10)
+		    dev.new(width = 10, height = 8)
 		if(debug){
 		    message("About to plot...")
 		    browser()
