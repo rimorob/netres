@@ -510,7 +510,7 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
                         selcol = colnames(Xbar)
                         selcol = selcol[selcol != "-1"]
                         Xbar = Xbar[, selcol, 1, drop=F]
-                        
+
                         massBelow = length(which(Xbar[ri,,] < X[ri]))
                         massAbove = length(which(Xbar[ri,,] > X[ri]))
                         dX[ri] = massBelow - massAbove #as per definition of PSR in Shepherd et al
@@ -1186,7 +1186,7 @@ latentDiscovery = function(
                                   )
                               })
         blacklist = rbind(blacklist,
-                          addblacklist)        
+                          addblacklist)
 	#################
 	## run bnlearn ##
 	#################
@@ -1270,7 +1270,7 @@ latentDiscovery = function(
                                        isOrdinal = isOrdinal,
                                        missing_code = missing_code,
                                        useResiduals = useResiduals,
-                                       ens = oldens, allPCs=TRUE)
+                                       resList = resList, allPCs=TRUE)
                 allpcs = latVars_test$confounders
                 sigpc = latVars_test$details$sigPcIdx
                 latVars_test$confounders = latVars_test$confounders[, sigpc]
@@ -1358,6 +1358,8 @@ latentDiscovery = function(
     latVars$details$isOrdinal = isOrdinal
     latVars$details$missing_code = missing_code
     latVars$useResiduals = useResiduals
+    latVars$final_ensemble = newens
+    latVars$resList = resList
     return(latVars)
 }
 
@@ -2282,7 +2284,7 @@ predict.robustLinear <- function(pr, newdata) {
 ##keeping the origins of the derivation of the confounder within reach
 predict.LatentConfounder <- function(latConf,
                                      newdata = NULL,
-                                     ens,
+                                     resList = NULL,
                                      allPCs = FALSE,
                                      isOrdinal = NULL,
                                      missing_code = NULL,
@@ -2301,11 +2303,12 @@ predict.LatentConfounder <- function(latConf,
                 missing_code = latConf$details$missing_code
             ## calculate the residuals
             allvars = latConf$details$originalData %>% colnames
-            message("Calculating REFS residuals")
-            resList = getGraphResiduals(
-                ens,
-                allvars
-            )
+            if(is.null(resList))
+                resList = latConf$details$resList
+            ## resList = getGraphResiduals(
+            ##     ens,
+            ##     allvars
+            ## )
             message("Calculating PSR")
             resDev = residualDeviance(newdata,
                                       resList,
