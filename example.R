@@ -183,13 +183,13 @@ load("res_missing.RData", verbose = T)
 
 
 testlin =  latentDiscovery(
-    res_missing_small,
-    nItera=3,
+    res_missing,
+    nItera=5,
     data = trainlv,
     "Z",
-    workpath="pcatest",
-    freqCutoff = 0.01,
-    maxpath = 1,
+    workpath="pcatest_fixed",
+    freqCutoff = 0.005,
+    maxpath = 2,
     alpha = 0.05,
     scale. = TRUE,
     method = "linear",
@@ -200,10 +200,36 @@ testlin =  latentDiscovery(
     include_output = TRUE,
     multiple_comparison_correction = T,
     debug = FALSE,
-    parallel = TRUE
+    parallel = TRUE,
+    width = 10,
+    showplots = T,
+    useResiduals = T
 )
 
 testlin_test =  latentDiscovery(
+    res_missing_small,
+    nItera=5,
+    data = trainlv,
+    "Z",
+    workpath="pcatest",
+    freqCutoff = 0.01,
+    maxpath = 2,
+    alpha = 0.1,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=datalist$test %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    testdata=datalist$test_noisy %>% dplyr::select(-U1.out, -U2.out),
+)
+
+
+testlin_test2 =  latentDiscovery(
     res_missing_small,
     nItera=5,
     data = trainlv,
@@ -215,14 +241,11 @@ testlin_test =  latentDiscovery(
     scale. = TRUE,
     method = "linear",
     latent_iterations = 100,
-    truecoef = datalist$coef %>% filter(output=="Z"),
-    truelatent=datalist$test %>% dplyr::select("U1.out","U2.out"),
     include_downstream = TRUE,
     include_output = TRUE,
     multiple_comparison_correction = T,
     debug = FALSE,
-    parallel = TRUE,
-    testdata=datalist$test_noisy %>% dplyr::select(-U1.out, -U2.out),
+    parallel = TRUE
 )
 
 

@@ -44,17 +44,17 @@ test_wrong =  latentDiscovery(
 )
 
 
-source("LatentConfounderBNlearnv2.R") 
+source("LatentConfounderBNlearnv2.R")
 
 test_right =  latentDiscovery(
     res_missing_small,
-    nItera=20,
+    nItera=10,
     data = trainlv,
     "Z",
     workpath="pca_right",
     freqCutoff = 0.01,
     maxpath = 1,
-    alpha = 0.01,
+    alpha = 0.05,
     scale. = TRUE,
     method = "linear",
     latent_iterations = 100,
@@ -67,3 +67,11 @@ test_right =  latentDiscovery(
     parallel = TRUE,
     wrongway = FALSE ## this undo the fix in getGraphResiduals
 )
+
+latvar_learned = predict(test_right, newdata = trainlv)
+
+latvar_learned$confounders %>% cor(train[, c("U1.out", "U2.out")])
+
+test_right$confounders %>% cor(train[, c("U1.out", "U2.out")])
+
+test_right$confounders %>% cor(latvar_learned$confounders)

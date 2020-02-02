@@ -438,20 +438,23 @@ getGraphResiduals = function(obj, variables, data = NULL, wrongway = FALSE){
         trainmarg = obj$data
     else
         trainmarg = data
-    latvars = grep("LV_.*", colnames(trainmarg), value = TRUE)
-    if(length(latvars) > 0)
+    latvars = grep("LV_.*", colnames(obj$data), value = TRUE)
+    if(length(latvars) > 0){
         message("Marginalizing latent variables")
-    for(ll in latvars){
-	trainmarg[[ll]] = mean(trainmarg[[ll]])
+        for(ll in latvars){
+            if(ll %in% colnames(trainmarg))
+                trainmarg[[ll]] = mean(trainmarg[[ll]])
+            else
+                trainmarg[[ll]] = mean(obj$data[[ll]])
+        }
     }
     Ndatasamp = nrow(trainmarg)
-    ##Ndatasamp = length(obj$fitmodels[[1]][[1]]$fitted.values)
     res = array(rep(0, Nboot * Ndatasamp * 1),
                 dim = c(Ndatasamp, Nboot, 1),
                 dimnames = list(paste0("samp", 1:Ndatasamp),
                                 paste0('Boot', 1:Nboot), "Sample1"))
     resall = list()
-
+    ## bootstraps
     for(bb in 1:Nboot){
 	bootdata = obj$fitmodels[[bb]]
 	## remove input only
@@ -464,7 +467,6 @@ getGraphResiduals = function(obj, variables, data = NULL, wrongway = FALSE){
 			   inonly,
 			   latvars
 		       ))
-	##bootorder = obj$boot_orders[[bb]]
 	for(vv in vars){
 	    tmp = bootdata[[vv]]
             pred = predict(bootdata,vv, trainmarg)
@@ -474,7 +476,7 @@ getGraphResiduals = function(obj, variables, data = NULL, wrongway = FALSE){
             if(wrongway)
                 cres[, paste0("Boot", bb), 1] = tmp$fitted.values
             else
-                cres[, paste0("Boot", bb), 1] = pred##tmp$fitted.values
+                cres[, paste0("Boot", bb), 1] = pred
 	    resall[[vv]] = cres
 	}
     }
@@ -2349,6 +2351,7 @@ predict.LatentConfounder <- function(latConf,
             allvars = latConf$details$originalData %>% colnames
             if(is.null(ens))
                 ens = latConf$details$latvar_ensemble
+            message("get graph residuals")
             resList = getGraphResiduals(
                 ens,
                 allvars,

@@ -29,25 +29,34 @@ K <- backend()
 K$clear_session()
 
 train = datalist$data_noisy
+
+trainlv = train %>% dplyr::select(-U1.out, -U2.out)
+
 vars = getDrivers(res_alldata, 'Z', maxpath = 2, cutoff = 0.1)$Drivers
 
-resList = getREFSresiduals (res_alldata,
-                            vars)
+vars =  getDrivers(res_missing, 'Z', maxpath = 2, cutoff = 0.1)$Drivers
 
-resDev = residualDeviance(train,
+resList = getGraphResiduals (res_missing,
+                             vars,
+                             trainlv)
+
+resDev = residualDeviance(trainlv,
                           resList, isOrdinal = T)
 
 
 
 tst = findLatentVars(resDev,
-                     method = 'autoencoder'
+                     method = 'linear'
                      )
 
 tst$confounders %>%
     cor(train$U2.out)
 
+tst$confounders %>%
+    cor(train$U1.out)
 
-tstlin = findLatentVars(resDev,
+
+etstlin = findLatentVars(resDev,
                      method = 'linear'
                      )
 
@@ -146,6 +155,79 @@ newaepred = fread("predae.csv", data.table = F)
 newaepred %>% cor(train$U1.out)
 
 newaepred %>% cor(train$U2.out)
+#+end_src
+
+* Example for Boris
+#+begin_src R :tangle example_boris.R
+source("LatentConfounderBNlearn.R")
+load("final_model_nolvp_novp.RData", verbose = T)
+
+train = datalist$data_noisy
+trainlv = train %>% dplyr::select(-U1.out, -U2.out)
+
+
+blacklistlv = rbind(data.frame(from = "Z", to = colnames(trainlv)))
+
+library(doParallel)
+cl <- makeCluster(5) ## for multi-threading
+registerDoParallel(cl)
+
+
+
+res_missing_small = getEnsemble2(trainlv, blacklist = blacklistlv,
+			  restart = 100, Nboot = 10,
+			  prior = "vsp",
+			  score = "bge",
+			  algorithm = 'hc',
+			  parallel = TRUE
+			  )
+
+
+test_wrong =  latentDiscovery(
+    res_missing_small,
+    nItera=5,
+    data = trainlv,
+    "Z",
+    workpath="pca_wrong",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.01,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE
+)
+
+
+source("LatentConfounderBNlearnv2.R") 
+
+test_right =  latentDiscovery(
+    res_missing_small,
+    nItera=5,
+    data = trainlv,
+    "Z",
+    workpath="pca_right",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.01,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    wrongway = TRUE ## this undo the fix in getGraphResiduals
+)
 #+end_src
 
 * Tied Weights Autoencoder
