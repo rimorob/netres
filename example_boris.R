@@ -8,7 +8,7 @@ trainlv = train %>% dplyr::select(-U1.out, -U2.out)
 blacklistlv = rbind(data.frame(from = "Z", to = colnames(trainlv)))
 
 library(doParallel)
-cl <- makeCluster(5) ## for multi-threading
+cl <- makeCluster(3) ## for multi-threading
 registerDoParallel(cl)
 
 
@@ -48,7 +48,7 @@ source("LatentConfounderBNlearnv2.R")
 
 test_right =  latentDiscovery(
     res_missing_small,
-    nItera=5,
+    nItera=20,
     data = trainlv,
     "Z",
     workpath="pca_right",
@@ -65,5 +65,5 @@ test_right =  latentDiscovery(
     multiple_comparison_correction = T,
     debug = F,
     parallel = TRUE,
-    wrongway = TRUE ## this undo the fix in getGraphResiduals
+    wrongway = FALSE ## this undo the fix in getGraphResiduals
 )

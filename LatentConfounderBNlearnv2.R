@@ -1,3 +1,26 @@
+##create a private global environment for keeping track of shared variables that are
+##not being passed around
+##more broadly, this whole show needs to be upgraded to S4 or R6 to allow for class variables
+.pkgGlobalEnv <- new.env(parent=emptyenv())
+
+##only variables that are disallowed to be driven by each known variable are fixed
+inferFixedVars <- function(data=NULL, blacklist=NULL) {
+    if (is.null(data)) {
+        data = .pkgGlobalEnv$data
+        blacklist = .pkgGlobalEnv$blacklist
+    }
+    allVars = colnames(data)
+    fixed = c()
+    for (v in unique(blacklist$to)) {
+        otherVars = setdiff(allVars, v)
+        drivers = subset(blacklist, to == v)$from
+        if (length(setdiff(otherVars, drivers)) == 0) {
+            fixed = c(fixed, v)
+        }
+    }
+    return(fixed)
+}
+
 isDiscrete = function (x, th = sqrt(length(x)))
 {
     if (length(unique(x)) < th) {
@@ -210,15 +233,15 @@ plot.bnlearn_ens = function(obj, output, ensid = 0,freqth = 0.5, cutoff = 0.5, m
 	else
 	    stop("direction not recognized. Only: 'upstream','downstream', and 'both'.")
 	##parents = names(igraph::neighborhood(ig, order = maxpath, output, mode = mode)[[1]])
-        if(!missing(output)){
-        parents = getDrivers(obj,
-                             output = output,
-                             maxpath = maxpath,
-                             cutoff = cutoff,
-                             direction = direction)$Drivers
-        subnode = c(output, parents)
-        subnode = subnode[subnode %in% allnodes]
-        }else{
+        if (!missing(output)) {
+            parents = getDrivers(obj,
+                                 output = output,
+                                 maxpath = maxpath,
+                                 cutoff = cutoff,
+                                 direction = direction)$Drivers
+            subnode = c(output, parents)
+            subnode = subnode[subnode %in% allnodes]
+        } else {
             subnode = allnodes
         }
         if(length(subnode > 1))
@@ -512,8 +535,7 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
                     ##1. ordinal variable is assumed to be represented as integer levels
                     ##(this should change into as.ordered() representation later)
                     ##2. results are presumed to be numeric
-                    print('What is discrete?!')
-                    browser()
+
                     if ((is.na(missing_code) & is.na(X[ri])) ||
                         (!is.na(missing_code) & X[ri] == missing_code)) {
                         dX[ri] = NA
@@ -1078,6 +1100,10 @@ latentDiscovery = function(
                            wrongway = FALSE,
                            ...
 			   ){
+    if (!exists('blacklist', envir=.pkgGlobalEnv)) {
+        assign("blacklist", ens$other_params$blacklist, envir=.pkgGlobalEnv)
+        assign('data', data, envir=.pkgGlobalEnv)
+    }
     if(debug){
 	message("At beginning...")
 	browser()
@@ -1189,19 +1215,22 @@ latentDiscovery = function(
 	    blacklist = rbind(blacklist,
 			      addblacklist)
 	}
+
         ##also ensure the latent variables never drive the true fixed variables
         ##whether they themselves are defined as fixed or not
-        trueFixed = unique(ens$other_params$blacklist$to)
-        addblacklist = map_df(colnames(df_toadd),
-                              function(vv) {
-                                  data.frame(
-                                      from = vv,
-                                      to = trueFixed,
-                                      stringsAsFactors=F
-                                  )
-                              })
-        blacklist = rbind(blacklist,
-                          addblacklist)
+        trueFixed = inferFixedVars()
+        if (!is.null(trueFixed)) {
+            addblacklist = map_df(colnames(df_toadd),
+                                  function(vv) {
+                                      data.frame(
+                                          from = vv,
+                                          to = trueFixed,
+                                          stringsAsFactors=F
+                                      )
+                                  })
+            blacklist = rbind(blacklist,
+                              addblacklist)
+        }
 	#################
 	## run bnlearn ##
 	#################
