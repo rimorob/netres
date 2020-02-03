@@ -131,40 +131,34 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ou
         print('Doing ensemble learning locally')
 	  `%op%` <-  `%do%`
       }
-	message("Bootstrapping bnlearn ", Nboot, " times.")
-      mycomb = function(xx, yy){
-	  yy[[1]] = list(yy[[1]])
-	  yy[[2]] = list(yy[[2]])
-	  yy[[4]] = list(yy[[4]])
-	  if(class(xx[[1]]) != "list")
-	      xx[[1]] = list(xx[[1]])
-	  if(class(xx[[2]]) != "list")
-	      xx[[2]] = list(xx[[2]])
-	  if(class(xx[[4]]) != "list")
-	      xx[[4]] = list(xx[[4]])
-	  list(allnet = c(xx[[1]], yy[[1]]), fitmodels = c(xx[[2]], yy[[2]]),
-	       edges = rbind(xx[[3]], yy[[3]]),
-	       boot_order = c(xx[[4]], yy[[4]]))
-      }
-      pdaboot = foreach(ii = 1:Nboot,
-			.combine = mycomb, .packages = c("bnlearn", "foreach", "igraph","dplyr")) %op%{
-			    bootorder = sample(1:nrow(train), nrow(train), replace = TRUE)
-			    trainb = train[bootorder, ]
-			    if(algorithm == "hc")
-				net = bnlearn::hc(trainb, ...)
-			    else if(algorithm == 'tabu')
-				net = bnlearn::tabu(trainb, ...)
-			    else{
-				 stop("Unknown Algorithm. Only hc and tabu.")
-			    }
-			    mod = bn.fit(net, train[bootorder, ])
-			    ## fit edges
-			    edgedf = arc.strength(net,trainb) %>% as.data.frame %>%
-				 mutate(Boot = ii)
-			    list(net, mod, edgedf, bootorder)
-			}
-    ##print('debug here')
-    ##browser()
+    message("Bootstrapping bnlearn ", Nboot, " times.")
+    
+    mycomb = function(xx, yy) {
+        list(allnet = c(xx[[1]], yy[[1]]), fitmodels = c(xx[[2]], yy[[2]]),
+             edges = rbind(xx[[3]], yy[[3]]),
+             boot_order = c(xx[[4]], yy[[4]]))
+    }
+    pdaboot = foreach(ii = 1:Nboot,
+                      .combine = mycomb, .packages = c("bnlearn", "foreach", "igraph","dplyr")) %op% {
+                          bootorder = sample(1:nrow(train), nrow(train), replace = TRUE)
+                          trainb = train[bootorder, ]
+                          if(algorithm == "hc") {
+                              net = bnlearn::hc(trainb, ...)
+                          } else if (algorithm == 'tabu') {
+                              net = bnlearn::tabu(trainb, ...)
+                          } else {
+                              stop("Unknown Algorithm. Only hc and tabu.")
+                          }
+                          mod = bn.fit(net, train[bootorder, ])
+                          ## fit edges
+                          edgedf = arc.strength(net,trainb) %>% as.data.frame %>%
+                              mutate(Boot = ii)
+                          list(allnet=list(net),
+                               fitmodels=list(mod),
+                               edges=edgedf,
+                               boot_order=list(bootorder))
+                      }
+
       pdaboot$edges = pdaboot$edges %>%
 	  dplyr::group_by(from, to) %>%
 	  dplyr::summarise(freq = n() / Nboot) %>%
@@ -2098,11 +2092,17 @@ getFixedVars = function(ens, vars = ".*"){
 			    allvars[logv]
 			})
     counts = table(unlist(all_inputonly))
-    library(mclust)
-    res = Mclust(counts)
-    ##use the cluster with the highest counts, discard the others
-    keepIdx = which(res$classification == max(res$classification))
-    return(names(keepIdx))
+    ##this only works if there are enough counts, which is a combination of variables and bootstraps
+    if (sum(counts) > 60) { #rule of thumb for a gaussian is 30, so 2x30....
+        library(mclust)
+        res = Mclust(counts)
+        ##use the cluster with the highest counts, discard the others
+        keepIdx = which(res$classification == max(res$classification))
+        return(names(keepIdx))
+    }
+    
+    return(all_inputonly)
+        
 }
 
 getDrivers = function(ens,output, maxpath =4, cutoff = 0.5, direction = 'upstream'){
