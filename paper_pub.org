@@ -1,0 +1,203 @@
+#+TITLE:Paper Publications 
+#+AUTHOR: Fred K. Gruber
+#+email: fred@gnshealthcare.com
+#+PROPERTY: header-args :tangle yes :eval never-export
+#+PROPERTY: header-args:R :session *R* :exports both
+#+OPTIONS: ^:{}
+-----
+* Experiments
+#+begin_src R
+source("LatentConfounderBNlearnv2.R")
+load("final_model_nolvp_novp.RData", verbose = T)
+library(doParallel)
+cl <- makeCluster(5) ## for multi-threading
+registerDoParallel(cl)
+
+train = datalist$data_noisy
+trainlv = train %>% dplyr::select(-U1.out, -U2.out)
+
+
+blacklist = rbind(data.frame(from = "Z", to = colnames(train)),
+		      data.frame(from = colnames(train), to = "U1.out"),
+		      data.frame(from = colnames(train), to = "U2.out")
+		      )
+
+blacklistlv = rbind(data.frame(from = "Z", to = colnames(trainlv)))
+
+bootn = c(5, 10, 15, 20, 30, 40, 50)
+niter = 20
+
+allmodels = list()
+for(nn in bootn){
+    message("Bootstrap # = ", nn)
+    ## running full data
+    ens_alldata_boot = getEnsemble2(train,
+                                    blacklist = blacklist,
+                                    restart = 100,
+                                    Nboot = nn,
+                                    prior = "vsp",
+                                    score = "bge",
+                                    algorithm = 'hc',
+                                    parallel = TRUE
+                                    )
+    ## running with missing data
+    ens_missing_boot = getEnsemble2(
+        trainlv,
+        blacklist = blacklistlv,
+        restart = 100,
+        Nboot = nn,
+        prior = "vsp",
+        score = "bge",
+        algorithm = 'hc',
+        parallel = TRUE
+    )
+    save(ens_alldata_boot,
+         ens_missing_boot,
+         file = file.path(
+             "boottest",
+             paste0('ensembles_boot_', nn, ".RData")   
+         )
+         )
+    ## run latent discovery
+    latdiscv =  latentDiscovery(
+        ens_missing_boot,
+        nItera=20,
+        data = trainlv,
+        "Z",
+        workpath="pcatest",
+        freqCutoff = 0.01,
+        maxpath = 1,
+        alpha = 0.05,
+        scale. = TRUE,
+        method = "linear",
+        latent_iterations = 100,
+        include_downstream = TRUE,
+        include_output = TRUE,
+        multiple_comparison_correction = T,
+        debug = FALSE,
+        parallel = TRUE
+    )
+}
+#+end_src
+* Plots
+** R2 plot
+#+begin_src R
+## load resulste
+library(tidyverse)
+##latVar = readRDS("/Users/fred/Documents/projects/latvar/pca_ens50/latVars.RDS")
+latVar = readRDS("/Users/fred/Documents/projects/latvar/pca_right/latVars.RDS")
+library("latex2exp")
+
+## mylabels = c(
+##     "R2a_U1.out" = ("$R^2$ for $U_1$"), 
+##     "R2a_U2.out" = ("$R^2$ for $U_2$")
+## )
+
+mylabels = c(
+     "R2a_U1.out" = TeX("$U_1$"), 
+    "R2a_U2.out" = TeX("$U_2$")
+)
+
+tstrep = latVar$details$Diagnostics %>%
+    dplyr::select(Iteration,
+                  R2a_U1.out,
+                  R2a_U2.out) %>%
+    gather(var, val, -Iteration) %>%
+    mutate(var = factor(var))
+
+
+#+end_src
+#+BEGIN_SRC R  :results output graphics file :exports both :file ./images/fig_paper_r2lat_rep.png
+(ggp = tstrep %>%
+    ggplot(aes(x = Iteration, y = val, colour = var, fill = var)) +
+    ggbeeswarm::geom_beeswarm()  + geom_smooth(span = 0.9, alpha = 0.1) +
+    ggpubr::theme_pubclean() +    ylab(TeX("R^2"))  +
+    ##ggtitle(TeX("Latent Variables Prediction $R^2$")) +
+    scale_colour_manual(values = c("skyblue", "orange"),
+                        labels = expression(U[1], U[2])) +
+    scale_fill_manual(values = c("skyblue", "orange"),
+                      labels = expression(U[1], U[2])) + 
+    theme(strip.text=element_text(size = rel(1.5)),
+          legend.text=element_text(size = rel(1.1)),
+          legend.position = c(0.5, 0.2),
+          legend.direction ="horizontal", 
+          axis.title=element_text(size = rel(1)),
+          plot.title = element_text(size = rel(1.5), hjust=0.5),
+          legend.title=element_blank( )
+          )
+)
+
+
+pdf("./images/fig_paper_r2lat_rep.pdf", width = 5, height = 5)
+print(ggp)
+dev.off()
+ggp
+#+END_SRC
+
+#+RESULTS:
+[[file:./images/fig_paper_r2lat_rep.png]]
+** Coef plot
+#+begin_src R
+plotCoefError = function(latvar, ens_alldata, out ='Z',
+                         drivers = c("V1", "V2")){
+    errallresp = latvar$details$Diagnostics %>%
+        dplyr::select(Repeat, Iteration, Coef) %>%
+        unnest(Coef)
+    errresp = errallresp %>%
+        filter(True_coef >= 0.02)
+    errresp = errresp %>%
+        mutate(Error = abs(error)) %>% 
+        dplyr::select(
+                   Iteration, Variable = input, Error
+               )
+    rmsedfresp = latvar$details$Diagnostics %>%
+        dplyr::select(Iteration, Error_rmse) %>%
+        mutate(Variable = "RMSE") %>%
+        dplyr::select(Iteration, Variable, Error = Error_rmse)
+    allerrorresp = rbind(errresp, rmsedfresp)
+    ## get performance of model with all data
+    score_alldata = getScores(ens=ens_alldata,output=out,
+                              truecoef=datalist$coef %>%
+                                  filter(output=="Z"),
+                              lat_estimates=NULL)
+    error_alldata = score_alldata$Coef[[1]] %>% filter(input %in% drivers)
+    rmse_alldata = score_alldata$Error_rmse
+    allerror_alldata = rbind(
+        error_alldata %>%
+        mutate(error = abs(error)) %>%
+        dplyr::select(Variable = input, Error = error),
+        tribble(
+            ~ Variable, ~ Error,
+            'RMSE', rmse_alldata
+        )
+    )
+    ## plot
+    (ggp = allerrorresp %>%
+         ggplot(aes(x = Iteration, y = Error, colour = Variable, fill = Variable)) + 
+         ggbeeswarm::geom_beeswarm() +
+         geom_smooth(se = TRUE) +
+         geom_hline(data = allerror_alldata,
+                    aes(yintercept = Error, colour = Variable), linetype = 'dashed') +
+         ## annotate("text", x = 0, y = max(allerror_alldata$Error), label = "Obs. All Variables",
+         ##          vjust = -1) + 
+         ylab("Error in Coefficients") + 
+         ggpubr::theme_pubclean() +    
+         theme(strip.text=element_text(size = rel(1)),
+               axis.title=element_text(size = rel(1)),
+               legend.position = c(0.5, 0.7),
+               legend.text = element_text(size = rel(1)), 
+               legend.direction='horizontal', 
+               plot.title = element_text(size = rel(1.5), hjust=0.5))  
+    )
+    return(ggp)
+}
+
+load("res_alldata_small.RData", verbose = T)
+
+graphics.off()
+plotCoefError(latVar, res_alldata_small)
+
+
+
+
+#+end_src

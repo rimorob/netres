@@ -53,9 +53,7 @@ plotIgraph(figtrue, layout = 'neato', sep = 0.0001,
 train = datalist$data_noisy
 library(bnlearn)
 
-
-
-    blacklist = rbind(data.frame(from = "Z", to = colnames(train)),
+blacklist = rbind(data.frame(from = "Z", to = colnames(train)),
 		      data.frame(from = colnames(train), to = "U1.out"),
 		      data.frame(from = colnames(train), to = "U2.out")
 		      )
@@ -77,6 +75,16 @@ library(pracma)
   toc() ## about 50 seconds
 
   save(res_alldata, file = "~/latentconfounderotf/latent_Discovery/res_alldata.RData")
+
+  res_alldata_small = getEnsemble2(train, blacklist = blacklist,
+			      restart = 100, Nboot = 10,
+			      prior = "vsp",
+			      score = "bge",
+			      algorithm = 'hc',
+			      parallel = TRUE
+			      )
+
+save(res_alldata_small, file = 'res_alldata_small.RData')
 
 pdf("Paper/images/res_alldata.pdf", width = 5, height = 5)
 ##  plot(res_alldata, 'Z', layout = 'neato', sep = 0.01)
@@ -208,13 +216,13 @@ testlin =  latentDiscovery(
 
 testlin_test =  latentDiscovery(
     res_missing_small,
-    nItera=5,
+    nItera=10,
     data = trainlv,
     "Z",
     workpath="pcatest",
     freqCutoff = 0.01,
-    maxpath = 2,
-    alpha = 0.1,
+    maxpath = 1,
+    alpha = 0.05,
     scale. = TRUE,
     method = "linear",
     latent_iterations = 100,
@@ -1278,3 +1286,170 @@ simple_evo_repeat = latentDiscovery(
   output="psychPC1",
   parallel = TRUE
 )
+
+
+source("LatentConfounderBNlearn.R")
+load("final_model_nolvp_novp.RData", verbose = T)
+
+train = datalist$data_noisy
+trainlv = train %>% dplyr::select(-U1.out, -U2.out)
+
+
+blacklistlv = rbind(data.frame(from = "Z", to = colnames(trainlv)))
+
+library(doParallel)
+cl <- makeCluster(3) ## for multi-threading
+registerDoParallel(cl)
+
+
+
+res_missing_small = getEnsemble2(trainlv, blacklist = blacklistlv,
+			  restart = 100, Nboot = 10,
+			  prior = "vsp",
+			  score = "bge",
+			  algorithm = 'hc',
+			  parallel = TRUE
+			  )
+
+
+test_wrong =  latentDiscovery(
+    res_missing_small,
+    nItera=5,
+    data = trainlv,
+    "Z",
+    workpath="pca_wrong",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.01,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE
+)
+
+
+source("LatentConfounderBNlearnv2.R")
+
+test_right =  latentDiscovery(
+    res_missing_small,
+    nItera=10,
+    data = trainlv,
+    "Z",
+    workpath="pca_right",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.05,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    wrongway = FALSE ## this undo the fix in getGraphResiduals
+)
+
+latvar_small_testset =  latentDiscovery(
+    res_missing_small,
+    nItera=10,
+    data = trainlv,
+    "Z",
+    workpath="pca_small_testset_20itera",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.05,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=datalist$test %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    testdata=datalist$test_noisy %>% dplyr::select(-U1.out, -U2.out),
+)
+
+
+latvar_small_testset_50 =  latentDiscovery(
+    res_missing_small,
+    nItera=50,
+    data = trainlv,
+    "Z",
+    workpath="pca_small_testset_50itera",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.05,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=datalist$test %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    testdata=datalist$test_noisy %>% dplyr::select(-U1.out, -U2.out),
+)
+
+
+
+latvar_learned = predict(test_right, newdata = trainlv)
+
+latvar_learned$confounders %>% cor(train[, c("U1.out", "U2.out")])
+
+test_right$confounders %>% cor(train[, c("U1.out", "U2.out")])
+
+test_right$confounders %>% cor(latvar_learned$confounders)
+
+
+
+res_missing_50boot = getEnsemble2(trainlv, blacklist = blacklistlv,
+			  restart = 100, Nboot = 50,
+			  prior = "vsp",
+			  score = "bge",
+			  algorithm = 'hc',
+			  parallel = TRUE
+			  )
+
+save(res_missing_50boot, file = "res_missing_50boot.RData")
+
+plot(res_missing_50boot, output = 'Z', edge_labels = 'coefficients')
+
+graphics.off()
+latlin_test =  latentDiscovery(
+    res_missing_50boot,
+    nItera=5,
+    data = trainlv,
+    "Z",
+    workpath="pca_ens50_5itera",
+    freqCutoff = 0.05,
+    maxpath = 1,
+    alpha = 0.05,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 200,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=datalist$test %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    testdata=datalist$test_noisy %>% dplyr::select(-U1.out, -U2.out),
+)
+
+
+
+nboot
