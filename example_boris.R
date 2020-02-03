@@ -1,4 +1,4 @@
-source("LatentConfounderBNlearn.R")
+source("LatentConfounderBNlearnv2.R")
 load("final_model_nolvp_novp.RData", verbose = T)
 
 train = datalist$data_noisy
@@ -17,11 +17,12 @@ res_missing_small = getEnsemble2(trainlv, blacklist = blacklistlv,
 			  restart = 100, Nboot = 10,
 			  prior = "vsp",
 			  score = "bge",
-			  algorithm = 'hc',
+			  algorithm = 'tabu',
 			  parallel = TRUE
 			  )
 
 
+if (0) {
 test_wrong =  latentDiscovery(
     res_missing_small,
     nItera=5,
@@ -42,7 +43,7 @@ test_wrong =  latentDiscovery(
     debug = F,
     parallel = TRUE
 )
-
+}
 
 source("LatentConfounderBNlearnv2.R")
 
