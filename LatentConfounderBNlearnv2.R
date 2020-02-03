@@ -163,6 +163,8 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ou
 				 mutate(Boot = ii)
 			    list(net, mod, edgedf, bootorder)
 			}
+    ##print('debug here')
+    ##browser()
       pdaboot$edges = pdaboot$edges %>%
 	  dplyr::group_by(from, to) %>%
 	  dplyr::summarise(freq = n() / Nboot) %>%
@@ -190,7 +192,7 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ou
       structure(list(
 	  Nboot = Nboot,
 	  boot_orders = pdaboot$boot_order,
-	  algorithm = "hc",
+	  algorithm = algorithm,
 	  other_params = list(...),
 	  edges = pdaboot$edges,
 	  coef = allcoef,
