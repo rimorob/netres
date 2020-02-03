@@ -13,6 +13,7 @@ from keras.layers import Input, Dense, Layer, InputSpec, Dropout, BatchNormaliza
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras import regularizers, activations, initializers, constraints, Sequential
 from keras import backend as K
+##K.clear_session()
 from keras.constraints import UnitNorm, Constraint
 import pandas as pd
 class DenseTied(Layer):

@@ -856,7 +856,9 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
         ##hacked outer dimension - min of 200 or half # of vars
         ##hacked # of layers
         if(is.null(architecture))
-            architecture = rev(round(exp(seq(log(nLatent), log(min(200, ncol(resDev)/2)), length.out=4))))
+            ##be more parsimonious than PCA, use nLatent/2 for the middle layer
+            ##PCA tends to be very broad
+            architecture = rev(round(exp(seq(log(max(nLatent/2, 2)), log(min(100, ncol(resDev)/2)), length.out=4))))
         encoder <- fitAeLatent(data=resDev, architecture=architecture, valData=resDev, epochs=nIter, activation = activation, drRate = drRate, use_batch_norm = use_batch_norm, batch_size = batch_size, metrics = metrics, optimizer = optimizer, learning_rate = learning_rate,activation_coding = activation_coding, activation_output = activation_output,validation_split = validation_split,
                                fname = fname)
         encoded = encoder$predict(as.matrix(resDev)) %>% as.data.frame
@@ -898,6 +900,7 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
                 prVarShuf = sdv^2/sum(sdv)
                 ##prVarShuf[ii, ] = prop.table(svd(prShuf$L)$d^2)
             }else if (method == 'ica') {
+                stop('ICA does not support prediction out of sample easily and has been disabled')
                 prShuf = icafast(scale(rdShuf), nLatent)
                 prVarShuf = prShuf$vafs
             } else {
