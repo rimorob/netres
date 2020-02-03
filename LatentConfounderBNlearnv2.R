@@ -1406,6 +1406,9 @@ latentDiscovery = function(
     latVars$details$useResiduals = useResiduals
     latVars$details$final_ensemble = newens
     latVars$details$latvar_ensemble = oldens
+    ## latvafname = file.path(workpath,
+    ##                        paste0(tools::file_path_sans_ext(filename), ".RDS"))
+    ## saveRDS(latVars, file = latvafname)
     return(latVars)
 }
 
