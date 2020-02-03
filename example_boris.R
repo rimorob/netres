@@ -1,6 +1,8 @@
 source("LatentConfounderBNlearnv2.R")
 load("final_model_nolvp_novp.RData", verbose = T)
 
+set.seed(42)
+
 train = datalist$data_noisy
 trainlv = train %>% dplyr::select(-U1.out, -U2.out)
 
@@ -8,13 +10,13 @@ trainlv = train %>% dplyr::select(-U1.out, -U2.out)
 blacklistlv = rbind(data.frame(from = "Z", to = colnames(trainlv)))
 
 library(doParallel)
-cl <- makeCluster(3) ## for multi-threading
+cl <- makeCluster(4) ## for multi-threading
 registerDoParallel(cl)
 
 
 
 res_missing_small = getEnsemble2(trainlv, blacklist = blacklistlv,
-			  restart = 100, Nboot = 10,
+			  restart = 100, Nboot = 50,
 			  prior = "vsp",
 			  score = "bge",
 			  algorithm = 'tabu',
@@ -33,7 +35,7 @@ test_wrong =  latentDiscovery(
     maxpath = 1,
     alpha = 0.01,
     scale. = TRUE,
-    method = "linear",
+    method = "kernel",
     latent_iterations = 100,
     truecoef = datalist$coef %>% filter(output=="Z"),
     truelatent=train %>% dplyr::select("U1.out","U2.out"),
@@ -49,7 +51,7 @@ source("LatentConfounderBNlearnv2.R")
 
 test_right =  latentDiscovery(
     res_missing_small,
-    nItera=10,
+    nItera=20,
     data = trainlv,
     "Z",
     workpath="pca_right",
