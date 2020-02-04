@@ -476,10 +476,10 @@ getGraphResiduals = function(obj, variables, data = NULL, Nsamples = 1){
             if(Nsamples > 1){
                 for(ss in Nsamples){
                     samp = rnorm(nrow(trainmarg), pred$fit, sds)
-                    cres[, paste0("Boot", bb), ] = samp
+                    cres[, paste0("Boot", bb), paste0("Sample", ss)] = samp
                 }
             }else{
-                cres[, paste0("Boot", bb), 1] = pred$fit
+                cres[, paste0("Boot", bb), "Sample1"] = pred$fit
             }
 	    resall[[vv]] = cres
 	}
