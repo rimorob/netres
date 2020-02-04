@@ -382,7 +382,9 @@ Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elida
 
 Since all results described above refer to gaussian or at most rank-monotonic relationships, and perhaps extend to linear models with interactions, when interactions can be seen as "synthetic features", and since real-world data often doesn't behave this way, we wanted to come up with an approach that might generalize beyond monotonic relationships.  Therefore we pursued latent space discovery using autoencoders.
 
-First, we assessed the cardinality of the latent space using the linear approach, it being a useful "ceiling" for such dimensionality, since non-linear features would be more compact and require lower dimensionality if discovered.  We then constructed an autoencoder where the maximum number of input features was capped at $min(200, number of variables)$, the cap being dictated by practical considerations, and the cardinality of the middle layer was set using the linear estimation of the ceiling of complexity.  Autoencoder was implemented using Keras with Tensorflow backend using Reticulate package in R. Furthermore, autoencoder input and output layers were coupled to improve stability of inference. [FRED - COULD YOU ADD DETAILS AND BEST REFERENCES?]
+First, we assessed the cardinality of the latent space using the linear approach, it being a useful "ceiling" for such dimensionality, since non-linear features would be more compact and require lower dimensionality if discovered.  We then constructed an autoencoder where the maximum number of input features was capped at $min(200, number of variables)$, the cap being dictated by practical considerations, and the cardinality of the middle or coding layer was set using the linear estimation of the ceiling of complexity.
+
+The autoencoder was implemented using Keras with Tensorflow backend and called within R using the Reticulate package \cite{rstudioreticulate_2020}. The encoders and decoder were kept symmetric and in order improve the stability we used tied weights (\cite{forumae}). In addition, the coding layer had additional properties borrowed from PCA including a kernel regularizer promoting orthogonality between weights and an activity regularizer to promote uncorrelated encoded features (see \cite{ranjan_build_2019} for details on implementation and justification). This last property is of particular interest in our application since ideally every dimesion in our latent space should be associated with a different latent variables.
 
 \section{Numerical Demonstration}
 \subsection{Synthetic Data}
@@ -449,8 +451,7 @@ Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10
   \centering
   \begin{minipage}[t]{0.52\linewidth}
     \includegraphics[scale=0.35]{images/fig_paper_r2lat.pdf}
-    \caption{\label{fig:latrecons}$R^2$ in the prediction of the latent variable from the
-      selected principal components.}
+    \caption{\label{fig:latrecons}$R^2$ in the prediction of the latent variable from the selected principal components.}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.42\linewidth}
     \includegraphics[scale=0.35]{images/fig_paper_errors.pdf}
@@ -460,9 +461,26 @@ Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10
 \medskip
 
 \subsection{Experimental Data}
-In order to assess the efficacy of our approach on real-world data, we picked a dataset of a type that is typically hard to infer, even with deep learning.  The dataset in question was obtained from the Cure Huntington's Disease Initiative (CHDI) foundation [FRED, RAY - COULD YOU ASK JEANNE FOR REFERENCE TO WHERE THEY'VE PUBLISHED IT?].  The dataset captured gene expression and CAG repeat expansion of CAG knock-in mice and consisted of striatum gene expression and proteomic data as well as some other miscellaneous measurements.  For the purposes of this analysis, we extracted CAG, weight, mouse age, and a number of gene expression and proteomic measurements, so that gene expression would also have matching proteomic data, and so that top [N - add N] variables rank-correlated with CAG would be present in the analysis.  While the small number of features hampered the inference, the dataset needed to be small enough to be of practical utility for method development.
+In order to assess the efficacy of our approach on real-world data, we picked a dataset of a type that is typically hard to infer, even with deep learning.  The dataset in question was obtained from the Cure Huntington's Disease Initiative (CHDI) foundation \cite{langfelder_integrated_2016}.  The dataset captured gene expression and CAG repeat expansion of CAG knock-in mice and consisted of striatum gene expression and proteomic data as well as some other miscellaneous measurements.  For the purposes of this analysis, we extracted CAG, weight, mouse age, and a number of gene expression and proteomic measurements, so that gene expression would also have matching proteomic data, and so that top [N - add N] variables rank-correlated with CAG would be present in the analysis.  While the small number of features hampered the inference, the dataset needed to be small enough to be of practical utility for method development.
 
 CAG repeats cause Huntingont's disease via a complex and not entirely understood mechanism, where disease age of onset and severity strongly correlate with repeat length.  Furthermore, CAG influences a large number of gene expression and protein level markers.  Therefore CAG is an ideal pleiotropic covariate of a type that our algorithm should be able to uncover.  In this respect, it's an easy target.  However, in every other respect the dataset is very challenging.  The log-linear range of gene expression and expression/protein level correlations is low; further, though gene expression leads to protein level of a given gene product, this correlation is also often low and is obscured by saturation effects and complex, multi-layered molecular regulation mechanisms.  The sample size is, as mentioned above, quite small.  And finally, though CAG varies across the population, some mice were early knock-ins and were not resequenced, their reported values being the knock-in CAG length, and therefore tied among [M - give the number] animals, making it impossible to infer CAG perfectly in principle.  Assessment of performance was assessed as shown in the table below as well as in the figures.
+
+
+\begin{figure}[ht!]
+  \centering
+  \begin{minipage}[t]{0.29\linewidth}
+    \includegraphics[width=\linewidth]{./images/CAG_linear_boot3_iter10.pdf}
+    \caption{\label{fig_cag_linear} Predicted latent variable (CAG) using PCA.}
+  \end{minipage}\hfill
+   \begin{minipage}[t]{0.33\linewidth}
+     \includegraphics[width=\linewidth]{./images/CAG_autoencoder_boot3_iter10.pdf}
+     \caption{\label{fig_cag_ae} Predicted latent variable (CAG) using autoencoder.}
+   \end{minipage}\hfill
+  \end{minipage}
+\end{figure}
+
+\medskip
+
 
 \begin{algorithm}%[H]
  \caption{Assesment Of Inference Of Latent CAG Repeat Length}

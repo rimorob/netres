@@ -616,7 +616,7 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
 fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
                         optimizer = 'RMSprop', metrics = 'mean_squared_error', drRate = 0.2,
                         summarize=TRUE, fname='aeRunSummary.pdf', valData=NULL,
-                        epochs=100, batch_size = NULL, activation = 'sigmoid', activation_coding = "sigmoid", activation_output = "linear", use_batch_norm = TRUE, learning_rate=0.001, validation_split = 0.1) {
+                        epochs=100, batch_size = NULL, activation = 'sigmoid', activation_coding = "sigmoid", activation_output = "linear", use_batch_norm = TRUE, learning_rate=0.001, validation_split = 0.1, callback = NULL) {
     ## reticulate::conda_list()
     ## reticulate::use_condaenv("tensorflow_p36")
     stopifnot(keras::is_keras_available())
@@ -764,7 +764,8 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
         print(summary(decoder))
     }
     message("Fit")
-    history <- decoder$fit(
+    if(is.null(callback)){
+            history <- decoder$fit(
                     x_train,
                     x_train,
                     epochs = as.integer(epochs),
@@ -774,6 +775,20 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
                     shuffle=TRUE,
                     validation_split = validation_split
                 )
+    }else{
+            history <- decoder$fit(
+                    x_train,
+                    x_train,
+                    epochs = as.integer(epochs),
+                    batch_size=as.integer(ifelse(is.null(batch_size),
+                                                 nrow(x_train),
+                                                 batch_size)),
+                    shuffle=TRUE,
+                    validation_split = validation_split,
+                    callbacks = callback
+                )
+    }
+
     if (summarize) {
         message('Saving training history in ', fname)
         ##pdf(file = fname, width=11 )
@@ -814,7 +829,8 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
                            use_batch_norm = TRUE, batch_size = 32,
                            optimizer = 'RMSprop',
                            metrics = 'mean_squared_error', learning_rate = 0.1,validation_split = 0.1,
-                           fname = "aeRunSummary.pdf"
+                           fname = "aeRunSummary.pdf",
+                           callback = NULL
                            ) {
     ## check for missingness
     missing = which(!complete.cases(resDev))
@@ -864,7 +880,7 @@ findLatentVars <- function(resDev, scale. = FALSE, nIter = 100, method = 'kernel
             ##PCA tends to be very broad
             architecture = rev(round(exp(seq(log(max(nLatent/2, 2)), log(min(100, ncol(resDev)/2)), length.out=4))))
         encoder <- fitAeLatent(data=resDev, architecture=architecture, valData=resDev, epochs=nIter, activation = activation, drRate = drRate, use_batch_norm = use_batch_norm, batch_size = batch_size, metrics = metrics, optimizer = optimizer, learning_rate = learning_rate,activation_coding = activation_coding, activation_output = activation_output,validation_split = validation_split,
-                               fname = fname)
+                               fname = fname, callback = callback)
         encoded = encoder$predict(as.matrix(resDev)) %>% as.data.frame
         pr = encoder
         pr$x = encoded #append the predicted latent space to pr
