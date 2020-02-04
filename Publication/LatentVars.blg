@@ -1,48 +1,51 @@
-This is BibTeX, Version 0.99d (TeX Live 2017/Debian)
+This is BibTeX, Version 0.99d (TeX Live 2018)
 Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
 The top-level auxiliary file: LatentVars.aux
 The style file: icml2020.bst
 Database file #1: LatentVars.bib
+Warning--to sort, need author or key in rstudioreticulate_2020
+Warning--to sort, need author or key in forumae
+Warning--empty year in forumae
 Warning--there's a number but no volume in wang_deconfounder_2019
-You've used 23 entries,
+You've used 27 entries,
             2773 wiz_defined-function locations,
-            776 strings with 10150 characters,
-and the built_in function-call counts, 11165 in all, are:
-= -- 1059
-> -- 600
-< -- 20
-+ -- 202
-- -- 179
-* -- 924
-:= -- 1747
-add.period$ -- 113
-call.type$ -- 23
-change.case$ -- 123
-chr.to.int$ -- 23
-cite$ -- 47
-duplicate$ -- 514
-empty$ -- 879
-format.name$ -- 218
-if$ -- 2358
+            800 strings with 11374 characters,
+and the built_in function-call counts, 13455 in all, are:
+= -- 1246
+> -- 811
+< -- 21
++ -- 275
+- -- 248
+* -- 1144
+:= -- 2090
+add.period$ -- 127
+call.type$ -- 27
+change.case$ -- 158
+chr.to.int$ -- 27
+cite$ -- 60
+duplicate$ -- 580
+empty$ -- 1022
+format.name$ -- 289
+if$ -- 2827
 int.to.chr$ -- 1
 int.to.str$ -- 1
-missing$ -- 28
-newline$ -- 162
-num.names$ -- 96
-pop$ -- 203
+missing$ -- 29
+newline$ -- 184
+num.names$ -- 104
+pop$ -- 287
 preamble$ -- 1
-purify$ -- 104
+purify$ -- 135
 quote$ -- 0
-skip$ -- 385
+skip$ -- 457
 stack$ -- 0
-substring$ -- 355
-swap$ -- 76
+substring$ -- 390
+swap$ -- 83
 text.length$ -- 7
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 228
-warning$ -- 1
-while$ -- 98
+type$ -- 272
+warning$ -- 4
+while$ -- 106
 width$ -- 0
-write$ -- 390
-(There was 1 warning)
+write$ -- 442
+(There were 4 warnings)

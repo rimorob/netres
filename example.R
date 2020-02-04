@@ -3,6 +3,7 @@
 ## [[file:~/Documents/gitRepos/latentconfounder/LatentConfounderBNlearn.org::*Simple%20example][Simple example:1]]
 ##setwd("~/Documents/projects//latentconfounder")
 ##setwd("~/Documents/gitRepos/latentconfounder")
+setwd("/Users/fred/Documents/projects/latvar/")
 source("LatentConfounderBNlearnv2.R")
 
     ##source("/users/fred/Documents/gitRepos/latentconfounder/LatentConfounder.R")
@@ -1289,6 +1290,7 @@ simple_evo_repeat = latentDiscovery(
 
 
 source("LatentConfounderBNlearn.R")
+
 load("final_model_nolvp_novp.RData", verbose = T)
 
 train = datalist$data_noisy
@@ -1423,6 +1425,19 @@ res_missing_50boot = getEnsemble2(trainlv, blacklist = blacklistlv,
 			  parallel = TRUE
 			  )
 
+
+vars = getDrivers(ens_missing_boot, "Z", maxpath = 1, cutoff = 0.05)$Drivers
+vars = unique(c(vars, "Z")) #unique in case output is already in vars
+vars = setdiff(vars, getFixedVars(ens_missing_boot)) #only use non-fixed vars
+
+res = getGraphResiduals(ens_missing_boot, vars, ens_missing_boot$data, Nsamples = 3)
+
+resDev = residualDeviance(as.data.frame(ens_missing_boot$data),
+                          res,
+                          isOrdinal=TRUE,
+                          missing_code = NA)
+
+
 save(res_missing_50boot, file = "res_missing_50boot.RData")
 
 plot(res_missing_50boot, output = 'Z', edge_labels = 'coefficients')
@@ -1452,4 +1467,236 @@ latlin_test =  latentDiscovery(
 
 
 
-nboot
+
+load("/Users/fred/Documents/projects/latvar/boottest/boot_15/ensembles_boot_15.RData", verbose = T)
+
+
+
+set.seed(213)
+latdiscv <- latentDiscovery(
+    ens_missing_boot,
+    nItera=15,
+    data = trainlv,
+    "Z",
+    workpath="terst_15_wrong",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.05,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    include_downstream = TRUE,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=datalist$test %>% dplyr::select("U1.out","U2.out"),
+    testdata=datalist$test_noisy %>% dplyr::select(-U1.out, -U2.out),
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = FALSE,
+    parallel = TRUE,
+    minLatentVars=0,
+    wrongway = T
+)
+
+
+
+
+set.seed(213)
+latdiscv <- latentDiscovery(
+    ens_missing_boot,
+    nItera=10,
+    data = trainlv,
+    "Z",
+    workpath="terst_15_right",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.05,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    include_downstream = TRUE,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=datalist$test %>% dplyr::select("U1.out","U2.out"),
+    testdata=datalist$test_noisy %>% dplyr::select(-U1.out, -U2.out),
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = FALSE,
+    parallel = TRUE,
+    minLatentVars=1, 
+    wrongway = F
+)
+
+
+source("LatentConfounderBNlearn.R")
+set.seed(213)
+test_wrong =  latentDiscovery(
+    ens_missing_boot,
+    nItera=20,
+    data = trainlv,
+    "Z",
+    workpath="pca_old_code",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.01,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE
+)
+
+
+source("LatentConfounderBNlearn0.R")
+
+set.seed(213)
+test_wrong_fixed =  latentDiscovery(
+    ens_missing_boot,
+    nItera=20,
+    data = trainlv,
+    "Z",
+    workpath="pca_old_code_fixed",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.4,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE
+)
+
+
+set.seed(213)
+test_new_samples =  latentDiscovery(
+    ens_missing_boot,
+    nItera=10,
+    data = trainlv,
+    "Z",
+    workpath="newcode_samples",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.01,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    Nsamples = 10
+)
+
+
+ens_missing_boot$algorithm = 'tabu'
+set.seed(213)
+test_new_samples =  latentDiscovery(
+    ens_missing_boot,
+    nItera=10,
+    data = trainlv,
+    "Z",
+    workpath="newcode_samples_tabu",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.01,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    Nsamples = 10
+)
+
+set.seed(213)
+test_new_samples =  latentDiscovery(
+    ens_missing_boot,
+    nItera=10,
+    data = trainlv,
+    "Z",
+    workpath="newcode_mle_tabu",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.01,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    Nsamples = 1
+)
+
+
+ens_missing_boot$algorithm = 'hc'
+set.seed(213)
+test_new_samples =  latentDiscovery(
+    ens_missing_boot,
+    nItera=10,
+    data = trainlv,
+    "Z",
+    workpath="newcode_mle_hc",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.01,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    Nsamples = 1
+)
+
+
+load("/Users/fred/Documents/projects/latvar/boottest/boot_50/ensembles_boot_50.RData", verbose = T)
+
+ens_missing_boot$algorithm = 'tabu'
+
+set.seed(213)
+test_new_samples_tabu_50boot =  latentDiscovery(
+    ens_missing_boot,
+    nItera=10,
+    data = trainlv,
+    "Z",
+    workpath="newcode_50_mle_tabu",
+    freqCutoff = 0.01,
+    maxpath = 1,
+    alpha = 0.01,
+    scale. = TRUE,
+    method = "linear",
+    latent_iterations = 100,
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=train %>% dplyr::select("U1.out","U2.out"),
+    include_downstream = TRUE,
+    include_output = TRUE,
+    multiple_comparison_correction = T,
+    debug = F,
+    parallel = TRUE,
+    Nsamples = 10
+)
+
+

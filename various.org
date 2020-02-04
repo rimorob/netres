@@ -13,17 +13,59 @@ https://github.com/rstudio/keras/issues/778
 https://stackoverflow.com/questions/57242141/how-to-share-weight-between-two-keras-layers
 https://towardsdatascience.com/build-the-right-autoencoder-tune-and-optimize-using-pca-principles-part-ii-24b9cca69bd6
 
+visualizating with tensorboard
+https://medium.com/@xianbao.qian/keras-model-visualization-on-tensorboard-8da47a6442bf
+
+Create a model and write graph to logdir folder
+import tensorflow as tf
+graph = tf.Graph()
+m = build_model()  # Your model implementation
+with graph.as_default():
+  # compile method actually creates the model in the graph.
+  m.compile(loss='categorical_crossentropy',
+            optimizer='adam', metrics=['accuracy'])
+writer = tf.summary.FileWriter(logdir='logdir', graph=graph)
+writer.flush()
+Then start TensorBoard on that folder from console
+tensorboard --logdir logdir
+
+Run tensorboard --logdir=YOUR_LOG_DIR --host=127.0.0.1 in command prompt, and type localhost:6006 in chrome, this works for me (Win10, anaconda4.3.16, python3.5.3, tensorflow1.1.0).
+
+ Compile the model
+model.compile(loss=keras.losses.categorical_crossentropy,
+              optimizer=keras.optimizers.Adam(),
+              metrics=['accuracy'])
+
+# Define Tensorboard as a Keras callback
+tensorboard = TensorBoard(
+  log_dir='.\logs',
+  histogram_freq=1,
+  write_images=True
+)
+keras_callbacks = [
+  tensorboard
+]
+
+# Fit data to model
+model.fit(input_train, target_train,
+          batch_size=batch_size,
+          epochs=no_epochs,
+          verbose=verbosity,
+          validation_split=validation_split,
+          callbacks=keras_callbacks)
 * Test autoencoders
 #+begin_src R
 source("LatentConfounderBNlearnv2.R")
 reticulate::conda_list()
 reticulate::use_condaenv("tensorflowv1")
-source_python("aupy.py")
+reticulate::source_python("aupy.py")
 load("/Users/fred/Documents/projects/latvar/res_alldata.RData", verbose = T)
 load("final_model_nolvp_novp.RData", verbose = T)
 
-library(keras)
-keras::is_keras_available()
+load('res_missing.RData', verbose = T)
+
+## library(keras)
+## keras::is_keras_available()
 tensorflow::tf_version()
 K <- backend()
 K$clear_session()
@@ -46,8 +88,42 @@ resDev = residualDeviance(trainlv,
 
 
 tst = findLatentVars(resDev,
-                     method = 'linear'
+                     method = 'autoencoder'
                      )
+
+tensorboard = TensorBoard(
+  log_dir='./logs',
+  histogram_freq=1,
+  write_images=TRUE
+)
+
+keras_callbacks = list(
+  tensorboard
+)
+
+
+tst = findLatentVars(resDev,
+                     method = 'autoencoder',
+                     callback = keras_callbacks
+                     )
+
+
+
+tf = import("tensorflow")
+graph = tf$Graph()
+writer = tf$summary$FileWriter("logs", graph)
+writer$flush()
+
+K = import("keras")
+plot_model = K$utils$vis_utils$plot_model
+
+plot_model(tst$details$pcObj, to_file = "model_ae.pdf", show_shapes = TRUE, show_layer_names = TRUE)
+
+
+annv = import("ann_visualizer.visualize")
+ann_viz = annv$ann_viz
+
+ann_viz(tst$details$pcObj, filename = 'plotae.gv')
 
 tst$confounders %>%
     cor(train$U2.out)
@@ -155,6 +231,10 @@ newaepred = fread("predae.csv", data.table = F)
 newaepred %>% cor(train$U1.out)
 
 newaepred %>% cor(train$U2.out)
+
+
+setwd("/Users/fred/Documents/projects/latvar/")
+latvarae = readRDS("aetest/latVars.RDS")
 #+end_src
 
 * Example for Boris

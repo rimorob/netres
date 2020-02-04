@@ -7,9 +7,11 @@
 -----
 * Experiments
 #+begin_src R
+setwd("/Users/fred/Documents/projects/latvar/")
 source("LatentConfounderBNlearnv2.R")
 load("final_model_nolvp_novp.RData", verbose = T)
 library(doParallel)
+
 cl <- makeCluster(5) ## for multi-threading
 registerDoParallel(cl)
 
@@ -21,16 +23,19 @@ blacklist = rbind(data.frame(from = "Z", to = colnames(train)),
 		      data.frame(from = colnames(train), to = "U1.out"),
 		      data.frame(from = colnames(train), to = "U2.out")
 		      )
-
 blacklistlv = rbind(data.frame(from = "Z", to = colnames(trainlv)))
 
-bootn = c(5, 10, 15, 20, 30, 40, 50)
+##bootn = c(5, 10, 15, 20, 30, 40, 50)
+bootn = c(30, 40, 50)
 niter = 20
 
-allmodels = list()
 for(nn in bootn){
     message("Bootstrap # = ", nn)
-    ## running full data
+    bootdir = file.path("boottestv2",
+                        paste0("boot_", nn))
+    dir.create(bootdir, recursive = T)
+    message("running full data")
+    set.seed(213)
     ens_alldata_boot = getEnsemble2(train,
                                     blacklist = blacklist,
                                     restart = 100,
@@ -40,7 +45,7 @@ for(nn in bootn){
                                     algorithm = 'hc',
                                     parallel = TRUE
                                     )
-    ## running with missing data
+    message("running with missing data")
     ens_missing_boot = getEnsemble2(
         trainlv,
         blacklist = blacklistlv,
@@ -54,29 +59,35 @@ for(nn in bootn){
     save(ens_alldata_boot,
          ens_missing_boot,
          file = file.path(
-             "boottest",
+             bootdir, 
              paste0('ensembles_boot_', nn, ".RData")   
          )
          )
-    ## run latent discovery
-    latdiscv =  latentDiscovery(
-        ens_missing_boot,
-        nItera=20,
-        data = trainlv,
-        "Z",
-        workpath="pcatest",
-        freqCutoff = 0.01,
-        maxpath = 1,
-        alpha = 0.05,
-        scale. = TRUE,
-        method = "linear",
-        latent_iterations = 100,
-        include_downstream = TRUE,
-        include_output = TRUE,
-        multiple_comparison_correction = T,
-        debug = FALSE,
-        parallel = TRUE
-    )
+    message("run latent discovery")
+    ##    try({
+    latdiscv <- latentDiscovery(
+      ens_missing_boot,
+      nItera=niter,
+      data = trainlv,
+      "Z",
+      workpath=bootdir,
+      freqCutoff = 0.01,
+      maxpath = 1,
+      alpha = 0.05,
+      scale. = TRUE,
+      method = "linear",
+      latent_iterations = 100,
+      include_downstream = TRUE,
+      truecoef = datalist$coef %>% filter(output=="Z"),
+      truelatent=datalist$test %>% dplyr::select("U1.out","U2.out"),
+      testdata=datalist$test_noisy %>% dplyr::select(-U1.out, -U2.out),
+      include_output = TRUE,
+      multiple_comparison_correction = T,
+          debug = FALSE,
+          parallel = TRUE,
+          Nsamples = 10
+        )
+##    })
 }
 #+end_src
 * Plots
@@ -85,7 +96,7 @@ for(nn in bootn){
 ## load resulste
 library(tidyverse)
 ##latVar = readRDS("/Users/fred/Documents/projects/latvar/pca_ens50/latVars.RDS")
-latVar = readRDS("/Users/fred/Documents/projects/latvar/pca_right/latVars.RDS")
+latVar = readRDS("/Users/fred/Documents/projects/latvar/boottestv2/boot_50/latVars.RDS")
 library("latex2exp")
 
 ## mylabels = c(
@@ -110,7 +121,7 @@ tstrep = latVar$details$Diagnostics %>%
 #+BEGIN_SRC R  :results output graphics file :exports both :file ./images/fig_paper_r2lat_rep.png
 (ggp = tstrep %>%
     ggplot(aes(x = Iteration, y = val, colour = var, fill = var)) +
-    ggbeeswarm::geom_beeswarm()  + geom_smooth(span = 0.9, alpha = 0.1) +
+    ggbeeswarm::geom_beeswarm()  + geom_smooth(span = 0.8, alpha = 0.1) +
     ggpubr::theme_pubclean() +    ylab(TeX("R^2"))  +
     ##ggtitle(TeX("Latent Variables Prediction $R^2$")) +
     scale_colour_manual(values = c("skyblue", "orange"),
@@ -137,7 +148,7 @@ ggp
 #+RESULTS:
 [[file:./images/fig_paper_r2lat_rep.png]]
 ** Coef plot
-#+begin_src R
+#+BEGIN_SRC R  :results output graphics file :exports both :file ./images/fig_paper_errors.png
 plotCoefError = function(latvar, ens_alldata, out ='Z',
                          drivers = c("V1", "V2")){
     errallresp = latvar$details$Diagnostics %>%
@@ -180,7 +191,8 @@ plotCoefError = function(latvar, ens_alldata, out ='Z',
                     aes(yintercept = Error, colour = Variable), linetype = 'dashed') +
          ## annotate("text", x = 0, y = max(allerror_alldata$Error), label = "Obs. All Variables",
          ##          vjust = -1) + 
-         ylab("Error in Coefficients") + 
+       ylab("Error in Coefficients") +
+       ylim(0, 1) + 
          ggpubr::theme_pubclean() +    
          theme(strip.text=element_text(size = rel(1)),
                axis.title=element_text(size = rel(1)),
@@ -192,12 +204,65 @@ plotCoefError = function(latvar, ens_alldata, out ='Z',
     return(ggp)
 }
 
-load("res_alldata_small.RData", verbose = T)
+load("/Users/fred/Documents/projects/latvar/boottestv2/boot_50/ensembles_boot_50.RData", verbose = TRUE)
 
-graphics.off()
-plotCoefError(latVar, res_alldata_small)
 
+##graphics.off()
+
+pdf("images/fig_paper_errors.pdf")
+plotCoefError(latVar, ens_alldata_boot)
+dev.off()
+
+plotCoefError(latVar, ens_alldata_boot)
 
 
 
 #+end_src
+
+#+RESULTS:
+[[file:./images/fig_paper_errors.png]]
+** Network plots
+*** with missing data
+#+BEGIN_SRC R  :results output graphics file :exports both :file images/fig_graph_missing.png
+
+plot.bnlearn_ens(ens_missing_boot,"Z",0, cutoff = 0.4,
+                 maxpath=2,nodesep=0.001,
+                 freqth = 0, 
+                 sep = 0.1, 
+	layout = 'dot', edge_labels = "frequency",
+	edgeweights=T,
+	edgelabelsFilter = 0.5, 
+	edge_color=tribble(~inp,~out,~color,"V1","Z","red","V2","Z","red"
+			   ),
+        filename = "images/estimated_network_missingdata.pdf",
+        saveToFile = F, 
+	fill = list("U.*" = 'darksalmon',
+		    "Z" = 'yellow',
+		    "^V1$|V2$" = 'skyblue'))
+
+
+#+end_src
+
+#+RESULTS:
+[[file:images/fig_graph_missing.png]]
+
+#+BEGIN_SRC R  :results output graphics file :exports both :file images/fig_graph_infered.png
+plot.bnlearn_ens(latVar$details$Diagnostics$Ensemble[[21]],"Z",0, cutoff = 0.4,
+                 maxpath=2,nodesep=0.01,
+                 freqth = 0, 
+                 sep = 0.1, 
+	layout = 'dot', edge_labels = "frequency",
+	edgeweights=T,
+	edgelabelsFilter = 0.5, 
+	edge_color=tribble(~inp,~out,~color,"V1","Z","red","V2","Z","red"
+			   ),
+        filename = "images/estimated_network_infered.pdf",
+        saveToFile = F, 
+	fill = list("U.*" = 'darksalmon',
+		    "Z" = 'yellow',
+		    "^V1$|V2$" = 'skyblue'))
+
+#+END_SRC
+
+#+RESULTS:
+[[file:images/fig_graph_infered.png]]

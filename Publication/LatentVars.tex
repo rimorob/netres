@@ -122,9 +122,9 @@ Consider a factorized joint probability distribution over a set of observed and 
 \label{tab:notation}
 \end{table}
 
-Assume that the joint distribution $D_{u}$ or $D$ is factorized as a directed acyclic graph, $G_{u}$ or $G$.  We will consider individual conditional probabilities describing nodes and their parents, $P(V | Pa{V}, \theta)$, where $\theta$ refers to the parameters linking  the parents of $V$ to $V$.  $\hat{\theta}$ will refer to an estimate of these parameters.  We will further assume that $G$ is constructed subject to regularization and using unbiased estimators for $P(V | Pa{V}), \hat{\theta})$.  We will further assume that $D_u$ plus any given constraints are sufficient to infer the true graph up to Markov equivalence.  For convenience, we'll focus on the actual true graph's parameters, so that, using unbiased estimators, $E[\hat{\theta_m}|D_u] = \theta_m, \forall m$.
+Assume that the joint distribution $D_{u}$ or $D$ is factorized as a directed acyclic graph, $G_{u}$ or $G$.  We will consider individual conditional probabilities describing nodes and their parents, $P(V | Pa{V}, \theta)$, where $\theta$ refers to the parameters linking  the parents of $V$ to $V$.  $\hat{\theta}$ will refer to an estimate of these parameters.  We will further assume that $G$ is constructed subject to regularization and using unbiased estimators for $P(V | Pa{V}), \hat{\theta}$.  We will further assume that $D_u$ plus any given constraints are sufficient to infer the true graph up to Markov equivalence.  For convenience, we'll focus on the actual true graph's parameters, so that, using unbiased estimators, $E[\hat{\theta_m}|D_u] = \theta_m, \forall m$.
 
-Mirroring $D$ (or $D_u$), we will define a matrix $R$ (or $R_u$) of the same dimensions - $s \times (v + o)$ (or $s \times (v + o + u)$)) - that captures the residuals of modeling every variable $N \in \{V, O, (U)\}$ via $G$ (or $G_u$).  In the linear case, these would be regular linear model residuals, but more generally we will consider probability scale residuals (PSR, \cite{shepherd_probability-scale_2016}).  That is, we define $R[i, j] = PSR(P(V_j | parents(V_j), \hat{\theta}_j) | D[i, j])$, the residuals of $V_j$ given its graph parents.  Notice that the use of probability-scale residuals allows us to define $R$ and $R_u$ for all ordinal variable types, up to rank-equivalence.
+Mirroring $D$ (or $D_u$), we will define a matrix $R$ (or $R_u$) of the same dimensions - $s \times (v + o)$ (or $s \times (v + o + u)$) - that captures the residuals of modeling every variable $N \in \{V, O, (U)\}$ via $G$ (or $G_u$).  In the linear case, these would be regular linear model residuals, but more generally we will consider probability scale residuals (PSR, \cite{shepherd_probability-scale_2016}).  That is, we define $R[i, j] = PSR(P(V_j | parents(V_j), \hat{\theta}_j) | D[i, j])$, the residuals of $V_j$ given its graph parents.  Notice that the use of probability-scale residuals allows us to define $R$ and $R_u$ for all ordinal variable types, up to rank-equivalence.
 
 \section{Diagnosing Latent Confounding}
 
@@ -263,7 +263,7 @@ Note that this approach is similar, in the linear case, to that in \cite{elidan_
 
 \section{Capping improvement}
 
-The most important utility of causal modeling is to identify drivers as well as drivers of drivers of outcomes of interest.  These drivers of drivers may have practical importance. For example, in the development of a drug, direct predictors of an outcome (e.g. $V_6$ pointing to $O_{1}$ in Figure \ref{fig:sampleGraph} may not be viable targets but upstream variables (e.g. $V_{5}$ may be promising targets and the direct parents of the outcome mediate the effect. In the presence of latent confounding, the identifiability of causal effects of outcomes is jeopardized \cite{hernan_estimating_2006}.  For example, in Figure \ref{fig:sampleGraph} $U$ induces correlation among $V_3$, $V_4$, $V_5$, and $V_6$ even when these variables are conditionally independent given $U$.  
+The most important utility of causal modeling is to identify drivers as well as drivers of drivers of outcomes of interest.  These drivers of drivers may have practical importance. For example, in the development of a drug, direct predictors of an outcome (e.g. $V_6$ pointing to $O_{1}$ in Figure \ref{fig:sampleGraph}) may not be viable targets but upstream variables (e.g. $V_{5}$) may be promising targets and the direct parents of the outcome mediate the effect. In the presence of latent confounding, the identifiability of causal effects of outcomes is jeopardized \cite{hernan_estimating_2006}.  For example, in Figure \ref{fig:sampleGraph} $U$ induces correlation among $V_3$, $V_4$, $V_5$, and $V_6$ even when these variables are conditionally independent given $U$.  
 
 The extent of the problem of unmeasured confounding can be quantified in more detail.  Suppose we model $O_1$ without controlling for $U$ (\ref{fig:sampleGraphOnObservables}): $$O_1 = \beta_0 + \beta_3 V_3 + \beta_4 V_4 + \beta_5 V_5 + \beta_6 V_6 + \dots.$$  Setting the coefficient of determination for the model $$V_3 = \alpha_0 + \alpha_4 V_4 + \alpha_5 V_5 + \alpha_6 V_6 + \dots.$$ equal to $\rho_3^2$.  Then the estimated variance of $\beta_3$ in the presence of collinearity can be related to that when collinearity is absent via the following formula (\cite{rawlings_applied_1998}):
 \begin{equation}
@@ -280,11 +280,12 @@ Consider an output $O_j$.  While it is difficult to describe the limit of error 
 \begin{equation}
 \begin{split}
 O_i = \beta_{i0} + B_W W (a) + \xi_i \qquad (a)\\
-O_i = \beta_{i0} + B_W W + B_{X \setminus W} (X \setminus W)) + \xi_i \qquad (b)\\
+O_i = \beta_{i0} + B_W W + B_{X \setminus W} (X \setminus W)
+ + \xi_i \qquad (b)\\
 O_i^U = \beta_{i0}^U + B_Z^U Z + B^U U + \xi_i \qquad (c).
 \end{split}
 \end{equation}
-Model (a) is the model that was actually accepted, subject to regularization, in G.  Model (b) is the "complete" model of $O_i$ that controls for $U$ non-parsimoniously by controlling for all variables affected by $U$ and not originally in the model.  The third model, (c), is the ideal parsimonious model when U is known.  We can compare the quality of these models by Bayesian Score, and the full score, in large sample sizes, can be approximated by BIC - the Bayesian Information Criterion (\cite{koller_probabilistic_2009}.  We assume that the third of these equations would have the lowest BIC (being the best model), and the first being the second highest, since we know that the set of variables $X \setminus W$ didn't make it into the first equation subject to regularization by BIC.  Assuming $n$ samples,
+Model (a) is the model that was actually accepted, subject to regularization, in G.  Model (b) is the "complete" model of $O_i$ that controls for $U$ non-parsimoniously by controlling for all variables affected by $U$ and not originally in the model.  The third model, (c), is the ideal parsimonious model when U is known.  We can compare the quality of these models by Bayesian Score, and the full score, in large sample sizes, can be approximated by BIC - the Bayesian Information Criterion (\cite{koller_probabilistic_2009}).  We assume that the third of these equations would have the lowest BIC (being the best model), and the first being the second highest, since we know that the set of variables $X \setminus W$ didn't make it into the first equation subject to regularization by BIC.  Assuming $n$ samples,
 \begin{equation}
 \begin{split}
 BIC(O_i = \beta_{i0} + B_W W + \xi_i) = b_a \qquad (a)\\
@@ -412,12 +413,9 @@ When the confounders are unobserved, the reconstruction of the network
 introduces many false edges and results in a four-times-larger RMSE. Figure \ref{fig_missing} shows the reconstructed network, where the red edges are the true edges between $V_1$ and $V_2$
 and the outcome $Z$.
 
-We ran algorithms \ref{alg:latentEM} and \ref{alg:linearPCA} for 10
+We ran algorithms \ref{alg:latentEM} and \ref{alg:linearPCA} for 20
 iterations using PCA to reconstruct the latent space from the
-residuals with the assumption that the latent variables were source nodes. We then tracked the latent variable reconstruction as well as the error in the coefficient's estimates. Figure \ref{fig:latrecons} shows the adjusted $R^2$ between each of the true latent variables and the prediction obtained
-from the estimated latent space across iterations. The lines and error bands are calculated using LOESS. The estimated latent space is predictive of both
-the latent variables, and the iterative procedure improves the $R^2$ with
-respect to $U_1$ from 0.57 to 0.61 converging in about 5 iterations.
+residuals with the assumption that the latent variables were source nodes. We then tracked the latent variable reconstruction in a out of sample test set as well as the error in the coefficient's estimates. Figure \ref{fig:latrecons} shows the adjusted $R^2$ between each of the true latent variables and the prediction obtained from the estimated latent space across iterations. The lines and error bands are calculated using LOESS. The estimated latent space is predictive of both the latent variables, and the iterative procedure improves the $R^2$ with respect to $U_1$ from 0.49 at the first iterations to about 0.505  tin about 3 iterations.
 
 Figure \ref{fig:errorcoef} shows the total error in the coefficients
 between all variables in the networks and the outcome $Z$ (RMSE) as
@@ -427,7 +425,7 @@ level of the same magniture as the error when all variables are
 observed (dashed lines).
 
 
-Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10. The number of edges arriving to the outcome was reduced considerably with respect to the network prior to inferring latent variables (Figure \ref{fig_missing}). In addition, the coefficients connecting V1 and V2 to the outcome are now closer to their true values. This represents an improvement in ACE estimation.
+Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10. The number of edges arriving to the outcome was reduced considerably with respect to the network prior to inferring latent variables (Figure \ref{fig_missing}). In addition, the coefficients connecting V1 and V2 to the outcome are now closer to their true values (Figure \ref{fig:errorcoef}). This represents an improvement in ACE estimation.
 %0.28\linewidth
 
 \begin{figure}[ht!]
@@ -449,12 +447,12 @@ Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10
 \end{figure}
 \begin{figure}[ht]
   \centering
-  \begin{minipage}[t]{0.52\linewidth}
+  \begin{minipage}[t]{0.42\linewidth}
     \includegraphics[scale=0.35]{images/fig_paper_r2lat.pdf}
     \caption{\label{fig:latrecons}$R^2$ in the prediction of the latent variable from the selected principal components.}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.42\linewidth}
-    \includegraphics[scale=0.35]{images/fig_paper_errors.pdf}
+    \includegraphics[scale=0.2]{images/fig_paper_errors.pdf}
     \caption{\label{fig:errorcoef}Error in coefficients as a function of the iterations.}
   \end{minipage}
 \end{figure}
@@ -468,17 +466,15 @@ CAG repeats cause Huntingont's disease via a complex and not entirely understood
 
 \begin{figure}[ht!]
   \centering
-  \begin{minipage}[t]{0.29\linewidth}
+  \begin{minipage}[t]{0.49\linewidth}
     \includegraphics[width=\linewidth]{./images/CAG_linear_boot3_iter10.pdf}
     \caption{\label{fig_cag_linear} Predicted latent variable (CAG) using PCA.}
   \end{minipage}\hfill
-   \begin{minipage}[t]{0.33\linewidth}
+   \begin{minipage}[t]{0.49\linewidth}
      \includegraphics[width=\linewidth]{./images/CAG_autoencoder_boot3_iter10.pdf}
      \caption{\label{fig_cag_ae} Predicted latent variable (CAG) using autoencoder.}
    \end{minipage}\hfill
-  \end{minipage}
 \end{figure}
-
 \medskip
 
 

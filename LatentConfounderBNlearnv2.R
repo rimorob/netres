@@ -1418,17 +1418,17 @@ latentDiscovery = function(
 	   file = finaldataloc
 	   )
     latVars$details$dataloc = finaldataloc
-    saveRDS(latVars,
-	    file = file.path(
-		workpath,
-		"latVars.RDS")
-	    )
     ## add parameters
     latVars$details$isOrdinal = isOrdinal
     latVars$details$missing_code = missing_code
     latVars$details$useResiduals = useResiduals
     latVars$details$final_ensemble = newens
     latVars$details$latvar_ensemble = oldens
+    saveRDS(latVars,
+	    file = file.path(
+		workpath,
+		"latVars.RDS")
+	    )
     ## latvafname = file.path(workpath,
     ##                        paste0(tools::file_path_sans_ext(filename), ".RDS"))
     ## saveRDS(latVars, file = latvafname)

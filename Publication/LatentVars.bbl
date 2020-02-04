@@ -1,9 +1,19 @@
-\begin{thebibliography}{23}
+\begin{thebibliography}{27}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
   \providecommand{\doi}[1]{doi: #1}\else
   \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[for()]{forumae}
+python - {Tying} {Autoencoder} {Weights} in a {Dense} {Keras} {Layer}.
+\newblock URL
+  \url{https://stackoverflow.com/questions/53751024/tying-autoencoder-weights-in-a-dense-keras-layer}.
+
+\bibitem[rst(2020)]{rstudioreticulate_2020}
+rstudio/reticulate, February 2020.
+\newblock URL \url{https://github.com/rstudio/reticulate}.
+\newblock original-date: 2017-02-06T18:59:46Z.
 
 \bibitem[Anandkumar et~al.(2013)Anandkumar, Hsu, Javanmard, and
   Kakade]{anandkumar_learning_2013}
@@ -123,6 +133,22 @@ Kraskov, A., Stögbauer, H., and Grassberger, P.
 \newblock \doi{10.1103/PhysRevE.69.066138}.
 \newblock URL \url{https://link.aps.org/doi/10.1103/PhysRevE.69.066138}.
 
+\bibitem[Langfelder et~al.(2016)Langfelder, Cantle, Chatzopoulou, Wang, Gao,
+  Al-Ramahi, Lu, Ramos, El-Zein, Zhao, Deverasetty, Tebbe, Schaab, Lavery,
+  Howland, Kwak, Botas, Aaronson, Rosinski, Coppola, Horvath, and
+  Yang]{langfelder_integrated_2016}
+Langfelder, P., Cantle, J.~P., Chatzopoulou, D., Wang, N., Gao, F., Al-Ramahi,
+  I., Lu, X.-H., Ramos, E.~M., El-Zein, K., Zhao, Y., Deverasetty, S., Tebbe,
+  A., Schaab, C., Lavery, D.~J., Howland, D., Kwak, S., Botas, J., Aaronson,
+  J.~S., Rosinski, J., Coppola, G., Horvath, S., and Yang, X.~W.
+\newblock Integrated genomics and proteomics to define huntingtin {CAG}
+  length-dependent networks in {HD} {Mice}.
+\newblock \emph{Nature neuroscience}, 19\penalty0 (4):\penalty0 623--633, April
+  2016.
+\newblock ISSN 1097-6256.
+\newblock \doi{10.1038/nn.4256}.
+\newblock URL \url{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5984042/}.
+
 \bibitem[Louizos et~al.(2017)Louizos, Shalit, Mooij, Sontag, Zemel, and
   Welling]{louizos_causal_2017}
 Louizos, C., Shalit, U., Mooij, J., Sontag, D., Zemel, R., and Welling, M.
@@ -144,6 +170,13 @@ Pearl, J.
 \newblock ISBN 978-1-139-64936-0 978-0-511-80316-1.
 \newblock URL \url{http://dx.doi.org/10.1017/CBO9780511803161}.
 \newblock OCLC: 834142635.
+
+\bibitem[Ranjan(2019)]{ranjan_build_2019}
+Ranjan, C.
+\newblock Build the right {Autoencoder} — {Tune} and {Optimize} using {PCA}
+  principles. {Part} {II}, July 2019.
+\newblock URL
+  \url{https://towardsdatascience.com/build-the-right-autoencoder-tune-and-optimize-using-pca-principles-part-ii-24b9cca69bd6}.
 
 \bibitem[Rawlings et~al.(1998)Rawlings, Pantula, and
   Dickey]{rawlings_applied_1998}
