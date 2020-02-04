@@ -380,7 +380,12 @@ Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elida
 %\end{center}
 %\FloatBarrier
 
+Since all results described above refer to gaussian or at most rank-monotonic relationships, and perhaps extend to linear models with interactions, when interactions can be seen as "synthetic features", and since real-world data often doesn't behave this way, we wanted to come up with an approach that might generalize beyond monotonic relationships.  Therefore we pursued latent space discovery using autoencoders.
+
+First, we assessed the cardinality of the latent space using the linear approach, it being a useful "ceiling" for such dimensionality, since non-linear features would be more compact and require lower dimensionality if discovered.  We then constructed an autoencoder where the maximum number of input features was capped at $min(200, number of variables)$, the cap being dictated by practical considerations, and the cardinality of the middle layer was set using the linear estimation of the ceiling of complexity.  Autoencoder was implemented using Keras with Tensorflow backend using Reticulate package in R. Furthermore, autoencoder input and output layers were coupled to improve stability of inference. [FRED - COULD YOU ADD DETAILS AND BEST REFERENCES?]
+
 \section{Numerical Demonstration}
+\subsection{Synthetic Data}
 To illustrate  the algorithms described in the previous sections we
 generated synthetic data from the network shown in Figure
 \ref{fig_truenet} where two variables $V_1$ and $V_2$ drive an outcome
@@ -454,7 +459,33 @@ Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10
 \end{figure}
 \medskip
 
-\section{Extensions to this approach}
+\subsection{Experimental Data}
+In order to assess the efficacy of our approach on real-world data, we picked a dataset of a type that is typically hard to infer, even with deep learning.  The dataset in question was obtained from the Cure Huntington's Disease Initiative (CHDI) foundation [FRED, RAY - COULD YOU ASK JEANNE FOR REFERENCE TO WHERE THEY'VE PUBLISHED IT?].  The dataset captured gene expression and CAG repeat expansion of CAG knock-in mice and consisted of striatum gene expression and proteomic data as well as some other miscellaneous measurements.  For the purposes of this analysis, we extracted CAG, weight, mouse age, and a number of gene expression and proteomic measurements, so that gene expression would also have matching proteomic data, and so that top [N - add N] variables rank-correlated with CAG would be present in the analysis.  While the small number of features hampered the inference, the dataset needed to be small enough to be of practical utility for method development.
+
+CAG repeats cause Huntingont's disease via a complex and not entirely understood mechanism, where disease age of onset and severity strongly correlate with repeat length.  Furthermore, CAG influences a large number of gene expression and protein level markers.  Therefore CAG is an ideal pleiotropic covariate of a type that our algorithm should be able to uncover.  In this respect, it's an easy target.  However, in every other respect the dataset is very challenging.  The log-linear range of gene expression and expression/protein level correlations is low; further, though gene expression leads to protein level of a given gene product, this correlation is also often low and is obscured by saturation effects and complex, multi-layered molecular regulation mechanisms.  The sample size is, as mentioned above, quite small.  And finally, though CAG varies across the population, some mice were early knock-ins and were not resequenced, their reported values being the knock-in CAG length, and therefore tied among [M - give the number] animals, making it impossible to infer CAG perfectly in principle.  Assessment of performance was assessed as shown in the table below as well as in the figures.
+
+\begin{algorithm}%[H]
+ \caption{Assesment Of Inference Of Latent CAG Repeat Length}
+ \label{alg:cag}
+\begin{algorithmic}
+\STATE {\bfseries Data:} The CAG dataset, with CAG repeat length withheld
+\STATE \textbf{Result:} Latent space predictive of CAG in training data and code to predict out of sample
+ \STATE Set significance threshold $\alpha$ (e.g. $\alpha = 0.05$)\;
+ \STATE Learn $\bar{U} = PCA(R_{\bar{U}})$\;
+ \STATE Calculate column-wise variance explained $V_E^{0}$ for $\bar{U}^{*}$\;
+ \STATE Set $V_E^s = 0 \times rank(R_{\bar{U}})$, matrix of variances explained by shuffling\;
+ \FOR{fold $in$ 5 folds} 
+  \STATE Train on 4/5 of the data
+  \STATE Learn latent variables using linear and autoencoder approaches
+  \STATE Predict out of sample
+  \STATE Concatenate all out-of-sample predictions
+ \ENDFOR
+\STATE Assess $R^{2}$ for linear and autoencoder methods
+\end{algorithmic}
+\end{algorithm}
+
+
+\section{Extensions}
 In this section, we discuss extensions to this approach for GGMs with interactions, nonlinear functional forms, and categorical variables. 
 
 \subsection{Gaussian Graphical Models With Interactions}
