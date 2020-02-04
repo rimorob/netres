@@ -427,7 +427,7 @@ expandDfRegex = function(mydf, allnames){
     return(newlist)
 }
 
-getGraphResiduals = function(obj, variables, data = NULL, wrongway = FALSE){
+getGraphResiduals = function(obj, variables, data = NULL, Nsamples = 1){
     Nboot = length(obj$fitmodels)
     ## first marginalize latent variables if present
     if(is.null(data))
@@ -445,10 +445,11 @@ getGraphResiduals = function(obj, variables, data = NULL, wrongway = FALSE){
         }
     }
     Ndatasamp = nrow(trainmarg)
-    res = array(rep(0, Nboot * Ndatasamp * 1),
-                dim = c(Ndatasamp, Nboot, 1),
+    res = array(rep(0, Nboot * Ndatasamp * Nsamples),
+                dim = c(Ndatasamp, Nboot, Nsamples),
                 dimnames = list(paste0("samp", 1:Ndatasamp),
-                                paste0('Boot', 1:Nboot), "Sample1"))
+                                paste0('Boot', 1:Nboot),
+                                paste0("Sample", 1:Nsamples)))
     resall = list()
     ## bootstraps
     for(bb in 1:Nboot){
@@ -465,14 +466,21 @@ getGraphResiduals = function(obj, variables, data = NULL, wrongway = FALSE){
 		       ))
 	for(vv in vars){
 	    tmp = bootdata[[vv]]
-            pred = predict(bootdata,vv, trainmarg)
+            mod = as.lm(tmp, data = trainmarg)
+            pred = predict(mod, trainmarg, se.fit = TRUE)
+            sds = pred$se.fit*sqrt(nrow(trainmarg))
+            ##pred = predict(bootdata,vv, trainmarg)
 	    cres = resall[[vv]]
 	    if(is.null(cres))
 		cres= res
-            if(wrongway)
-                cres[, paste0("Boot", bb), 1] = tmp$fitted.values
-            else
-                cres[, paste0("Boot", bb), 1] = pred
+            if(Nsamples > 1){
+                for(ss in Nsamples){
+                    samp = rnorm(nrow(trainmarg), pred$fit, sds)
+                    cres[, paste0("Boot", bb), ] = samp
+                }
+            }else{
+                cres[, paste0("Boot", bb), 1] = pred$fit
+            }
 	    resall[[vv]] = cres
 	}
     }
@@ -497,7 +505,7 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
             dim(Xbar) = c(length(Xbar), 1)
         }
         print(paste('vi:', vi))
-        X = trainingData[, ep] #data
+        X = trainingData[[ep]] #data
 
         ##For discrete ordinal data:
         ##compute distance from this paper (Shepherd et al):
@@ -1088,6 +1096,7 @@ latentDiscovery = function(
 			   useResiduals = TRUE,
 			   maxLatentVars = Inf,
 			   latent_iterations = 100,
+                           Nsamples = 1, 
 			   parallel = FALSE,
 			   nSimTasks = 1,
 			   varmap = NULL,
@@ -1098,7 +1107,6 @@ latentDiscovery = function(
                            height = 8,
                            width = 10,
                            showplots = TRUE,
-                           wrongway = FALSE,
                            ...
 			   ){
     if (!exists('blacklist', envir=.pkgGlobalEnv)) {
@@ -1168,7 +1176,7 @@ latentDiscovery = function(
 	    resList = getGraphResiduals (newens,
                                          newvars,
                                          newdata,
-                                         wrongway = wrongway)
+                                         Nsamples = Nsamples)
 	    ## deviance
 	    message("Calculates deviances")
 	    resDev = residualDeviance(newdata,
@@ -2082,7 +2090,7 @@ getFixedVars = function(ens, vars = ".*"){
 
     all_inputonly = purrr::map(1:ens$Nboot,
 			function(bb){
-			    logv = map_lgl(allvars,
+			    logv = purrr::map_lgl(allvars,
                                            function(vv){
                                                if(length(ens$fitmodels[[bb]][[vv]]$parents) > 0)
                                                    FALSE
