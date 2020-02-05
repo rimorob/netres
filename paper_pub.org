@@ -2,7 +2,7 @@
 #+AUTHOR: Fred K. Gruber
 #+email: fred@gnshealthcare.com
 #+PROPERTY: header-args :tangle yes :eval never-export
-#+PROPERTY: header-args:R :session *R* :exports both
+#+PROPERTY: header-args:R :session *R:latvar* :exports both
 #+OPTIONS: ^:{}
 -----
 * Experiments
@@ -209,7 +209,7 @@ load("/Users/fred/Documents/projects/latvar/boottestv2/boot_50/ensembles_boot_50
 
 ##graphics.off()
 
-pdf("images/fig_paper_errors.pdf")
+pdf("images/fig_paper_errors.pdf", width = 5, height = 5)
 plotCoefError(latVar, ens_alldata_boot)
 dev.off()
 
@@ -222,16 +222,41 @@ plotCoefError(latVar, ens_alldata_boot)
 #+RESULTS:
 [[file:./images/fig_paper_errors.png]]
 ** Network plots
+*** full data
+#+BEGIN_SRC R  :results output graphics file :exports both :file images/fig_graph_fulldata.png
+plot.bnlearn_ens(ens_alldata_boot,"Z",0, cutoff = 0.4,
+                 maxpath=2,nodesep=0.001,
+                 freqth = 0, 
+                 sep = 0.1,
+                 coef_filter = 0.5,
+                 label_pad = 3, 
+	layout = 'dot', edge_labels = "coef",
+	edgeweights=T,
+	edge_color=tribble(~inp,~out,~color,"V1","Z","red","V2","Z","red"),
+        filename = "images/estimated_network_fulldata.pdf",
+        saveToFile = TRUE, 
+	fill = list("U.*" = 'darksalmon',
+		    "Z" = 'yellow',
+		    "^V1$|V2$" = 'skyblue'))
+
+
+#+end_src
+
+#+RESULTS:
+[[file:images/fig_graph_fulldata.png]]
+
+
 *** with missing data
 #+BEGIN_SRC R  :results output graphics file :exports both :file images/fig_graph_missing.png
 
 plot.bnlearn_ens(ens_missing_boot,"Z",0, cutoff = 0.4,
                  maxpath=2,nodesep=0.001,
                  freqth = 0, 
-                 sep = 0.1, 
-	layout = 'dot', edge_labels = "frequency",
+                 sep = 0.1,
+                 coef_filter = 0.5,
+                 label_pad = 3, 
+	layout = 'dot', edge_labels = "coef",
 	edgeweights=T,
-	edgelabelsFilter = 0.5, 
 	edge_color=tribble(~inp,~out,~color,"V1","Z","red","V2","Z","red"
 			   ),
         filename = "images/estimated_network_missingdata.pdf",
@@ -245,13 +270,16 @@ plot.bnlearn_ens(ens_missing_boot,"Z",0, cutoff = 0.4,
 
 #+RESULTS:
 [[file:images/fig_graph_missing.png]]
+*** With infered latent variables
 
 #+BEGIN_SRC R  :results output graphics file :exports both :file images/fig_graph_infered.png
 plot.bnlearn_ens(latVar$details$Diagnostics$Ensemble[[21]],"Z",0, cutoff = 0.4,
                  maxpath=2,nodesep=0.01,
                  freqth = 0, 
                  sep = 0.1, 
-	layout = 'dot', edge_labels = "frequency",
+                 layout = 'dot', edge_labels = "coef",
+                 coef_filter = 0.5,
+                 label_pad = 3, 
 	edgeweights=T,
 	edgelabelsFilter = 0.5, 
 	edge_color=tribble(~inp,~out,~color,"V1","Z","red","V2","Z","red"

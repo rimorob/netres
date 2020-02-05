@@ -213,7 +213,16 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ou
 	print(setdiff(names(obj), c("Nboot", "algorithm", "other_params")))
     }
 
-plot.bnlearn_ens = function(obj, output, ensid = 0,freqth = 0.5, cutoff = 0.5, maxpath = 3,direction = 'upstream',edge_labels = "none", labels_regex = output, ...){
+plot.bnlearn_ens = function(obj,
+                            output,
+                            ensid = 0,
+                            freqth = 0.5,
+                            cutoff = 0.5,
+                            maxpath = 3,
+                            coef_filter = 0.05, 
+                            direction = 'upstream',
+                            edge_labels = "none",
+                            labels_regex = output, ...){
 	if(ensid == 0)
 	    ig = igraph::graph_from_data_frame(
 			     dplyr::filter(obj$edges, freq >= freqth))
@@ -246,18 +255,20 @@ plot.bnlearn_ens = function(obj, output, ensid = 0,freqth = 0.5, cutoff = 0.5, m
             sig = ig
         if(edge_labels == 'none'){
             edgelabels = FALSE
+            edge_labels = NULL
         }else if (edge_labels == 'frequency'){
             edgelabels = TRUE
+            edge_labels = NULL
         }else if(edge_labels == "coefficients" | edge_labels == 'coef'){
             edgelabels = TRUE
             edge_labels = getCoef(obj,labels_regex, as.regex = TRUE) %>%
-                filter(wcoef>0.05) %>%
+                filter(wcoef>coef_filter) %>%
                 dplyr::select(input,output,wcoef) %>%
                 mutate_if(is.numeric, signif, 2)
         }else{
             stop("wrong edge_labels. Only 'none', 'frequency','coefficients'")
         }
-	plotIgraph(sig,edgelabels = edgelabels, ...)
+	plotIgraph(sig,edgelabels = edgelabels,edge_labels = edge_labels, ...)
     }
 
 plotIgraph = function(g,
@@ -284,9 +295,10 @@ plotIgraph = function(g,
                       nodeThickness = 1,
                       nodeThickness_important = 2,
                       fill = NULL,
-                      edge_color = NULL
+                      edge_color = NULL,
+                      edge_labels = NULL,
+                      label_pad = 2
                       ){
-    label_pad = 2
     allnodes = names(igraph::V(g))
     if(!is.null(fill)){
 	fill = expandListRegex(fill, allnodes)
@@ -312,15 +324,28 @@ plotIgraph = function(g,
         ##names(eAttrs$lwd) = edgeNames(gr, recipEdges="distinct")
     }
     if(edgelabels){
-        if(edgelabelsFilter_useabs)
-            iiw = which(abs(w) > edgelabelsFilter)
-        else
-            iiw = which(w > edgelabelsFilter)
-        eAttrs$label = rep("", length(w))
-        names(eAttrs$label) = names(w)
-        wval = w[iiw]
-        wval = paste0(paste0(rep(" ",label_pad),collapse=""),wval)
-        eAttrs$label[names(w[iiw])] = wval
+        if(!is.null(edge_labels)){
+            edgs = paste(edge_labels[[1]], edge_labels[[2]], sep = '~')
+            alledges = graph::edgeNames(gr)
+            alledgeslab= rep("", length(alledges))
+            names(alledgeslab) = alledges
+            alledgeslab[edgs] = as.character(edge_labels[[3]])
+            namesw = names(alledgeslab)
+            alledgeslab = paste0(paste0(rep(" ",label_pad),collapse=""),alledgeslab)
+            names(alledgeslab) = namesw
+            eAttrs$label = alledgeslab
+            
+        }else{
+            if(edgelabelsFilter_useabs)
+                iiw = which(abs(w) > edgelabelsFilter)
+            else
+                iiw = which(w > edgelabelsFilter)
+            eAttrs$label = rep("", length(w))
+            names(eAttrs$label) = names(w)
+            wval = w[iiw]
+            wval = paste0(paste0(rep(" ",label_pad),collapse=""),wval)
+            eAttrs$label[names(w[iiw])] = wval
+        }
     }
     if(edgeweights){
         wn = as.numeric(w)
@@ -694,11 +719,11 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
     middlal = as.character(middla)
     linput = as.integer(architecture[length(architecture) - 1])
     mylayers[[as.character(ii)]] = Dense(middla,
-                                activation = activation_coding,
-                                    kernel_regularizer = WeightsOrthogonalityConstraint(middla, weightage=1., axis=0L),
-                                kernel_constraint=UnitNorm(axis=0L),
-                                activity_regularizer=UncorrelatedFeaturesConstraint(middla, weightage = 1.)
-                                )
+                                         activation = activation_coding,
+                                         kernel_regularizer = WeightsOrthogonalityConstraint(middla, weightage=1., axis=0L),
+                                         kernel_constraint=UnitNorm(axis=0L),
+                                         activity_regularizer=UncorrelatedFeaturesConstraint(middla, weightage = 1.)
+                                         )
     encoder$add(mylayers[[as.character(ii)]])
     if(use_batch_norm)
         encoder$add(BatchNormalization())
