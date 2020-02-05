@@ -296,7 +296,7 @@ b_{b} &= BIC(O_i = \beta_{i0} + B_W W  \\
 b_{c} &= BIC(O_i^U = \beta_{i0}^U + B_Z^U Z + B^U U + \xi_i)
 \end{align}
 
-The "complete model" - model (b) - includes all of the true predictors of $O_j$.  Therefore its score will be the same as that of the true model - model (c) - plus the BIC penalty, $log(n)$, for each extra term, minus the cost of having $U$ in the true model (that is, the cardinality of the relevant part of the latent space).  We know that the extra information carried by this model was not big enough to improve upon model (a), that is $b_a < b_c + k \log(n)$ for some $k$.  Rearranging:
+The "complete model" - model (b) - includes all of the true predictors of $O_j$.  Therefore its score will be the same as that of the true model, model (c) but with an added penalty based on the cardinality of the relevant part of the latent space.  We know that the extra information carried by this model was not big enough to improve upon model (a), that is $b_a < b_c + k \log(n)$ for some $k$.  Rearranging:
 \begin{equation}
     b_c - b_a > -k\log(n).
     \label{eq:ceilingTheorem}
