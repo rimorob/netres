@@ -91,14 +91,26 @@ tst = findLatentVars(resDev,
                      method = 'autoencoder'
                      )
 
+plot_history(tst$details$pcObj$history)
+
 tensorboard = TensorBoard(
   log_dir='./logs',
   histogram_freq=1,
   write_images=TRUE
 )
 
+K = import("keras")
+ModelCheckpoint = K$callbacks$ModelCheckpoint
+
 keras_callbacks = list(
   tensorboard
+)
+
+mc = ModelCheckpoint("bestmodel.h5", monitor = "val_mean_squared_error", mode = "max",
+                     verbose=1, save_best_only=TRUE)
+
+keras_callbacks = list(
+  mc  
 )
 
 tst$details$pcObj$save("tstmodel.h5")
@@ -112,6 +124,10 @@ tst = findLatentVars(resDev,
 
 
 model_visualize = import("plotnn.visualize.model_visualize")
+
+saved_model = load_model('bestmodel.h5')
+
+
 #Build your model here
 model_visualize(model, name="graph")
 
@@ -138,15 +154,15 @@ tst$confounders %>%
     cor(train$U1.out)
 
 
-etstlin = findLatentVars(resDev,
+testlin = findLatentVars(resDev,
                      method = 'linear'
                      )
 
 
-tstlin$confounders %>%
+testlin$confounders %>%
     cor(train$U2.out)
 
-tstlin$confounders %>%
+testlin$confounders %>%
     cor(train$U1.out)
 
 myplot = function(tstlin, train){
