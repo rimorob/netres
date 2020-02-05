@@ -719,11 +719,11 @@ fitAeLatent <- function(data, architecture, lossFunction = 'mean_squared_error',
     middlal = as.character(middla)
     linput = as.integer(architecture[length(architecture) - 1])
     mylayers[[as.character(ii)]] = Dense(middla,
-                                activation = activation_coding,
-                                    kernel_regularizer = WeightsOrthogonalityConstraint(middla, weightage=1., axis=0L),
-                                kernel_constraint=UnitNorm(axis=0L),
-                                activity_regularizer=UncorrelatedFeaturesConstraint(middla, weightage = 1.)
-                                )
+                                         activation = activation_coding,
+                                         kernel_regularizer = WeightsOrthogonalityConstraint(middla, weightage=1., axis=0L),
+                                         kernel_constraint=UnitNorm(axis=0L),
+                                         activity_regularizer=UncorrelatedFeaturesConstraint(middla, weightage = 1.)
+                                         )
     encoder$add(mylayers[[as.character(ii)]])
     if(use_batch_norm)
         encoder$add(BatchNormalization())

@@ -382,52 +382,43 @@ Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elida
 %\FloatBarrier
 
 
+
 \subsection{Nonlinear Extension: Autoencoder}
+
 All results described above refer to gaussian or at most rank-monotonic relationships, and perhaps extend to linear models with interactions, when interactions can be seen as "synthetic features". Real-world data, however, often does not behave this way requiring an approach that might generalize beyond monotonic relationships.  Therefore, we pursued latent space discovery using autoencoders.
 
-We first assessed the cardinality of the latent space using the linear approach, it being a useful "ceiling" for such dimensionality, since non-linear features would be more compact and require lower dimensionality if discovered.  We then constructed an autoencoder with 4 hidden layers where the number of nodes in the hidden layers was capped at $\min (100, \textrm{number of variables})$, the cap being dictated by practical considerations, and the cardinality of the middle or coding layer was set using the linear estimation of the ceiling of complexity.
+We first assess the cardinality of the latent space (number of nodes in the coding layer) using the linear approach (PCA), and take this number as a useful "ceiling" for the dimensionality of the non-linear latent space, on the assumption that non-linear features are more compact and require lower dimensionality if discovered.  We then constructed an autoencoder with 4 hidden layers where the maximum number of nodes in the hidden layers was capped at $\min (100, \textrm{number of variables})$, the cap being dictated by practical considerations.
 
-The autoencoder was implemented using Keras with Tensorflow backend and called within R using the Reticulate package \cite{reticulate_2020}. The encoders and decoder were kept symmetric and in order improve the stability we used tied weights (\cite{pca_ae}). In addition, the coding layer had additional properties borrowed from PCA including a kernel regularizer promoting orthogonality between weights and an activity regularizer to promote uncorrelated encoded features (see \cite{ranjan_build_2019} for details on implementation and justification). This last property is of particular interest in our application since ideally every dimension in our latent space should be associated with a different latent variables. The hidden layers used a sigmoidal activation except for the output layer which had a linear activation. All layers had batch normalization \cite{ioffe2015batch}.
+The autoencoder was implemented using Keras with Tensorflow backend and called within R using the Reticulate package \cite{reticulate_2020}. The encoders and decoder were kept symmetric and in order improve the stability we used tied weights (\cite{pca_ae}). In addition, the coding layer had additional properties borrowed from PCA including a kernel regularizer promoting orthogonality between weights and an activity regularizer to promote uncorrelated encoded features (see \cite{ranjan_build_2019} for details on implementation and justification). This last property is of particular interest in our application since ideally every dimension in our latent space should be associated with a different latent variable. The hidden layers used a sigmoidal activation except for the output layer which had a linear activation. All layers had batch normalization \cite{ioffe2015batch} (see supplementary Figure 1 for a diagram of the architecture).
 
-% \begin{figure}[ht!]
-%   \centering
-%   \includegraphics[scale=0.2]{./images/model_ae.pdf}
-% \end{figure}
+For more details see the implementation in the github repository for this paper (\cite{latent_2020}).
 
 \section{Numerical Demonstration}
 \subsection{Synthetic Data}
 To illustrate  the algorithms described in the previous sections we
 generated synthetic data from the network shown in Figure
-\ref{fig_truenet} where two variables $V_1$ and $V_2$ drive an outcome
+\ref{fig_truenet} (also supplementary Figure 2) where two variables $V_1$ and $V_2$ drive an outcome
 $Z$. Two confounders $U_1$ and $U_2$ affect both the drivers and the
 outcome, as well as many additional variables that do not affect the
 outcome $Z$.
-The coefficient values in the network were chosen
-so that faithfullness was achieved and that the structure
-and coefficients were approximately recovered when all variables were observed.
+The coefficient values in the network were chosen so that faithfullness (also knows as stability \cite{pearl_causality:_2000}) was achieved allowing the structure and coefficients to be  approximately recovered when all variables were observed (see supplement for additional examples).
 
-The underlying network inference needed for the algorithm was
-implemented by bootstrapping the data  and running the R package bnlearn (\cite{scutari_learning_2010}\footnote{algorithm: hill climbing w/100 restarts, prior: vsp, score: bge}\footnote{Both the testbed and the underlying R library will be provided as a supplement.  The R library implements the use of PCA, robust PCA, and kernel PCA.  Regular PCA was used in this example}) on each bootstrap.  The resulting ensemble of networks can be combined to obtain a consensus network where only the most confident edges are kept. Similarly, the estimates of coefficients can be obtained by averaging them over bootstraps.
+The underlying network inference needed for the algorithm was implemented by bootstrapping the data  and running the R package bnlearn (\cite{scutari_learning_2010} also see code in \cite{latent_2020} for specific settings of the run.) on each bootstrap.  The resulting ensemble of networks can be combined to obtain a consensus network where only the most confident edges are kept. Similarly, the coefficient estimates can be obtained by averaging them over bootstraps.
 
-For this example, the consensus network created with edges with confidence larger than 40\% recovers the true structure, and the root mean square error (RMSE) in the
-coefficient estimates is 0.05 (not shown). This represents a lower
-bound on the error that we can expect to obtain under perfect reconstruction of the
-latent space.
+For this example, using the complete data (no missing variables) the consensus network created with edges with confidence larger than 40\% recovers the true structure (see supplementary Figure 3), and the root mean square error (RMSE) in the coefficient estimates is 0.05 (not shown). This represents a lower
+bound on the error that we can expect to obtain under perfect reconstruction of the latent space.
 
-When the confounders are unobserved, the reconstruction of the network
-introduces many false edges and results in a five-times-larger RMSE. Figure \ref{fig_missing} shows the reconstructed network, where the red edges are the true edges between $V_1$ and $V_2$ and the outcome $Z$.
+When the confounders are unobserved, the reconstruction of the network introduces many false edges and results in a five-times-larger RMSE. Figure \ref{fig_missing} (see also supplementary Figure 4) shows the reconstructed network, where the red edges are the true edges between $V_1$ and $V_2$ and the outcome $Z$.
 
-We ran algorithms \ref{alg:latentEM} and \ref{alg:linearPCA} for 20 iterations using PCA to reconstruct the latent space from the residuals with the assumption that the latent variables were source nodes. We then tracked the latent variable reconstruction in a out of sample test set as well as the error in the coefficient's estimates. Figure \ref{fig:latrecons} shows the adjusted $R^2$ between each of the true latent variables and the prediction obtained from the estimated latent space across iterations. The lines and error bands are calculated using LOESS. The estimated latent space is predictive of both the latent variables, and the iterative procedure improves the $R^2$ with respect to $U_1$ from 0.49 at the first iterations to about 0.505  tin about 3 iterations.
+We ran algorithms \ref{alg:latentEM} and \ref{alg:linearPCA} for 20 iterations using PCA to reconstruct the latent space from the residuals with the assumption that the latent variables were source nodes. We then tracked the latent variable reconstruction in an out-of-sample test set as well as the error in the coefficient's estimates. Figure \ref{fig:latrecons} (supplementary Figure 5) shows the adjusted $R^2$ between each of the true latent variables and the prediction obtained from the estimated latent space across iterations. The lines and error bands are calculated using locally estimated scatterplot smoothing (LOESS). The estimated latent space is predictive of both the latent variables, and the iterative procedure improves the $R^2$ with respect to $U_1$ from 0.49 at the first iterations to about 0.505 in about 3 iterations.
 
-Figure \ref{fig:errorcoef} shows the total error in the coefficients
-between all variables in the networks and the outcome $Z$ (RMSE) as
+Figure \ref{fig:errorcoef} (also supplementary Figure 6) shows the total error in the coefficients
+of all variables connected to the outcome $Z$ (RMSE) in the infered network as
 well as the error in the coefficients of the true drivers of $Z$, $V_1$
-and $V_2$. Both errors converge after the first iteration to an error
-level of the same magniture as the error when all variables are
-observed (dashed lines).
+and $V_2$. The dashed lines show the error levels when all variables are observed.
 
 
-Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10. The number of edges arriving to the outcome was reduced considerably with respect to the network prior to inferring latent variables (Figure \ref{fig_missing}). In addition, the coefficients connecting V1 and V2 to the outcome are now closer to their true values (Figure \ref{fig:errorcoef}). This represents an improvement in ACE estimation.
+Figure \ref{fig_estnet_infered}  (and supplementary Figure 7) shows the final inferred network at iteration 20. The number of edges arriving to the outcome was reduced considerably with respect to the network prior to inferring latent variables (Figure \ref{fig_missing} and supplementary Figure 4). In addition, the coefficients connecting V1 and V2 to the outcome are now closer to their true values (Figure \ref{fig:errorcoef}). This represents an improvement in ACE estimation.
 %0.28\linewidth
 
 \begin{figure}[ht!]
@@ -458,9 +449,6 @@ Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10
     \caption{\label{fig:errorcoef}Error in coefficients as a function of the iterations.\medskip}
   \end{minipage}
 \end{figure}
-
-
-
 
 
 

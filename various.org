@@ -101,6 +101,9 @@ keras_callbacks = list(
   tensorboard
 )
 
+tst$details$pcObj$save("tstmodel.h5")
+
+
 
 tst = findLatentVars(resDev,
                      method = 'autoencoder',
@@ -108,6 +111,9 @@ tst = findLatentVars(resDev,
                      )
 
 
+model_visualize = import("plotnn.visualize.model_visualize")
+#Build your model here
+model_visualize(model, name="graph")
 
 tf = import("tensorflow")
 graph = tf$Graph()
@@ -117,7 +123,7 @@ writer$flush()
 K = import("keras")
 plot_model = K$utils$vis_utils$plot_model
 
-plot_model(tst$details$pcObj, to_file = "model_ae.pdf", show_shapes = TRUE, show_layer_names = TRUE)
+plot_model(tst$details$pcObj, to_file = "model_ae2.pdf", show_shapes = TRUE, show_layer_names = TRUE)
 
 
 annv = import("ann_visualizer.visualize")
