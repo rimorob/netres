@@ -27,9 +27,9 @@ p1 = ggplot(lin, aes(x=lin$allCAG, fill=lin$allCAG)) + geom_density(fill='skyblu
     geom_jitter(data = jitter, aes(x,y), height = 0.01) + ggpubr::theme_pubclean() + guides(fill=FALSE) + xlim(rr)
 
 p2 = ggplot(perf, aes(x=CAG, y = pred, color=type)) + geom_point() + geom_smooth(method=lm, aes(fill=type)) + scale_colour_manual(values = c("skyblue", "orange"), labels = c('autoencoder', 'linear')) +
-    scale_fill_manual(values = c("skyblue", "orange"), labels = c('autoencoder', 'linear'))
+    scale_fill_manual(values = c("skyblue", "orange"), labels = c('autoencoder', 'linear')) + ggpubr::theme_pubclean() 
 
-pdf('cag plots.pdf', width=11)
+pdf('cagPlots.pdf', width=11)
 print(p1)
 print(p2)
 dev.off()
