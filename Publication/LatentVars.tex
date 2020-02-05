@@ -87,7 +87,7 @@ Hitherto, the literature has largely focused on addressing the subset of problem
 
 Intuitively, the presence of unobserved confounding leads to violations of conditional independence among the affected variables downstream from any latent confounder.  Likelihood methods for GM construction aim to minimize unexplained variance for all variables in the network by accounting for conditional independencies in the data (\cite{pearl_causality:_2000}, \cite{friedman_being_2013}).  Lack of observability of a causally important variable will induce dependencies among its descendants in the graph that cannot be fully ascribed to any single child node of the latent variable except by chance due to noise.  Such unexplained interdependency results in model residuals that are correlated with the latent variable and not fully explained by any putative graph parents. Thus, we observe inferred connectivity that is excessive compared to the true network.  (\cite{elidan_discovering_2001}).  
 
-Previously, methods have been proposed for inferring latent variables affecting GMs by the means of EM (as far back as \cite{friedman1997learning}, \cite{friedman1998bayesian}).  However, for a large enough network local gradients do not provide a reliable guide, nor do they address the cardinality of the latent space.  Methods for using near-cliques for detection of latent variables in directed acyclic graphs (DAGs) with gaussian graphical models (GGMs) have been proposed that address both problems by analyzing near-cliques in DAGs (\cite{elidan_discovering_2001}, \cite{silva_learning_2006}).  A method related to ours has been proposed for calculating latent variables in a greedy fashion in linear and "invertible continuous" networks, and relating such estimates to observed data to speed up structure search and enable discovery of hidden variables (\cite{elidan_ideal_2007}). However, with clique-driven approach it would be impossible to tell whether any cliques have shared parents or, importantly, whether any signal remained to be modeled, leaving score-based testing to reject proposed "ideal parents". Additionally, Wang and Blei (2019) introduced the deconfounder approach to detecting and adjusting for latent confounders of causal effects in the presence of multiple causes but in the contect of a fixed DAG under relatively strict conditions (\cite{wang_deconfounder_2019}). 
+Previously, methods have been proposed for inferring latent variables affecting GMs by the means of expectation maximization (EM) (as far back as \cite{friedman1997learning}, \cite{friedman1998bayesian}).  However, for a large enough network local gradients do not provide a reliable guide, nor do they address the cardinality of the latent space.  Methods for using near-cliques for detection of latent variables in directed acyclic graphs (DAGs) with gaussian graphical models (GGMs) have been proposed that address both problems by analyzing near-cliques in DAGs (\cite{elidan_discovering_2001}, \cite{silva_learning_2006}).  A method related to ours has been proposed for calculating latent variables in a greedy fashion in linear and "invertible continuous" networks, and relating such estimates to observed data to speed up structure search and enable discovery of hidden variables (\cite{elidan_ideal_2007}). However, with clique-driven approach it would be impossible to tell whether any cliques have shared parents or, importantly, whether any signal remained to be modeled, leaving score-based testing to reject proposed "ideal parents". Additionally, Wang and Blei (2019) introduced the deconfounder approach to detecting and adjusting for latent confounders of causal effects in the presence of multiple causes but in the contect of a fixed DAG under relatively strict conditions (\cite{wang_deconfounder_2019}). 
 
 We show that there exist circumstances when causal sufficiency can be asymptotically achieved, and exchangeability ensured, even when the causal drivers of outcome are confounded by a number of latent variables.  This can be achieved when the confounding is \textbf{pleiotropic}, that is,  when the latent variable affects a "large enough" number of variables, some driving an outcome of interest and others not (\cite{anandkumar_learning_2013}).  Notably, this objective cannot be achieved when confounding affects only the variables of interest and their causal parents (\cite{damour_multi-cause_2019}). We detail an algorithm for diagnosing and accounting for latent confounding in closed form for a GGM example, demonstrate the implementation in a simulated data set, and discuss extensions to other functional forms.  Importantly, our approach uses an indication of latent space that is global, though only locally optimal, being derived from the totality of network residuals. This allows for one-step derivation of the best local approximation of latent space, leading to theiterative algorithm proposed below.
 
@@ -126,7 +126,7 @@ Assume that the joint distribution $D_{u}$ or $D$ is factorized as a directed ac
 
 Mirroring $D$ (or $D_u$), we will define a matrix $R$ (or $R_u$) of the same dimensions - $s \times (v + o)$ (or $s \times (v + o + u)$) - that captures the residuals of modeling every variable $N \in \{V, O, (U)\}$ via $G$ (or $G_u$).  In the linear case, these would be regular linear model residuals, but more generally we will consider probability scale residuals (PSR, \cite{shepherd_probability-scale_2016}).  That is, we define $R[i, j] = PSR(P(V_j | parents(V_j), \hat{\theta}_j) | D[i, j])$, the residuals of $V_j$ given its graph parents.  Notice that the use of probability-scale residuals allows us to define $R$ and $R_u$ for all ordinal variable types, up to rank-equivalence.
 
-\section{Diagnosing Latent Confounding}
+\section{Diagnosing Latent Confounding} 
 
 Here, we consider the special case of Gaussian graphical models where our approach for determining the existence latent confounders can be written down in a closed form. 
 
@@ -381,11 +381,18 @@ Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elida
 %\end{center}
 %\FloatBarrier
 
-Since all results described above refer to gaussian or at most rank-monotonic relationships, and perhaps extend to linear models with interactions, when interactions can be seen as "synthetic features", and since real-world data often doesn't behave this way, we wanted to come up with an approach that might generalize beyond monotonic relationships.  Therefore we pursued latent space discovery using autoencoders.
 
-First, we assessed the cardinality of the latent space using the linear approach, it being a useful "ceiling" for such dimensionality, since non-linear features would be more compact and require lower dimensionality if discovered.  We then constructed an autoencoder where the maximum number of input features was capped at $min(200, number of variables)$, the cap being dictated by practical considerations, and the cardinality of the middle or coding layer was set using the linear estimation of the ceiling of complexity.
+\subsection{Nonlinear Extension: Autoencoder}
+All results described above refer to gaussian or at most rank-monotonic relationships, and perhaps extend to linear models with interactions, when interactions can be seen as "synthetic features". Real-world data, however, often does not behave this way requiring an approach that might generalize beyond monotonic relationships.  Therefore, we pursued latent space discovery using autoencoders.
 
-The autoencoder was implemented using Keras with Tensorflow backend and called within R using the Reticulate package \cite{rstudioreticulate_2020}. The encoders and decoder were kept symmetric and in order improve the stability we used tied weights (\cite{forumae}). In addition, the coding layer had additional properties borrowed from PCA including a kernel regularizer promoting orthogonality between weights and an activity regularizer to promote uncorrelated encoded features (see \cite{ranjan_build_2019} for details on implementation and justification). This last property is of particular interest in our application since ideally every dimesion in our latent space should be associated with a different latent variables.
+We first assessed the cardinality of the latent space using the linear approach, it being a useful "ceiling" for such dimensionality, since non-linear features would be more compact and require lower dimensionality if discovered.  We then constructed an autoencoder with 4 hidden layers where the number of nodes in the hidden layers was capped at $\min (100, \textrm{number of variables})$, the cap being dictated by practical considerations, and the cardinality of the middle or coding layer was set using the linear estimation of the ceiling of complexity.
+
+The autoencoder was implemented using Keras with Tensorflow backend and called within R using the Reticulate package \cite{reticulate_2020}. The encoders and decoder were kept symmetric and in order improve the stability we used tied weights (\cite{pca_ae}). In addition, the coding layer had additional properties borrowed from PCA including a kernel regularizer promoting orthogonality between weights and an activity regularizer to promote uncorrelated encoded features (see \cite{ranjan_build_2019} for details on implementation and justification). This last property is of particular interest in our application since ideally every dimension in our latent space should be associated with a different latent variables. The hidden layers used a sigmoidal activation except for the output layer which had a linear activation. All layers had batch normalization \cite{ioffe2015batch}.
+
+% \begin{figure}[ht!]
+%   \centering
+%   \includegraphics[scale=0.2]{./images/model_ae.pdf}
+% \end{figure}
 
 \section{Numerical Demonstration}
 \subsection{Synthetic Data}
@@ -400,22 +407,17 @@ so that faithfullness was achieved and that the structure
 and coefficients were approximately recovered when all variables were observed.
 
 The underlying network inference needed for the algorithm was
-implemented by bootstrapping the data  and running
-the R package bnlearn (\cite{scutari_learning_2010}\footnote{algorithm: hill climbing w/100 restarts, prior: vsp, score: bge}\footnote{Both the testbed and the underlying R library will be provided as a supplement.  The R library implements the use of PCA, robust PCA, and kernel PCA.  Regular PCA was used in this example}) on each bootstrap.  The resulting ensemble of networks can be combined to obtain a consensus network where only the most confident edges are kept. Similarly, the estimates of coefficients can be obtained by averaging them over bootstraps.
+implemented by bootstrapping the data  and running the R package bnlearn (\cite{scutari_learning_2010}\footnote{algorithm: hill climbing w/100 restarts, prior: vsp, score: bge}\footnote{Both the testbed and the underlying R library will be provided as a supplement.  The R library implements the use of PCA, robust PCA, and kernel PCA.  Regular PCA was used in this example}) on each bootstrap.  The resulting ensemble of networks can be combined to obtain a consensus network where only the most confident edges are kept. Similarly, the estimates of coefficients can be obtained by averaging them over bootstraps.
 
-For this example, the consensus network created with edges with confidence larger than 40\%
-recovers the true structure, and the root mean square error (RMSE) in the
-coefficient estimates is 0.06 (not shown). This represents a lower
-bound on the error that we can expect to obtain under perfect
-reconstruction of the latent space.
+For this example, the consensus network created with edges with confidence larger than 40\% recovers the true structure, and the root mean square error (RMSE) in the
+coefficient estimates is 0.05 (not shown). This represents a lower
+bound on the error that we can expect to obtain under perfect reconstruction of the
+latent space.
 
 When the confounders are unobserved, the reconstruction of the network
-introduces many false edges and results in a four-times-larger RMSE. Figure \ref{fig_missing} shows the reconstructed network, where the red edges are the true edges between $V_1$ and $V_2$
-and the outcome $Z$.
+introduces many false edges and results in a five-times-larger RMSE. Figure \ref{fig_missing} shows the reconstructed network, where the red edges are the true edges between $V_1$ and $V_2$ and the outcome $Z$.
 
-We ran algorithms \ref{alg:latentEM} and \ref{alg:linearPCA} for 20
-iterations using PCA to reconstruct the latent space from the
-residuals with the assumption that the latent variables were source nodes. We then tracked the latent variable reconstruction in a out of sample test set as well as the error in the coefficient's estimates. Figure \ref{fig:latrecons} shows the adjusted $R^2$ between each of the true latent variables and the prediction obtained from the estimated latent space across iterations. The lines and error bands are calculated using LOESS. The estimated latent space is predictive of both the latent variables, and the iterative procedure improves the $R^2$ with respect to $U_1$ from 0.49 at the first iterations to about 0.505  tin about 3 iterations.
+We ran algorithms \ref{alg:latentEM} and \ref{alg:linearPCA} for 20 iterations using PCA to reconstruct the latent space from the residuals with the assumption that the latent variables were source nodes. We then tracked the latent variable reconstruction in a out of sample test set as well as the error in the coefficient's estimates. Figure \ref{fig:latrecons} shows the adjusted $R^2$ between each of the true latent variables and the prediction obtained from the estimated latent space across iterations. The lines and error bands are calculated using LOESS. The estimated latent space is predictive of both the latent variables, and the iterative procedure improves the $R^2$ with respect to $U_1$ from 0.49 at the first iterations to about 0.505  tin about 3 iterations.
 
 Figure \ref{fig:errorcoef} shows the total error in the coefficients
 between all variables in the networks and the outcome $Z$ (RMSE) as
@@ -448,15 +450,19 @@ Figure \ref{fig_estnet_infered} shows the final inferred network at iteration 10
 \begin{figure}[ht]
   \centering
   \begin{minipage}[t]{0.42\linewidth}
-    \includegraphics[scale=0.35]{images/fig_paper_r2lat.pdf}
-    \caption{\label{fig:latrecons}$R^2$ in the prediction of the latent variable from the selected principal components.}
+    \includegraphics[scale=0.3]{images/fig_paper_r2lat.pdf}
+    \caption{\label{fig:latrecons}$R^2$ in the prediction of the latent variable from the selected principal components.\medskip}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.42\linewidth}
-    \includegraphics[scale=0.2]{images/fig_paper_errors.pdf}
-    \caption{\label{fig:errorcoef}Error in coefficients as a function of the iterations.}
+    \includegraphics[scale=0.3]{images/fig_paper_errors.pdf}
+    \caption{\label{fig:errorcoef}Error in coefficients as a function of the iterations.\medskip}
   \end{minipage}
 \end{figure}
-\medskip
+
+
+
+
+
 
 \subsection{Experimental Data}
 In order to assess the efficacy of our approach on real-world data, we picked a dataset of a type that is typically hard to infer, even with deep learning.  The dataset in question was obtained from the Cure Huntington's Disease Initiative (CHDI) foundation \cite{langfelder_integrated_2016}.  The dataset captured gene expression and CAG repeat expansion of CAG knock-in mice and consisted of striatum gene expression and proteomic data as well as some other miscellaneous measurements.  For the purposes of this analysis, we extracted CAG, weight, mouse age, and a number of gene expression and proteomic measurements, so that gene expression would also have matching proteomic data, and so that top [N - add N] variables rank-correlated with CAG would be present in the analysis.  While the small number of features hampered the inference, the dataset needed to be small enough to be of practical utility for method development.
