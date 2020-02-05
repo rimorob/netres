@@ -131,7 +131,25 @@ In this section we include additional images.
       \caption{\label{fig_cag_density} Density distribution of CAG. }
 \end{figure}
 
+\clearpage
+\section{Addtional Algorithms}
+In this section we include additional algorithms
 
+\begin{algorithm}%[H]
+ \caption{Assesment Of Inference Of Latent CAG Repeat Length}
+ \label{alg_cag}
+\begin{algorithmic}
+\STATE {\bfseries Data:} The CAG dataset, with CAG repeat length withheld
+\STATE \textbf{Result:} Latent space predictive of CAG in training data and code to predict out of sample
+ \FOR{fold $in$ 5 folds} 
+  \STATE Train on 4/5 of the data
+  \STATE Learn latent variables (linear, autoencoder methods)
+  \STATE Predict out of sample
+ \ENDFOR
+ \STATE Concatenate all out-of-sample predictions across folds
+ \STATE Assess $R^{2}$ for linear and autoencoder methods
+\end{algorithmic}
+\end{algorithm}
 
 \clearpage
 \section{Additional Examples}
