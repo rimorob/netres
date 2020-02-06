@@ -9,6 +9,7 @@
 \externaldocument[sup-]{supplementary}
 \usepackage{natbib}
 
+\usepackage[hyphens]{url} %to format URLs in the bibliography
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
@@ -525,6 +526,7 @@ Retaining original data features provides explainability, while inference of lat
 % The authors gratefully acknowledge Karl Runge of GNS Healthcare, Jacob Oppenheim of Indigo Agriculture, and Yevgeny Shapiro of Mythic AI for their invaluable feedback and suggestions and Jeanne Latourelle of GNS Healthcare for her assistance with obtaining the CHDI data.
  
 \small
+\Urlmuskip=0mu plus 1mu\relax
 \bibliography{LatentVars}
 \bibliographystyle{icml2020}
 
