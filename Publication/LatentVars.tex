@@ -104,32 +104,33 @@ Consider a factorized joint probability distribution over a set of observed and 
 \centering
 \scalebox{0.85}{
 \begin{tabular}{ c|c|c } 
- Set & Meaning & Indexing \\ 
+ Symbol & Meaning & Indexing \\ 
  \hline
  $S$ & samples & $S_i, i \in \{1, \dots, s\}$ \\ 
  $V$ & observed predictor variables & $V_j, j \in \{1, \dots, v\}$ \\
  $U$ & unobserved predictor variables & $U_l, l \in \{1, \dots, u\}$ \\
  $O$ & outcomes (sinks) & $O_k, k \in \{1, \dots, o\}$ \\
- $D$ & $\{V, O\}$ - observable data & \\
- $D_u$ & $\{V, O, U\}$ - implied data & \\
+ $D$ & $\{V, O\}$ - observable data matrix & \\
+ $D_u$ & $\{V, O, U\}$ - implied data matrix& \\
  $\theta$ & parameters & $\theta_i, i \in \{1, \dots, t\}$ \\
  $Pa^N$ & parents of variable $N$ & $Pa^N_i, i \in \{1, \dots, p\}$\\
  $C^N$ & children of variable $N$ & $C^N_i, i \in \{1, \dots, c\}$\\
  $G$ & graph over $D$ &\\
- $G_u$ & graph over $D_u$&
+ $G_u$ & graph over $D_u$& \\
+ $R$ & residuals - matrix matching $D$ &\\
 \end{tabular}}
 \smallskip
 \caption{Notation}
 \label{tab:notation}
 \end{table}
 
-Assume that the joint distribution $D_{u}$ over the full data or $D$ over the observed data is factorized as a directed acyclic graph, $G_{u}$ or $G$.  We will consider individual conditional probabilities describing nodes and their parents, $P(V | Pa^{V}, \theta)$, where $\theta$ refers to the parameters linking  the parents of $V$ to $V$.  $\hat{\theta}$ will refer to an estimate of these parameters.  We will further assume that $G$ is constructed subject to regularization and using unbiased estimators for $P(V | Pa^{V}, \hat{\theta})$.  We will further assume that $D_u$ plus any given constraints are sufficient to infer the true graph up to Markov equivalence.  For convenience, we'll focus on the actual true graph's parameters, so that, using unbiased estimators, $E[\hat{\theta_m}|D_u] = \theta_m, \forall m$.
+Assume that the joint distribution $D_{u}$ over the full data or $D$ over the observed data is factorized as a directed acyclic graph, $G_{u}$ or $G$.  We will consider individual conditional probabilities describing nodes and their parents, $P(V | Pa{V}, \theta)$, where $\theta$ refers to the parameters linking  the parents of $V$ to $V$.  $\hat{\theta}$ will refer to an estimate of these parameters.  We will further assume that $G$ is constructed subject to regularization and using unbiased estimators for $P(V | Pa{V}), \hat{\theta}$.  We will further assume that $D_u$ plus any given constraints are sufficient to infer the true graph up to Markov equivalence.  For convenience, we'll focus on the actual true graph's parameters, so that, using unbiased estimators, $E[\hat{\theta_m}|D_u] = \theta_m, \forall m$.
 
-Mirroring $D$ (or $D_u$), we will define a matrix $R$ (or $R_u$) of the same dimensions - $s \times (v + o)$ (or $s \times (v + o + u)$) - that captures the residuals of modeling every variable $N \in \{V, O, (U)\}$ via $G$ (or $G_u$).  In the linear case, these would be regular linear model residuals, but more generally we will consider probability scale residuals (PSR, \cite{shepherd_probability-scale_2016}).  That is, we define $R[i, j] = PSR(P(V_j | Pa^{V_j}, \hat{\theta}_j) | D[i, j])$, the residuals of $V_j$ given its graph parents.  Notice that the use of probability-scale residuals allows us to define $R$ and $R_u$ for all ordinal variable types, up to rank-equivalence.
+Mirroring $D$ (or $D_u$), we will define a matrix $R$ of the same dimensions ($s \times (v + o)$) that captures the residuals of modeling every variable $N \in \{V, O, (U)\}$ via $G$ (or $G_u$).  Note that $R_u$ - the residuals matrix that contains residuals of $U$ - doesn't make sense and isn't defined.  In the linear case, these would be regular linear model residuals, but more generally we will consider probability scale residuals (PSR, \cite{shepherd_probability-scale_2016}).  That is, we define $R[i, j] = PSR(P(V_j | parents(V_j), \hat{\theta}_j) | D[i, j])$, the residuals of $V_j$ given its graph parents.  The use of probability-scale residuals allows us to define $R$ for all ordinal variable types, up to rank-equivalence.
 
 \section{Diagnosing Latent Confounding} 
 
-Here, we consider the special case of GGMs where our approach for determining the existence of latent confounders can be written down in a closed form. 
+Here, we consider the special case of GGMs where our approach for determining the existence latent confounders can be written down in a closed form. 
 
 Recall that, for some $V_j \in \{V, U, O\}$, $P^{V_j}_k$ denotes the $k$th parent of $V_j$.  For GGMs, we can write down a fragment of any DAG G as a linear equation where a child node is parameterized as a linear function of its parents:
 \begin{equation}
@@ -264,7 +265,7 @@ Note that this approach is similar, in the linear case, to that in \cite{elidan_
 
 \section{Capping improvement}
 
-The most important utility of causal modeling is to identify drivers as well as drivers of drivers of outcomes of interest.  These drivers of drivers may have practical importance. For example, in the development of a drug, direct predictors of an outcome (e.g. $V_6$ pointing to $O_{1}$ in Figure \ref{fig:sampleGraph}) may not be viable targets but upstream variables (e.g. $V_{5}$) may in fact be be promising targets and the direct parents of the outcome mediate the effect of these potential targets. In the presence of latent confounding, the identifiability of causal effects of outcomes is jeopardized \cite{hernan_estimating_2006}.  For example, in Figure \ref{fig:sampleGraph} $U$ induces correlation among $V_3$, $V_4$, $V_5$, and $V_6$ even when these variables are conditionally independent given $U$.  
+The most important utility of causal modeling is to identify drivers as well as drivers of drivers of outcomes of interest.  These drivers of drivers may have practical importance. For example, in the development of a drug, direct predictors of an outcome (e.g. $V_6$ pointing to $O_{1}$ in Figure \ref{fig:sampleGraph}) may not be viable targets but upstream variables (e.g. $V_{5}$) may in fact be be promising targets and the direct parents of the outcome mediate the effect of these potential targets. In the presence of latent confounding, the identifiability of causal effects of outcomes is jeopardized \cite{hernan_estimating_2006}.  For example, in Figure \ref{fig:sampleGraphOnObservables} misisng $U$ induces apparent correlation among $V_3$, $V_4$, $V_5$, and $V_6$ even though some of these variables are conditionally independent given $U$.  
 
 The extent of the problem of unmeasured confounding can be quantified in more detail.  Suppose we model $O_1$ without controlling for $U$ (\ref{fig:sampleGraphOnObservables}): $$O_1 = \beta_0 + \beta_3 V_3 + \beta_4 V_4 + \beta_5 V_5 + \beta_6 V_6 + \dots.$$  Setting the coefficient of determination for the model $$V_3 = \alpha_0 + \alpha_4 V_4 + \alpha_5 V_5 + \alpha_6 V_6 + \dots.$$ equal to $\rho_3^2$.  Then the estimated variance of $\beta_3$ in the presence of collinearity can be related to the variance when collinearity is absent via the following formula (\cite{rawlings_applied_1998}):
 \begin{equation}
@@ -296,7 +297,7 @@ b_{b} &= BIC(O_i = \beta_{i0} + B_W W  \\
 b_{c} &= BIC(O_i^U = \beta_{i0}^U + B_Z^U Z + B^U U + \xi_i)
 \end{align}
 
-The "complete model" - model (b) - includes all of the true predictors of $O_j$.  Therefore its score will be the same as that of the true model, model (c) but with an added penalty based on the cardinality of the relevant part of the latent space.  We know that the extra information carried by this model was not big enough to improve upon model (a), that is $b_a < b_c + k \log(n)$ for some $k$.  Rearranging:
+The "complete model" - model (b) - includes all of the true predictors of $O_j$.  Therefore its score will be the same as that of the true model - model (c) - plus the BIC penalty, $log(n)$, for each extra term, minus the cost of having $U$ in the true model (that is, the cardinality of the relevant part of the latent space).  We know that the extra information carried by this model was not big enough to improve upon model (a), that is $b_a < b_c + k \log(n)$ for some $k$.  Rearranging:
 \begin{equation}
     b_c - b_a > -k\log(n).
     \label{eq:ceilingTheorem}
@@ -480,7 +481,7 @@ R_N = \beta_0 + \beta_1 U + \beta_2 U^2 + \beta_2 U^3 + \dots.
 Assuming interactions up to $k$th power are present in the system being modeled, residuals for each variable may have up to $k$ terms in the model matrix described by equation \ref{eq:residualColumnWithInteractions}, and if interactions among variables in the latent space $U$ also exist, the cardinality of the principal components of the residuals may far exceed the cardinality of the underlying latent space.  Nevertheless, it may be possible to reconstruct a parsimonious basis vector by application of regularization and nonlinear approaches to latent variable modeling, such as nonlinear PCA (e.g. using methods from \cite{karatzoglou_kernlab_2004}), or autoencoders (\cite{louizos_causal_2017}) as will be discussed below.
 
 \subsection{Generalization to nonlinear functions}
-We can show that linear PCA will suffice for a set of transformations broader than GGMs without interactions.  In particular, we will focus on nonlinear but homeomorphic functions within the Generalized Additive Model (GAM) family.  When talking about multiple inputs, we will require that the relationship of any output variable to any of the covariates in equation \ref{eq:residualColumn} is homeomorphic (invertible), and that equation \ref{eq:resPCA} can be marginalized with respect to any right-hand-side variable as well as to the original left-hand side variable.  For such class of transformations, mutual information between variables, such as between a single confounder $U$ and some downstream variable $N$, is invariant (\cite{kraskov_estimating_2004}).  Therefore, residuals of any variable $N$ will be rank-correlated to $rank(U)$ in a transformation-invariant way. Further, spearman rank-correlation, specifically, is defined as pearson correlation of ranks, and pearson correlation is a special case of mutual information for bivariate normal distribution.  Therefore when talking about mutual information between ranks of arbitrarily distributed variables, we can use our results for the GGM case above.
+We can show that linear PCA will suffice for a set of models broader than GGMs.  In particular, we will focus on nonlinear but homeomorphic functions within the Generalized Additive Model (GAM) family.  When talking about multiple inputs, we will require that the relationship of any output variable to any of the covariates in equation \ref{eq:residualColumn} is homeomorphic (invertible), and that equation \ref{eq:resPCA} can be marginalized with respect to any right-hand-side variable as well as to the original left-hand side variable.  For such class of transformations, mutual information between variables, such as between a single confounder $U$ and some downstream variable $N$, is invariant (\cite{kraskov_estimating_2004}).  Therefore, residuals of any variable $N$ will be rank-correlated to $rank(U)$ in a transformation-invariant way. Further, spearman rank-correlation, specifically, is defined as pearson correlation of ranks, and pearson correlation is a special case of mutual information for bivariate normal distribution.  Therefore when talking about mutual information between ranks of arbitrarily distributed variables, we can use our results for the GGM case above.
 
 Thus, equation \ref{eq:residualColumn} will apply here with some modifications:
 \begin{equation}
@@ -511,13 +512,17 @@ While approximate inference of latent variables for GMs built over invertible fu
 In principle, PSRs can be extended to the case of non-ordinal categorical variables by modeling binary in/out of class label, deviance being correct/false.  These models would lack the smooth gradient allowed by ranks and would probably converge far worse and offer more local minima for EM to get stuck in.  
 
 \section{Conclusions and Future Directions}
-In this work we present a method for describing the latent variable space that is optimal under linearity, up to rank-linearity.  The method does not place \textit{a priori} constraints on the number of latent variables, and will infer the upper bound on this dimensionality automatically.  It is a generalization of prior work, both in terms of the global treatment of the residual space, and in terms of stronger statements of applicability in cases when probability-scale residuals are applicable.  
+In this work we present a method for describing the latent variable space which is optimal under linearity, up to rank-linearity.  The method does not place \textit{a priori} constraints on the number of latent variables, and will infer the upper bound on this dimensionality automatically.  It is a generalization of prior work, both in terms of the global treatment of the residual space, and in terms of stronger statements of applicability in cases when ordinal variables are important for the problem domain.  
 
-To address cases when the internal connectivity of the latent space is unimportant or the confounding may be non-linear, we provide an autoencoder implementation to supplement our PCA and rank-PCA approaches.  In this case, we use linear PCA (Algorithm \ref{alg:linearPCA}) to set the cardinality of the bottleneck layer of the autoencoder.  Using autoencoders has been shown to be of high utility when the structure of the causal model is already known (\cite{louizos_causal_2017}).  Learning structure over observed data as well as unconstrained latent space via autoencoders, as in our work, results in a hybrid "deep causal" model that would be useful, for instance, in epidemiological problems when neither the model structure, nor the latent space are well-understood \textit{a priori}.  It is often highly desirable to retain original features of the data for explainability but is also helpful to introduce latent variables to account for unobserved (pleiotropic) confounding.  As noted above, calculation of ACE in epidemiological problems is one specific use case.  Applications of such "deep causal networks" should also arise outside of the realm of epidemiology, the traditional causal domain.  Multi-omic biological datasets are another obvious area of applicability, since whole available data modalities are always absent from every experiment and may be important.  In clinical trial data, moreover, epidemiological features of multi-omic datasets may not be fully accounted for through flawed design.   We believe this work, both algorithmically and through availability of the software, will open new doors for exploration of "deep causal" modeling.
+In real-data situations, some assumptions of our linear approach may not hold - PCA and related methods may not suffice.  Therefore we provide an autoencoder implementation to supplement our PCA and rank-PCA approaches.  Autoencoders have shown utility when the structure of the causal model is already known (\cite{louizos_causal_2017}).  Learning structure over observed data as well as unconstrained latent space via autoencoders, as in our work, results in a hybrid "deep causal discovery" generalization of this approach.  
+
+Many domains can benefit from this admixture of causal discovery and latent space inference.  For instance, in epidemiology neither the model structure nor the latent space are typically well-understood \textit{a priori} beyond simple examples.  Retaining the original features provides explainability, while inference of latent space adds robustness to statements about ACE and helps assess data set limitations.  
+
+Multi-omic biological datasets are another obvious area of applicability, since it's impossible to collect all omic data modalities in practice.  In clinical trials, epidemiological features of multi-omic datasets may not be fully accounted for through flawed design.   We believe this work, both algorithmically and through availability of the software, couples causal discovery and causal inference and will open new practical applications in both domains.
 
 \clearpage
 % \section*{Acknowledgments}
-% The authors gratefully acknowledge Karl Runge of GNS Healthcare for his invaluable feedback and suggestions.
+% The authors gratefully acknowledge Karl Runge of GNS Healthcare, Jacob Oppenheim of Indigo Agriculture, and Yevgeny Shapiro of Mythic AI for their invaluable feedback and suggestions and Jeanne Latourelle of GNS Healthcare for her assistance with obtaining the CHDI data.
  
 \small
 \bibliography{LatentVars}
