@@ -1,0 +1,400 @@
+#+TITLE:Examples for paper: "Identification of Latent Variables From Their Footprint In Bayesian Network Residuals"
+#+AUTHOR: Anonymous
+#+PROPERTY: header-args :tangle yes :eval never-export
+#+PROPERTY: header-args:R :session *R:3:latvar* :exports both
+#+OPTIONS: ^:{}
+-----
+* Simple Example
+First we load the codes and dataset.
+#+begin_src R
+## Load libraries
+source("LatentConfounderBNlearnv2.R")
+## load test data
+suppressWarnings(load("final_model_nolvp_novp.RData", verbose = T))
+
+figtrue = igraph::graph_from_data_frame(datalist$coef)
+#+end_src
+
+For the first example the true causal structure is shown below:
+#+BEGIN_SRC R  :results output graphics file :exports both :file img_example/fig_true.png
+plotIgraph(figtrue, layout = 'neato', sep = 0.0001,
+                       fill = list("U.*" = 'darksalmon',
+                                   "Z" = 'yellow',
+                                   "^V1$|V2$" = 'skyblue'))
+#+END_SRC
+
+#+RESULTS:
+[[file:img_example/fig_true.png]]
+** Structure learning with no missing  variables
+If we observe all the variables we can get a good estimate the graph structure:
+#+begin_src R
+train = datalist$data_noisy
+library(bnlearn)
+
+blacklist = rbind(data.frame(from = "Z", to = colnames(train)),
+		      data.frame(from = colnames(train), to = "U1.out"),
+		      data.frame(from = colnames(train), to = "U2.out")
+                  )
+
+library(doParallel)
+cl <- makeCluster(10) ## for multi-threading
+registerDoParallel(cl)
+
+#+end_src
+
+#+begin_src R :results output
+res_alldata = getEnsemble2(train, blacklist = blacklist,
+                           restart = 100, Nboot = 10,
+                           prior = "vsp",
+                           score = "bge",
+                           algorithm = 'hc',
+                           parallel = TRUE
+                           )
+
+#+end_src
+
+#+RESULTS:
+: [1] "Distributing ensemble learning"
+: Bootstrapping bnlearn 10 times.
+: calculate coefficients
+
+#+BEGIN_SRC R  :results output graphics file :exports both :file img_example/fig_graph_all_data.png
+plot(res_alldata,
+     "Z",
+     cutoff = 0.3,
+     freqth = 0.3, 
+     maxpath=3,
+     nodesep=0.01,
+     sep = 0.01,
+     layout = 'neato',
+     edge_labels = 'frequency',
+     edgeweights=T,
+     edgelabelsFilter = 0.5,
+     edge_color=tribble(~input,~output,~color,"V1","Z","red","V2","Z","red",
+                        "U1.out", "Z", "red",
+                        "U2.out", "Z", "red"),
+     fill = list("U.*" = 'darksalmon',
+                 "Z" = 'yellow',
+                 "^V1$|V2$" = 'skyblue'))
+#+END_SRC
+
+#+RESULTS:
+[[file:img_example/fig_graph_all_data.png]]
+** Reconstruction with missing confounders.
+Suppose that now we try to reconstruct the structure without observing U1.out and U2.out.
+The resulting graph will be more complicated since many variables will try to compensate for the 
+missing U1.out and U2.out.
+#+begin_src R
+trainlv = train %>% dplyr::select(-U1.out, -U2.out)
+
+blacklistlv = rbind(data.frame(from = "Z", to = colnames(trainlv)))
+seed = 123
+set.seed(seed)
+res_missing = getEnsemble2(trainlv, blacklist = blacklistlv,
+			  restart = 100, Nboot = 10,
+			  prior = "vsp",
+			  score = "bge",
+			  algorithm = 'tabu',
+			  parallel = TRUE
+			  )
+#+end_src
+#+BEGIN_SRC R  :results output graphics file :exports both :file img_example/fig_missing.png
+plot(res_missing,"Z",
+     cutoff = 0.3,
+     freqth = 0.3, 
+     maxpath=3,
+     nodesep=0.01,
+     sep = 0.01,
+     layout = 'dot',
+     edge_labels = 'frequency',
+     edgeweights=T,
+     edgelabelsFilter = 0.5,
+     edge_color=tribble(~input,~output,~color,"V1","Z","red","V2","Z","red",
+                        "U1.out", "Z", "red",
+                        "U2.out", "Z", "red"),
+     fill = list("U.*" = 'darksalmon',
+                 "Z" = 'yellow',
+                 "^V1$|V2$" = 'skyblue'))
+#+END_SRC
+
+#+RESULTS:
+[[file:img_example/fig_missing.png]]
+** Reconstruction estimating missing confounders
+Here we used the propose algorithm to learn the missing variables and improve the structure search.
+#+begin_src R
+seed = 123
+set.seed(seed)
+graphics.off()
+latvar_simple =  latentDiscovery(
+    res_missing,
+    nItera=5,
+    data = trainlv,
+    "Z",
+    workpath="pca_simple",
+    method = "linear",
+    truecoef = datalist$coef %>% filter(output=="Z"),
+    truelatent=datalist$data %>% dplyr::select("U1.out","U2.out"),
+    parallel = TRUE
+)
+
+#+end_src
+
+#+BEGIN_SRC R  :results output graphics file :exports both :file img_example/fig_reconstr_simple.png
+
+plot(latvar_simple$details$final_ensemble,
+     "Z",
+     cutoff = 0.3,
+     freqth = 0.3, 
+     maxpath=3,
+     nodesep=0.01,
+     sep = 0.01,
+     layout = 'dot',
+     edge_labels = 'frequency',
+     edgeweights=T,
+     edgelabelsFilter = 0.5,
+     edge_color=tribble(~input,~output,~color,"V1","Z","red","V2","Z","red",
+                        "U1.out", "Z", "red",
+                        "U2.out", "Z", "red"),
+     fill = list("U.*" = 'darksalmon',
+                 "Z" = 'yellow',
+                 "^V1$|V2$" = 'skyblue'))
+#+END_SRC
+
+#+RESULTS:
+[[file:img_example/fig_reconstr_simple.png]]
+
+** Cleanup
+Close the parallelization cluster:
+#+begin_src R
+stopCluster(cl)
+#+end_src
+* Medium Example
+** True network
+#+begin_src R
+source("LatentConfounderBNlearnv2.R")
+suppressWarnings(load("final_model_nolvp_withvp.RData", verbose = T))
+datalist_med = datalist
+
+figtrue_med = igraph::graph_from_data_frame(
+			  datalist_med$coef %>%
+			  filter(input %in% c(paste0("P", 1:10),
+					      paste0("V", 45:50),
+					      paste0("V", 1:5),
+					      "U1.out", "U2.out", 'Z'),
+				 output %in% c("Z","U1.out", "U2.out",
+					       paste0("V", 40:50),
+					      paste0("V", 1:10)))
+)
+
+#+end_src
+#+BEGIN_SRC R  :results output graphics file :exports both :file img_example/fig_true_medium.png
+plotIgraph(figtrue_med, layout = 'dot', nodesep = 0.00001,
+		       fill = list("U.*" = 'darksalmon',
+				   "Z" = 'yellow',
+				   "^V1$|V2$" = 'skyblue')
+           )
+#+END_SRC
+
+#+RESULTS:
+[[file:img_example/fig_true_medium.png]]
+** Structure search with missing variables
+
+#+begin_src R
+train_med = datalist_med$data_noisy
+
+trainlv_med = train_med %>% dplyr::select(-U1.out, -U2.out)
+
+blacklistlv_med = rbind(data.frame(from = "Z", to = colnames(trainlv_med)))
+
+seed = 123
+set.seed(seed)
+res_missing_med_small = getEnsemble2(trainlv_med, blacklist = blacklistlv_med,
+			    restart = 100, Nboot = 10,
+			    prior = "vsp",
+			    score = "bge",
+			    algorithm = 'tabu',
+			    parallel = TRUE
+			    )
+#+end_src
+
+#+BEGIN_SRC R  :results output graphics file :exports both :file img_example/fig_nolatvar_med.png
+plot(res_missing_med_small,
+     "Z",
+     cutoff = 0.5,
+     freqth = 0.5, 
+     maxpath=2,
+     nodesep=0.01,
+     sep = 0.01,
+     layout = 'dot',
+     edge_labels = 'frequency',
+     edgeweights=T,
+     edgelabelsFilter = 0.5,
+     edge_color=tribble(~input,~output,~color,"V1","Z","red","V2","Z","red",
+                        "U1.out", "Z", "red",
+                        "U2.out", "Z", "red"),
+     fill = list("U.*" = 'darksalmon',
+                 "Z" = 'yellow',
+                 "^V1$|V2$" = 'skyblue'))
+#+END_SRC
+
+#+RESULTS:
+3[[file:img_example/fig_nolatvar_med.png]]
+** Structure search estimating latent variables
+
+#+begin_src R
+seed = 123
+set.seed(seed)
+graphics.off()
+medium_evo = latentDiscovery(
+	res_missing_med_small,
+	nItera=5,
+	data = trainlv_med,
+	"Z",
+	seed=seed,
+	workpath="latentDiscovery_med_linear",
+	method = "linear",
+	truecoef = datalist_med$coef %>% filter(output=="Z"),
+	truelatent=datalist_med$data %>% dplyr::select("U1.out","U2.out"),
+	parallel = TRUE
+    )
+
+#+end_src
+#+BEGIN_SRC R  :results output graphics file :exports both :file img_example/fig_reconstr_medium.png
+
+plot(medium_evo$details$final_ensemble,
+     "Z",
+     cutoff = 0.5,
+     freqth = 0.5, 
+     maxpath=2,
+     nodesep=0.01,
+     sep = 0.01,
+     layout = 'dot',
+     edge_labels = 'frequency',
+     edgeweights=T,
+     edgelabelsFilter = 0.5,
+     edge_color=tribble(~input,~output,~color,"V1","Z","red","V2","Z","red",
+                        "U1.out", "Z", "red",
+                        "U2.out", "Z", "red"),
+     fill = list("U.*" = 'darksalmon',
+                 "Z" = 'yellow',
+                 "^V1$|V2$" = 'skyblue'))
+#+END_SRC
+
+#+RESULTS:
+[[file:img_example/fig_reconstr_medium.png]]
+* Final Example
+#+begin_src R
+suppressWarnings(load("final_model_withlvp_withvp.RData", verbose = T))
+datalist_com = datalist
+figtrue_com = igraph::graph_from_data_frame(
+			  datalist_com$coef %>%
+			  filter(input %in% c(paste0("P", 1:10),
+					      paste0("Up", 1:10),
+					      paste0("V", 45:50),
+					      paste0("V", 1:5),
+					      "U1.out", "U2.out", 'Z'),
+				 output %in% c("Z","U1.out", "U2.out",
+					       paste0("V", 40:50),
+					      paste0("V", 1:10)))
+)
+
+#+end_src
+#+BEGIN_SRC R  :results output graphics file :exports both :file img_example/fig_true_com.png
+plotIgraph(figtrue_com, layout = 'dot', nodesep = 0.00001,
+		       fill = list("U\\d.*" = 'darksalmon',
+				   "Z" = 'yellow',
+				   "^V1$|V2$" = 'skyblue'),
+	   saveToFile=F,
+	   filename="complicated_model.pdf")
+#+END_SRC
+
+#+RESULTS:
+[[file:img_example/fig_true_com.png]]
+** Structure search with missing confounders.
+#+begin_src R
+train_com = datalist_com$data_noisy
+
+
+
+trainlv_com = train_com %>% dplyr::select(-U1.out, -U2.out)
+
+blacklistlv_com = rbind(data.frame(from = "Z",
+				   to = colnames(trainlv_com)))
+
+seed = 123
+set.seed(seed)
+res_missing_com = getEnsemble2(trainlv_com, blacklist = blacklistlv_com,
+			    restart = 100, Nboot = 10,
+			    prior = "vsp",
+			    score = "bge",
+			    algorithm = 'tabu',
+			    parallel = TRUE
+			    )
+
+#+end_src
+
+#+BEGIN_SRC R  :results output graphics file :exports both :file img_example/fig_missing_comp.png
+plot(res_missing_com,
+     "Z",
+     cutoff = 0.5,
+     freqth = 0.5, 
+     maxpath=2,
+     nodesep=0.01,
+     sep = 0.01,
+     layout = 'dot',
+     edge_labels = 'frequency',
+     edgeweights=T,
+     edgelabelsFilter = 0.5,
+     edge_color=tribble(~input,~output,~color,"V1","Z","red","V2","Z","red",
+                        "U1.out", "Z", "red",
+                        "U2.out", "Z", "red"),
+     fill = list("U1.out|U2.out" = 'darksalmon',
+                 "Z" = 'yellow',
+                 "^V1$|V2$" = 'skyblue'))
+#+END_SRC
+
+#+RESULTS:
+[[file:img_example/fig_missing_comp.png]]
+** Reconstruction with estimated latent variables
+#+begin_src R
+seed = 123
+set.seed(seed)
+graphics.off()
+complicated_evo = latentDiscovery(
+	res_missing_com,
+	nItera=5,
+	data = trainlv_com,
+	"Z",
+	seed=seed,
+	workpath="latentDiscovery_com",
+	method = "robustLinear",
+	latent_iterations = 10, ## reduced for speed reasons
+	truecoef = datalist_com$coef %>% filter(output=="Z"),
+	truelatent=datalist_com$data %>% dplyr::select("U1.out","U2.out"),
+	parallel = TRUE
+    )
+
+#+end_src
+
+#+BEGIN_SRC R  :results output graphics file :exports both :file img_example/fig_est_comp.png
+plot(complicated_evo$details$final_ensemble, 
+     "Z",
+     cutoff = 0.5,
+     freqth = 0.5, 
+     maxpath=2,
+     nodesep=0.01,
+     sep = 0.01,
+     layout = 'dot',
+     edge_labels = 'frequency',
+     edgeweights=T,
+     edgelabelsFilter = 0.5,
+     edge_color=tribble(~input,~output,~color,"V1","Z","red","V2","Z","red",
+                        "U1.out", "Z", "red",
+                        "U2.out", "Z", "red"),
+     fill = list("U1.out|U2.out" = 'darksalmon',
+                 "Z" = 'yellow',
+                 "^V1$|V2$" = 'skyblue'))
+#+END_SRC
+
+#+RESULTS:
+[[file:img_example/fig_est_comp.png]]
