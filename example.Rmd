@@ -1,0 +1,115 @@
+
+# Table of Contents
+
+1.  [Simple Example](#org0f3abe8)
+    1.  [Structure learning with no missing  variables](#orgd4c96b4)
+    2.  [Reconstruction with missing confounders.](#orgdb7e165)
+    3.  [Reconstruction estimating missing confounders](#org8430d22)
+    4.  [Cleanup](#orgfae7551)
+2.  [Medium Example](#org384702f)
+    1.  [True network](#orgdbbb62d)
+    2.  [Structure search with missing variables](#org5a336a0)
+    3.  [Structure search estimating latent variables](#orge116b49)
+3.  [Final Example](#org1717f98)
+    1.  [Structure search with missing confounders.](#org589dd50)
+    2.  [Reconstruction with estimated latent variables](#orge46a145)
+
+---
+
+
+<a id="org0f3abe8"></a>
+
+# Simple Example
+
+First we load the codes and dataset.
+For the first example the true causal structure is shown below:
+
+![img](img_example/fig_true.png)
+
+
+<a id="orgd4c96b4"></a>
+
+## Structure learning with no missing  variables
+
+If we observe all the variables we can get a good estimate the graph structure:
+
+    [1] "Distributing ensemble learning"
+    Bootstrapping bnlearn 10 times.
+    calculate coefficients
+
+![img](img_example/fig_graph_all_data.png)
+
+
+<a id="orgdb7e165"></a>
+
+## Reconstruction with missing confounders.
+
+Suppose that now we try to reconstruct the structure without observing U1.out and U2.out.
+The resulting graph will be more complicated since many variables will try to compensate for the 
+missing U1.out and U2.out.
+
+![img](img_example/fig_missing.png)
+
+
+<a id="org8430d22"></a>
+
+## Reconstruction estimating missing confounders
+
+Here we used the propose algorithm to learn the missing variables and improve the structure search.
+
+![img](img_example/fig_reconstr_simple.png)
+
+
+<a id="orgfae7551"></a>
+
+## Cleanup
+
+Close the parallelization cluster:
+
+
+<a id="org384702f"></a>
+
+# Medium Example
+
+
+<a id="orgdbbb62d"></a>
+
+## True network
+
+![img](img_example/fig_true_medium.png)
+
+
+<a id="org5a336a0"></a>
+
+## Structure search with missing variables
+
+3![img](img_example/fig_nolatvar_med.png)
+
+
+<a id="orge116b49"></a>
+
+## Structure search estimating latent variables
+
+![img](img_example/fig_reconstr_medium.png)
+
+
+<a id="org1717f98"></a>
+
+# Final Example
+
+![img](img_example/fig_true_com.png)
+
+
+<a id="org589dd50"></a>
+
+## Structure search with missing confounders.
+
+![img](img_example/fig_missing_comp.png)
+
+
+<a id="orge46a145"></a>
+
+## Reconstruction with estimated latent variables
+
+![img](img_example/fig_est_comp.png)
+

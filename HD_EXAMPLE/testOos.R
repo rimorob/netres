@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 source('../LatentConfounderBNlearnv2.R')
+=======
+>>>>>>> 712cd915c1419e9d22f038e254861425c9079b8c
 library(tidyverse)
 library(data.table)
 library(caret)
@@ -6,6 +9,10 @@ library(doParallel)
 library(reticulate)
 
 reticulate::use_condaenv("TFv1")
+<<<<<<< HEAD
+=======
+source('../LatentConfounderBNlearnv2.R')
+>>>>>>> 712cd915c1419e9d22f038e254861425c9079b8c
 
 source_python("../aupy.py")
 
@@ -89,6 +96,11 @@ if (!file.exists('trainSmall.csv')) {
     write.csv(trainSmall, 'trainSmall.csv', row.names=F)    
 } else {
     trainSmall = read.csv('trainSmall.csv')
+<<<<<<< HEAD
+=======
+    trainSmall$Age = as.numeric(trainSmall$Age)
+    trainSmall$Gender = as.numeric(trainSmall$Gender)    
+>>>>>>> 712cd915c1419e9d22f038e254861425c9079b8c
 }
     
 fixedVars = c('Gender', 'CAG', 'Age')
@@ -122,7 +134,11 @@ getOneNetwork <- function(ens, nIdx) {
 }
 
 ##create cross-validation folds
+<<<<<<< HEAD
 folds <- createFolds(train$CAG, k = 5, list = TRUE, returnTrain = FALSE)
+=======
+folds <- createFolds(trainSmall$CAG, k = 5, list = TRUE, returnTrain = FALSE)
+>>>>>>> 712cd915c1419e9d22f038e254861425c9079b8c
 latPred = list()
 ##cross-validate learning of CAG
 for (fi in 1:length(folds)) {
