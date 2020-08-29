@@ -1,0 +1,235 @@
+\begin{thebibliography}{29}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{URL }
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \urlstyle{rm}\Url}\fi
+
+\bibitem[{Anandkumar et~al.(2013)Anandkumar, Hsu, Javanmard, and
+  Kakade}]{anandkumar_learning_2013}
+Anandkumar, A.; Hsu, D.; Javanmard, A.; and Kakade, S. 2013.
+\newblock Learning {Linear} {Bayesian} {Networks} with {Latent} {Variables}.
+\newblock In Dasgupta, S.; and McAllester, D., eds., \emph{Proceedings of the
+  30th {International} {Conference} on {Machine} {Learning}}, volume~28 of
+  \emph{Proceedings of {Machine} {Learning} {Research}}, 249--257. Atlanta,
+  Georgia, USA: PMLR.
+\newblock \urlprefix\url{http://proceedings.mlr.press/v28/anandkumar13.html}.
+
+\bibitem[{Bareinboim and Pearl(2016)}]{bareinboim_causal_2016}
+Bareinboim, E.; and Pearl, J. 2016.
+\newblock Causal inference and the data-fusion problem.
+\newblock \emph{Proceedings of the National Academy of Sciences} 113(27):
+  7345--7352.
+\newblock ISSN 0027-8424, 1091-6490.
+\newblock \doi{10.1073/pnas.1510507113}.
+\newblock
+  \urlprefix\url{http://www.pnas.org/lookup/doi/10.1073/pnas.1510507113}.
+
+\bibitem[{Berlinkov(2018)}]{pca_ae}
+Berlinkov, M. 2018.
+\newblock python - {Tying} {Autoencoder} {Weights} in a {Dense} {Keras}
+  {Layer}.
+\newblock
+  \urlprefix\url{https://stackoverflow.com/questions/53751024/tying-autoencoder-weights-in-a-dense-keras-layer}.
+
+\bibitem[{D'Amour(2019)}]{damour_multi-cause_2019}
+D'Amour, A. 2019.
+\newblock On {Multi}-{Cause} {Causal} {Inference} with {Unobserved}
+  {Confounding}: {Counterexamples}, {Impossibility}, and {Alternatives}.
+\newblock \emph{arXiv:1902.10286 [cs, stat]}
+  \urlprefix\url{http://arxiv.org/abs/1902.10286}.
+\newblock ArXiv: 1902.10286.
+
+\bibitem[{Elidan and Friedman(2005)}]{elidan_learning_2005}
+Elidan, G.; and Friedman, N. 2005.
+\newblock Learning {Hidden} {Variable} {Networks}: {The} {Information}
+  {Bottleneck} {Approach}.
+\newblock \emph{J. Mach. Learn. Res.} 6: 81--127.
+\newblock ISSN 1532-4435.
+\newblock \urlprefix\url{http://dl.acm.org/citation.cfm?id=1046920.1046924}.
+
+\bibitem[{Elidan et~al.(2001)Elidan, Lotner, Friedman, and
+  Koller}]{elidan_discovering_2001}
+Elidan, G.; Lotner, N.; Friedman, N.; and Koller, D. 2001.
+\newblock Discovering {Hidden} {Variables}: {A} {Structure}-{Based} {Approach}.
+\newblock In Leen, T.~K.; Dietterich, T.~G.; and Tresp, V., eds.,
+  \emph{Advances in {Neural} {Information} {Processing} {Systems} 13},
+  479--485. MIT Press.
+\newblock
+  \urlprefix\url{http://papers.nips.cc/paper/1940-discovering-hidden-variables-a-structure-based-approach.pdf}.
+
+\bibitem[{Elidan, Nachman, and Friedman(2007)}]{elidan_ideal_2007}
+Elidan, G.; Nachman, I.; and Friedman, N. 2007.
+\newblock “{Ideal} {Parent}” {Structure} {Learning} for {Continuous}
+  {Variable} {Bayesian} {Networks}.
+\newblock \emph{Journal of Machine Learning Research} 8: 35.
+
+\bibitem[{Friedman(1997)}]{friedman1997learning}
+Friedman, N. 1997.
+\newblock Learning belief networks in the presence of missing values and hidden
+  variables.
+\newblock In \emph{{ICML}}, volume~97, 125--133.
+
+\bibitem[{Friedman(1998)}]{friedman1998bayesian}
+Friedman, N. 1998.
+\newblock The {Bayesian} structural {EM} algorithm.
+\newblock In \emph{Proceedings of the {Fourteenth} conference on {Uncertainty}
+  in artificial intelligence}, 129--138.
+
+\bibitem[{Friedman and Koller(2013)}]{friedman_being_2013}
+Friedman, N.; and Koller, D. 2013.
+\newblock Being {Bayesian} about {Network} {Structure}.
+\newblock \emph{arXiv:1301.3856 [cs, stat]}
+  \urlprefix\url{http://arxiv.org/abs/1301.3856}.
+\newblock ArXiv: 1301.3856.
+
+\bibitem[{Gavish and Donoho(2014)}]{gavish_optimal_2014}
+Gavish, M.; and Donoho, D.~L. 2014.
+\newblock The {Optimal} {Hard} {Threshold} for {Singular} {Values} is
+  {\textbackslash}(4/{\textbackslash}sqrt \{3\}{\textbackslash}).
+\newblock \emph{IEEE Transactions on Information Theory} 60(8): 5040--5053.
+\newblock ISSN 0018-9448, 1557-9654.
+\newblock \doi{10.1109/TIT.2014.2323359}.
+\newblock \urlprefix\url{http://ieeexplore.ieee.org/document/6846297/}.
+
+\bibitem[{github(2020)}]{latent_2020}
+github. 2020.
+\newblock Latent {Confounder}.
+\newblock \urlprefix\url{https://github.com/rimorob/netres}.
+\newblock Original-date: 2020-02-05T03:35:01Z.
+
+\bibitem[{Hernán and Robins(2006)}]{hernan_estimating_2006}
+Hernán, M.~A.; and Robins, J.~M. 2006.
+\newblock Estimating causal effects from epidemiological data.
+\newblock \emph{Journal of Epidemiology and Community Health} 60(7): 578--586.
+\newblock ISSN 0143-005X.
+\newblock \doi{10.1136/jech.2004.029496}.
+
+\bibitem[{Ioffe and Szegedy(2015)}]{ioffe2015batch}
+Ioffe, S.; and Szegedy, C. 2015.
+\newblock Batch Normalization: Accelerating Deep Network Training by Reducing
+  Internal Covariate Shift.
+
+\bibitem[{Karatzoglou et~al.(2004)Karatzoglou, Smola, Hornik, and
+  Zeileis}]{karatzoglou_kernlab_2004}
+Karatzoglou, A.; Smola, A.; Hornik, K.; and Zeileis, A. 2004.
+\newblock \textbf{kernlab} - {An} \textit{{S}4} {Package} for {Kernel}
+  {Methods} in \textit{{R}}.
+\newblock \emph{Journal of Statistical Software} 11(9).
+\newblock ISSN 1548-7660.
+\newblock \doi{10.18637/jss.v011.i09}.
+\newblock \urlprefix\url{http://www.jstatsoft.org/v11/i09/}.
+
+\bibitem[{Koller and Friedman(2009)}]{koller_probabilistic_2009}
+Koller, D.; and Friedman, N. 2009.
+\newblock \emph{Probabilistic graphical models: principles and techniques}.
+\newblock Adaptive computation and machine learning. Cambridge, MA: MIT Press.
+\newblock ISBN 978-0-262-01319-2.
+
+\bibitem[{Kraskov, Stögbauer, and Grassberger(2004)}]{kraskov_estimating_2004}
+Kraskov, A.; Stögbauer, H.; and Grassberger, P. 2004.
+\newblock Estimating mutual information.
+\newblock \emph{Physical Review E} 69(6).
+\newblock ISSN 1539-3755, 1550-2376.
+\newblock \doi{10.1103/PhysRevE.69.066138}.
+\newblock \urlprefix\url{https://link.aps.org/doi/10.1103/PhysRevE.69.066138}.
+
+\bibitem[{Langfelder et~al.(2016)Langfelder, Cantle, Chatzopoulou, Wang, Gao,
+  Al-Ramahi, Lu, Ramos, El-Zein, Zhao, Deverasetty, Tebbe, Schaab, Lavery,
+  Howland, Kwak, Botas, Aaronson, Rosinski, Coppola, Horvath, and
+  Yang}]{langfelder_integrated_2016}
+Langfelder, P.; Cantle, J.~P.; Chatzopoulou, D.; Wang, N.; Gao, F.; Al-Ramahi,
+  I.; Lu, X.-H.; Ramos, E.~M.; El-Zein, K.; Zhao, Y.; Deverasetty, S.; Tebbe,
+  A.; Schaab, C.; Lavery, D.~J.; Howland, D.; Kwak, S.; Botas, J.; Aaronson,
+  J.~S.; Rosinski, J.; Coppola, G.; Horvath, S.; and Yang, X.~W. 2016.
+\newblock Integrated genomics and proteomics to define huntingtin {CAG}
+  length-dependent networks in {HD} {Mice}.
+\newblock \emph{Nature neuroscience} 19(4): 623--633.
+\newblock ISSN 1097-6256.
+\newblock \doi{10.1038/nn.4256}.
+\newblock
+  \urlprefix\url{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5984042/}.
+
+\bibitem[{Louizos et~al.(2017)Louizos, Shalit, Mooij, Sontag, Zemel, and
+  Welling}]{louizos_causal_2017}
+Louizos, C.; Shalit, U.; Mooij, J.; Sontag, D.; Zemel, R.; and Welling, M.
+  2017.
+\newblock Causal {Effect} {Inference} with {Deep} {Latent}-{Variable} {Models}.
+\newblock \emph{arXiv:1705.08821 [cs, stat]}
+  \urlprefix\url{http://arxiv.org/abs/1705.08821}.
+\newblock ArXiv: 1705.08821.
+
+\bibitem[{MacKay(2003)}]{mackay_information_2003}
+MacKay, D. J.~C. 2003.
+\newblock \emph{Information theory, inference, and learning algorithms}.
+\newblock Cambridge, UK ; New York: Cambridge University Press.
+\newblock ISBN 978-0-521-64298-9.
+
+\bibitem[{Pearl(2000)}]{pearl_causality:_2000}
+Pearl, J. 2000.
+\newblock \emph{Causality: models, reasoning, and inference}.
+\newblock Cambridge, U.K.; New York: Cambridge University Press.
+\newblock ISBN 978-1-139-64936-0 978-0-511-80316-1.
+\newblock \urlprefix\url{http://dx.doi.org/10.1017/CBO9780511803161}.
+\newblock OCLC: 834142635.
+
+\bibitem[{Ranjan(2019)}]{ranjan_build_2019}
+Ranjan, C. 2019.
+\newblock Build the right {Autoencoder} — {Tune} and {Optimize} using {PCA}
+  principles. {Part} {II}.
+\newblock
+  \urlprefix\url{https://towardsdatascience.com/build-the-right-autoencoder-tune-and-optimize-using-pca-principles-part-ii-24b9cca69bd6}.
+
+\bibitem[{Rawlings, Pantula, and Dickey(1998)}]{rawlings_applied_1998}
+Rawlings, J.~O.; Pantula, S.~G.; and Dickey, D.~A. 1998.
+\newblock \emph{Applied regression analysis: a research tool}.
+\newblock Springer texts in statistics. New York: Springer, 2nd ed edition.
+\newblock ISBN 978-0-387-98454-4.
+
+\bibitem[{Scutari(2010)}]{scutari_learning_2010}
+Scutari, M. 2010.
+\newblock Learning {Bayesian} {Networks} with the \textbf{bnlearn} \textit{{R}}
+  {Package}.
+\newblock \emph{Journal of Statistical Software} 35(3).
+\newblock ISSN 1548-7660.
+\newblock \doi{10.18637/jss.v035.i03}.
+\newblock \urlprefix\url{http://www.jstatsoft.org/v35/i03/}.
+
+\bibitem[{Shepherd, Li, and Liu(2016)}]{shepherd_probability-scale_2016}
+Shepherd, B.~E.; Li, C.; and Liu, Q. 2016.
+\newblock Probability-scale residuals for continuous, discrete, and censored
+  data.
+\newblock \emph{The Canadian journal of statistics = Revue canadienne de
+  statistique} 44(4): 463--479.
+\newblock ISSN 0319-5724.
+\newblock \doi{10.1002/cjs.11302}.
+\newblock
+  \urlprefix\url{https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5364820/}.
+
+\bibitem[{Silva et~al.(2006)Silva, Scheines, Glymour, and
+  Spirtes}]{silva_learning_2006}
+Silva, R.; Scheines, R.; Glymour, C.; and Spirtes, P. 2006.
+\newblock Learning the {Structure} of {Linear} {Latent} {Variable} {Models}.
+\newblock \emph{J. Mach. Learn. Res.} 7: 191--246.
+
+\bibitem[{Spirtes, Glymour, and Scheines(1993)}]{spirtes_causation_1993}
+Spirtes, P.; Glymour, C.~N.; and Scheines, R. 1993.
+\newblock \emph{Causation, prediction, and search}.
+\newblock Number~81 in Lecture notes in statistics. New York: Springer-Verlag.
+\newblock ISBN 978-0-387-97979-3.
+
+\bibitem[{Ushey(2020)}]{reticulate_2020}
+Ushey, K. 2020.
+\newblock rstudio/reticulate.
+\newblock \urlprefix\url{https://github.com/rstudio/reticulate}.
+\newblock Original-date: 2017-02-06T18:59:46Z.
+
+\bibitem[{Wang and Blei(2019)}]{wang_deconfounder_2019}
+Wang, Y.; and Blei, D.~M. 2019.
+\newblock The blessings of multiple causes.
+\newblock \emph{Journal of the American Statistical Association}
+  (just-accepted): 1--71.
+
+\end{thebibliography}
