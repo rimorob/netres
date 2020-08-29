@@ -1,24 +1,37 @@
-\documentclass{article}
+\def\year{2021}\relax
+% File: LatentVars-aaai.tex
 
-% Use the following line for the initial blind version submitted for review:
-\usepackage{icml2020}
+\documentclass[letterpaper]{article}
 
-% If accepted, instead use the following line for the camera-ready submission:
-%\usepackage[accepted]{icml2020}
+% DO NOT CHANGE THIS
+\usepackage{aaai21} % DO NOT CHANGE THIS
+\usepackage{times} % DO NOT CHANGE THIS
+\usepackage{helvet} % DO NOT CHANGE THIS
+\usepackage{courier} % DO NOT CHANGE THIS
+\usepackage[hyphens]{url} % DO NOT CHANGE THIS
+\usepackage{graphicx} % DO NOT CHANGE THIS
+\urlstyle{rm} % DO NOT CHANGE THIS
+\def\UrlFont{\rm} % DO NOT CHANGE THIS
+\usepackage{graphicx} % DO NOT CHANGE THIS
+\usepackage{natbib}
+% DO NOT CHANGE THIS OR ADD OPTIONS
+\usepackage{caption}
+% DO NOT CHANGE THIS OR ADD OPTIONS
+\frenchspacing % DO NOT CHANGE THIS
+\setlength{\pdfpagewidth}{8.5in} % DO NOT CHANGE THIS
+\setlength{\pdfpageheight}{11in} % DO NOT CHANGE THIS
+
+% THIS IS OUR "EXTRA" SECTION - REVIEW FOR COMPLIANCE WITH AAAI RULES
 \usepackage{xr}
 \externaldocument[sup-]{supplementary}
-\usepackage{natbib}
 
-\usepackage[hyphens]{url} %to format URLs in the bibliography
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
-\usepackage{hyperref}       % hyperlinks
-% Attempt to make hyperref and algorithmic work together better:
+% keeping for compatibility though not using hyperref any longer (due to aaai regulations)
 \newcommand{\theHalgorithm}{\arabic{algorithm}}
 
-\usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
-\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{amsfonts}       % blackboard math symbols - THIS MAY CAUSE PROBLEMS
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 \usepackage{multirow}				% for multi-row labels
@@ -29,50 +42,29 @@
 \usepackage{mathtools}			% for \vdotswithin{}
 \usepackage{resizegather}   % for gathering multi-lines to one line
 %packages for graph layout
-\usepackage{graphicx}
-\usepackage[pdf]{graphviz}
+\usepackage[pdf]{graphviz}	% THIS MAY CAUSE PROBLEMS
 
-%format section headings compactly
-\usepackage[compact]{titlesec}
-\titlespacing{\section}{0pt}{2ex}{1ex}
-\titlespacing{\subsection}{0pt}{1ex}{0ex}
-\titlespacing{\subsubsection}{0pt}{0.5ex}{0ex}
+\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 
-\setlength{\textfloatsep}{3pt}
+%
+% PDF Info Is REQUIRED.
+% For /Author, add all authors within the parentheses,
+% separated by commas. No accents or commands.
+% For /Title, add Title in Mixed Case.
+% No accents or commands. Retain the parentheses.
+\pdfinfo{
+/Title (Identification of Latent Variables From Grahpical Model Residuals)
+/Author (Anonymous)
+} %Leave this
 
-\icmltitlerunning{Identification of Latent Variables From Residuals}
+\setcounter{secnumdepth}{0} %May be changed to 1 or 2 if section numbers are desired.
+
+\title{Identification of Latent Variables From Grahpical Model Residuals}
+
 
 \begin{document}
-
-\twocolumn[
-\icmltitle{Identification of Latent Variables From Their
-Footprint In Bayesian Network Residuals}
-
-\icmlsetsymbol{equal}{*}
-
-\begin{icmlauthorlist}
-\icmlauthor{Boris Hayete}{equal,former}
-\icmlauthor{Fred Gruber}{equal,gns}
-\icmlauthor{Anna Decker}{former}
-\icmlauthor{Raymond Yan}{gns}
-\end{icmlauthorlist}
-
-\icmlaffiliation{former}{Work completed at GNS Healthcare, Cambridge, Massachusetts, USA 02142}
-\icmlaffiliation{gns}{Department Of Precision Medicine, GNS Healthcare, Cambridge, Massachusetts, USA 02142}
-
-\icmlcorrespondingauthor{Boris Hayete}{boris@borisland.com}
-\icmlcorrespondingauthor{Fred Gruber}{fred@gnshealthcare.com}
-
-\icmlkeywords{Machine Learning, ICML, Computational Biology, Bayes Nets, Latent Variables} %revise!!!!!!!!!!!!!!!!!
-\vskip 0.1in
-]
-
-\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
-
-% Set sizes of skips before/after equations, figures, and tables
-\setlength{\abovedisplayskip}{4pt}
-\setlength{\belowdisplayskip}{4pt} 
-\setlength{\belowcaptionskip}{-5pt}
+\maketitle
 
 \begin{abstract}
 Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency: that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" highlights the need for continued attention to the unobserved confounder problem.  
@@ -328,26 +320,26 @@ Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elida
 \begin{algorithmic}
 %\DontPrintSemicolon
 %\SetAlgoLined
- \STATE \textbf{Data:} The set of observed variables $\{V, O\}$
- \STATE \textbf{Result:} Graph $G_{\bar{U}}(V, O, \bar{U})$
- \STATE Construct $G = G(V, O)$\;
- \STATE Compute $S_0 = BIC_{G}$\;
- \STATE Estimate $\bar{U} = f(R)$\;
- \STATE Construct $G_{\bar{U}} = G(V, O, \bar{U})$\;
- \STATE Compute $S_{\bar{U}} = BIC(G_{\bar{U}})$\;
- \WHILE{$S_{\bar{U}} - S_0 > \epsilon$} 
-  \STATE Set $S_0 = S_{\bar{U}}$\;
-  \STATE Calculate $R_{\bar{U}}$:\;
-  \STATE Set $\bar{U}$ to arbitrary constant values\;
-  \FORALL{child node $C \in G_{\bar{U}}, C \notin \bar{U}$}
-  	\STATE Set parents to training data\;
-  	\STATE $\bar{C} = C|parents(C)$\;
-  	\STATE Set $R_C = PSR(\bar{C}, C)$\;
-  \ENDFOR
-  \STATE Estimate $\bar{U} = f(R_{\bar{U}})$\;
-  \STATE Construct $G_{\bar{U}} = G(V, O, \bar{U})$\;
-  \STATE Compute $S_{\bar{U}} = BIC(G_{\bar{U}})$\;
- \ENDWHILE
+ \State \textbf{Data:} The set of observed variables $\{V, O\}$
+ \State \textbf{Result:} Graph $G_{\bar{U}}(V, O, \bar{U})$
+ \State Construct $G = G(V, O)$\;
+ \State Compute $S_0 = BIC_{G}$\;
+ \State Estimate $\bar{U} = f(R)$\;
+ \State Construct $G_{\bar{U}} = G(V, O, \bar{U})$\;
+ \State Compute $S_{\bar{U}} = BIC(G_{\bar{U}})$\;
+ \While{$S_{\bar{U}} - S_0 > \epsilon$} 
+  \State Set $S_0 = S_{\bar{U}}$\;
+  \State Calculate $R_{\bar{U}}$:\;
+  \State Set $\bar{U}$ to arbitrary constant values\;
+  \ForAll{child node $C \in G_{\bar{U}}, C \notin \bar{U}$}
+  	\State Set parents to training data\;
+  	\State $\bar{C} = C|parents(C)$\;
+  	\State Set $R_C = PSR(\bar{C}, C)$\;
+  \EndFor
+  \State Estimate $\bar{U} = f(R_{\bar{U}})$\;
+  \State Construct $G_{\bar{U}} = G(V, O, \bar{U})$\;
+  \State Compute $S_{\bar{U}} = BIC(G_{\bar{U}})$\;
+ \EndWhile
 \end{algorithmic}
 \end{algorithm}
 %\end{minipage}
@@ -357,25 +349,25 @@ Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elida
  \caption{Inferring linearly optimal $\bar{U}$ and assessing its cardinality by permutations}
  \label{alg:linearPCA}
 \begin{algorithmic}
-\STATE {\bfseries Data:} The set of residuals $R_{\bar{U}}$ from modeling $D$ with $G_{\bar{U}}$
-\STATE \textbf{Result:} Linear approximation to $\bar{U}$
- \STATE Set significance threshold $\alpha$ (e.g. $\alpha = 0.05$)\;
- \STATE Learn $\bar{U} = PCA(R_{\bar{U}})$\;
- \STATE Calculate column-wise variance explained $V_E^{0}$ for $\bar{U}^{*}$\;
- \STATE Set $V_E^s = 0 \times rank(R_{\bar{U}})$, matrix of variances explained by shuffling\;
- \WHILE{$se(\bar{U}) > \epsilon$} 
-  \STATE $R_{\bar{U}}^{*} = shuffle(R_{\bar{U}})$ (column-wise)\;
-  \STATE Calculate $\bar{U}^{*} = PCA(R_{\bar{U}}^{*})$\;
-  \STATE Calculate $V_E^{*}$ for $\bar{U}^{*}$\;
-  \STATE Concatenate row-wise: $V_E^s = \{V_E^s; V_E^{*}\}$\;
-  \STATE Fit $B(i)$ beta distributions to each column $i$ of $V_E$\;
-  \STATE For each column $i$ of $\bar{U}$, calculate:\;
+\State {\bfseries Data:} The set of residuals $R_{\bar{U}}$ from modeling $D$ with $G_{\bar{U}}$
+\State \textbf{Result:} Linear approximation to $\bar{U}$
+ \State Set significance threshold $\alpha$ (e.g. $\alpha = 0.05$)\;
+ \State Learn $\bar{U} = PCA(R_{\bar{U}})$\;
+ \State Calculate column-wise variance explained $V_E^{0}$ for $\bar{U}^{*}$\;
+ \State Set $V_E^s = 0 \times rank(R_{\bar{U}})$, matrix of variances explained by shuffling\;
+ \While{$se(\bar{U}) > \epsilon$} 
+  \State $R_{\bar{U}}^{*} = shuffle(R_{\bar{U}})$ (column-wise)\;
+  \State Calculate $\bar{U}^{*} = PCA(R_{\bar{U}}^{*})$\;
+  \State Calculate $V_E^{*}$ for $\bar{U}^{*}$\;
+  \State Concatenate row-wise: $V_E^s = \{V_E^s; V_E^{*}\}$\;
+  \State Fit $B(i)$ beta distributions to each column $i$ of $V_E$\;
+  \State For each column $i$ of $\bar{U}$, calculate:\;
   \begin{gather*}
   P(V_E^{0}(i) | V_E^s(i)) = \lim_{|V_E^s(i)| \to \infty} \frac{|V_E^s(i) > V_E^{0}(i)|}{|V_E^s(i)|} \approx 1 - \int_{-\infty}^{V_E^{0}(i)} PDF(B_i)
   \end{gather*}\;
- \ENDWHILE
- \STATE $P(V_E^{0}(i) | V_E^s(i)) = P(V_E^{0}(i) \sim V_E^s(i)) \times rank(V_E)$\;
- \STATE Drop $V_E^{0}(i)$ for which $P(V_E^{0}(i) \sim V_E^s(i)) > \alpha$
+ \EndWhile
+ \State $P(V_E^{0}(i) | V_E^s(i)) = P(V_E^{0}(i) \sim V_E^s(i)) \times rank(V_E)$\;
+ \State Drop $V_E^{0}(i)$ for which $P(V_E^{0}(i) \sim V_E^s(i)) > \alpha$
 \end{algorithmic}
 \end{algorithm}
 %\end{minipage}
@@ -525,8 +517,6 @@ Retaining original data features provides explainability, while inference of lat
 % The authors gratefully acknowledge Karl Runge of GNS Healthcare, Jacob Oppenheim of Indigo Agriculture, and Yevgeny Shapiro of Mythic AI for their invaluable feedback and suggestions and Jeanne Latourelle of GNS Healthcare for her assistance with obtaining the CHDI data.
  
 \small
-\Urlmuskip=0mu plus 1mu\relax
-\bibliography{LatentVars}
-\bibliographystyle{icml2020}
+\bibliography{LatentVars-aaai}
 
 \end{document}
