@@ -27,7 +27,6 @@
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
-% keeping for compatibility though not using hyperref any longer (due to aaai regulations)
 \newcommand{\theHalgorithm}{\arabic{algorithm}}
 
 \usepackage{booktabs}       % professional-quality tables
@@ -41,7 +40,7 @@
 \usepackage{placeins}				% for table and figure positioning
 \usepackage{mathtools}			% for \vdotswithin{}
 \usepackage{resizegather}   % for gathering multi-lines to one line
-%packages for graph layout
+%package for graph layout
 \usepackage[pdf]{graphviz}	% THIS MAY CAUSE PROBLEMS
 
 \usepackage{algorithm}% http://ctan.org/pkg/algorithms
@@ -67,9 +66,9 @@
 \maketitle
 
 \begin{abstract}
-Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency: that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" highlights the need for continued attention to the unobserved confounder problem.  
+Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency: that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" draws renewed attention to the unobserved confounder problem.  
 
-We present a novel method that aims to control for the latent structure of the data in the estimation of causal effects by iteratively deriving proxies for the latent space from the entirety of residuals of the inferred graphical model.  When used for gaussian graphical models, under mild assumptions our method improves structural inference and enhances identifiability of the causal effect. In addition, when the model is being used to predict outcomes, this method un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that such improvement of the predictive model is intrinsically capped and cannot rise beyond a certain limit as compared to the confounded model.  Furthermore, we propose an algorithm for computing a ceiling for the dimensionality of the latent space which may be useful in future approaches to the problem.  We extend our methodology beyond GGMs to ordinal variables and nonlinear cases.  Our R package provides both PCA and autoencoder implementations of the methodology, suitable for GGMs with some guarantees and for better performance in general cases but without such guarantees. 
+We present a novel method that aims to control for the latent space when estimating the DAG and any causal effects on outcomes by iteratively deriving proxies for the latent space from the inferred model.  When used for gaussian graphical models, under mild assumptions our method improves structural inference and enhances identifiability of the causal effect. In addition, when the model is being used to predict outcomes, this method un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that such improvement of the predictive model is intrinsically capped and cannot rise beyond a certain limit as compared to the confounded model.  Furthermore, we propose an algorithm for computing a ceiling for the dimensionality of the latent space which may be useful in future approaches to the problem.  We extend our methodology beyond GGMs to ordinal variables and nonlinear cases.  Our R package provides both PCA and autoencoder implementations of the methodology, suitable for GGMs with some guarantees and for better performance in general cases but without such guarantees. 
 \end{abstract}
 
 \section{Introduction}
@@ -132,7 +131,6 @@ V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j,\
 \end{align*}
 \end{equation}	
 
-\FloatBarrier
 \begin{figure}[h]
 	\centering
 	\begin{minipage}[t]{\dimexpr0.6\textwidth}
@@ -177,7 +175,6 @@ V_j = \beta_{j0} + \beta_{j1} P^{V_j}_1 + \dots + \beta_{jp} P^{V_j}_p + \xi_j,\
 	\end{minipage}
 	\end{minipage}
 \end{figure}
-\FloatBarrier
 
 For example, consider $O_1$ in Figure \ref{fig:sampleGraph}.  We can write:
 \begin{equation}
@@ -310,10 +307,7 @@ The integral should converge faster than the count of times variance explained b
 
 Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elidan_learning_2005}.  If we consider $Y = f(X)$, where $Y$ are all DAG outputs and $X$ are all inputs, and $f$ is a suitably parameterized DAG, PCA over residuals (linear or not) normalized by PCA over shuffled residuals provides a measure of "compressibility" of residual space.  In other words, we propose a minimum description length algorithm for detecting the latent variables so that the residual space is no longer compressible.
 
-%\FloatBarrier
-%\begin{center}
-%\scalebox{0.5}{
-%\begin{minipage}[t]{0.9\textwidth}
+
 \begin{algorithm}%[H]
  \caption{Learning $\bar{U}$ from structure residuals via EM}
  \label{alg:latentEM}
@@ -370,10 +364,6 @@ Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elida
  \State Drop $V_E^{0}(i)$ for which $P(V_E^{0}(i) \sim V_E^s(i)) > \alpha$
 \end{algorithmic}
 \end{algorithm}
-%\end{minipage}
-%}
-%\end{center}
-%\FloatBarrier
 
 
 
@@ -512,7 +502,6 @@ Many domains can benefit from this admixture of causal discovery and latent spac
 
 Retaining original data features provides explainability, while inference of latent space improves structure, adds robustness to statements about ACE, and helps assess data set limitations.  We believe our work, both algorithmically and through availability of the software, couples causal discovery and causal inference and will open new practical applications in both domains.
 
-\clearpage
 % \section*{Acknowledgments}
 % The authors gratefully acknowledge Karl Runge of GNS Healthcare, Jacob Oppenheim of Indigo Agriculture, and Yevgeny Shapiro of Mythic AI for their invaluable feedback and suggestions and Jeanne Latourelle of GNS Healthcare for her assistance with obtaining the CHDI data.
  
