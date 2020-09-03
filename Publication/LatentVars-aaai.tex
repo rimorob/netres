@@ -23,7 +23,7 @@
 
 % THIS IS OUR "EXTRA" SECTION - REVIEW FOR COMPLIANCE WITH AAAI RULES
 \usepackage{xr}
-\externaldocument[sup-]{supplementary}
+\externaldocument[sup-]{supplementary-aaai}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
@@ -53,13 +53,13 @@
 % For /Title, add Title in Mixed Case.
 % No accents or commands. Retain the parentheses.
 \pdfinfo{
-/Title (Identification of Latent Variables From Grahpical Model Residuals)
+/Title (Identification of Latent Variables From Graphical Model Residuals)
 /Author (Anonymous)
 } %Leave this
 
 \setcounter{secnumdepth}{0} %May be changed to 1 or 2 if section numbers are desired.
 
-\title{Identification of Latent Variables From Grahpical Model Residuals}
+\title{Identification of Latent Variables From Graphical Model Residuals}
 
 
 \begin{document}
@@ -68,7 +68,7 @@
 \begin{abstract}
 Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency: that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" draws renewed attention to the unobserved confounder problem.  
 
-We present a novel method that aims to control for the latent space when estimating a DAG by iteratively deriving proxies for the latent space from the inferred model.  Under mild assumptions, our method improves structural inference of gaussian graphical models and enhances identifiability of the causal effect. In addition, when the model is being used to predict outcomes, it un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that any improvement of prediction of an outcome is intrinsically capped and cannot rise beyond a certain limit as compared to the confounded model.  Furthermore, we propose an algorithm for computing a ceiling for the dimensionality of the latent space which may be useful in future approaches to the problem.  We extend our methodology beyond GGMs to ordinal variables and nonlinear cases.  Our R package provides both PCA and autoencoder implementations of the methodology, suitable for GGMs with some guarantees and for better performance in general cases but without such guarantees. 
+We present a novel method that aims to control for the latent space when estimating a DAG by iteratively deriving proxies for the latent space from the residuals of the inferred model.  Under mild assumptions, our method improves structural inference of gaussian graphical models and enhances identifiability of the causal effect. In addition, when the model is being used to predict outcomes, it un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that any improvement of prediction of an outcome is intrinsically capped and cannot rise beyond a certain limit as compared to the confounded model.  We extend our methodology beyond GGMs to ordinal variables and nonlinear cases.  Our R package provides both PCA and autoencoder implementations of the methodology, suitable for GGMs with some guarantees and for better performance in general cases but without such guarantees. 
 \end{abstract}
 
 \section{Introduction}
@@ -82,7 +82,7 @@ Intuitively, the presence of unobserved confounding leads to violations of condi
 
 Hitherto, the literature has largely focused on addressing the subset of problems where the ACE can be estimated reliably in the absence of this guarantee, such as when conditional exchangeability holds \cite{hernan_estimating_2006}.  Previously, methods have been proposed for inferring latent variables affecting GMs by the means of expectation maximization (EM) (as far back as \cite{friedman1997learning}, \cite{friedman1998bayesian}).  However, for a large enough network, local gradients do not provide a reliable guide, nor do they address the cardinality of the latent space.  Methods for using near-cliques for detection of latent variables in directed acyclic graphs (DAGs) with gaussian graphical models (GGMs) have been proposed that address both problems by analyzing near-cliques in DAGs (\cite{elidan_discovering_2001}, \cite{silva_learning_2006}).  A method related to ours has been proposed for calculating latent variables in a greedy fashion in linear and "invertible continuous" networks, and relating such estimates to observed data to speed up structure search and enable discovery of hidden variables (\cite{elidan_ideal_2007}). However, with a clique-driven approach it is impossible to tell whether any cliques have shared parents and, importantly, whether any signal remained to be modeled, resulting in score-based testing rejecting proposed "ideal parents". Additionally, Wang and Blei (2019) introduced the deconfounder approach to detecting and adjusting for latent confounders of causal effects in the presence of multiple causes but in the context of a fixed DAG under relatively strict conditions \cite{wang_deconfounder_2019}. 
 
-We show that there exist circumstances when causal sufficiency can be asymptotically achieved and exchangeability ensured even when the causal drivers of outcome are confounded by a number of latent variables.  This can be achieved when the confounding is \textbf{pleiotropic}, that is,  when the latent variable affects a "large enough" number of variables, some driving an outcome of interest and others not (\cite{anandkumar_learning_2013}).  Notably, this objective cannot be achieved when confounding affects only the variables of interest and their causal parents (\cite{damour_multi-cause_2019}). We detail an algorithm for diagnosing and accounting for latent confounding in closed form for a GGM example, demonstrate the implementation in a simulated data set, and discuss extensions to other functional forms.  Importantly, our approach uses an indication of latent space that is global, though only locally optimal, being derived from the totality of network residuals. This allows for one-step derivation of the best local approximation of latent space, leading to theiterative algorithm proposed below.
+We show that there exist circumstances when causal sufficiency can be asymptotically achieved and exchangeability ensured even when the causal drivers of outcome are confounded by a number of latent variables.  This can be achieved when the confounding is \textbf{pleiotropic}, that is,  when the latent variable affects a "large enough" number of variables, some driving an outcome of interest and others not (\cite{anandkumar_learning_2013}).  Notably, this objective cannot be achieved when confounding affects only the variables of interest and their causal parents (\cite{damour_multi-cause_2019}). We detail an algorithm for diagnosing and accounting for latent confounding in closed form for a GGM example, demonstrate the implementation in a simulated data set, and discuss extensions to other functional forms.  Importantly, our approach uses an indication of latent space that is global, though only locally optimal, being derived from the totality of network residuals. This allows for one-step derivation of the best local approximation of latent space, leading to the iterative algorithm proposed below.
 
 The outline of this paper is as follows: In the first two sections, we outline the process of diagnosting latent confounding in the special case of GGMs where closed-form solutions exist. In the third section, we derive the improvement cap for predictive models improvements to the graph learned from the data. In the fourth section, discuss implementation, and in the fifth demonstrate the approach in simulated and real data. Finally, we discuss some extensions to the approach for more complex graphical model structures and functional forms. 
 
@@ -299,13 +299,9 @@ Although the available improvement in predictive power is also capped in some wa
 This approach is a generalization of work presented in \cite{anandkumar_learning_2013}, where the authors show that, under some assumptions. the latent space can be learned exactly, which is also related to the deconfounder approach described by \cite{wang_deconfounder_2019}.  However, our approach does not require that the observables be conditionally independent given the latent space and instead \textit{generate} such independence by the use of causal network's residuals, which are conditionally independent of each other \textit{given the graph and the latent space}.  However, since the network among the observables is undefined in the beginning, the structure of the observable network must be learned at the same time as the structure of the latent space, which leads us to the iterative/variational bayes approach presented in Algorithm \ref{alg:latentEM}.  Lastly, the use of the entirety of the residual space is different from the work described in \cite{elidan_ideal_2007}, where local residuals are pursued with the goal to accelerate structure learning while simultaneously discovering the latent space.
 
 \section{Implementation}
-Algorithm \ref{alg:latentEM} below describes our approach to learning the latent space and can be viewed as a type of an expectation-maximization algorithm, possibly nested, if EM is used to learn the DAG at each step.
+Algorithm \ref{alg:latentEM} below describes our approach to learning the latent space and can be viewed as a type of an expectation-maximization algorithm.
 
-How do we learn $\bar{U} = f(R_{\bar{U}})$?  In the linear case, we can use PCA, as described above, and in the non-linear case, we can use non-linear PCA, autoencoders, or other methods, as alluded to above.  However, the linear case provides a useful constraint on dimensionality, and this constraint can be derived quickly.  A useful notion of the ceiling constraint on the linear latent space dimensionality can be found in \cite{gavish_optimal_2014}.  From a practical standpoint, the dimensionality can be even tighter, and we propose a permutation-test-based method for inferring $ceiling(|U|)$ in Algorithm \ref{alg:linearPCA}.
-
-The integral should converge faster than the count of times variance explained by $U^{*}$ on true residuals exceeds that obtained from shuffled residuals, but the permutation test approach of PCA cardinality is also workable, albeit with more iterations.  Note that it is necessary to correct for the number of tests performed, and that we use Bonferroni correction as a simple and conservative stand-in. Alternatively, networks built using structural priors of the form proposed in \cite{friedman_being_2013} may not need to perform this step.
-
-Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elidan_learning_2005}.  If we consider $Y = f(X)$, where $Y$ are all DAG outputs and $X$ are all inputs, and $f$ is a suitably parameterized DAG, PCA over residuals (linear or not) normalized by PCA over shuffled residuals provides a measure of "compressibility" of residual space.  In other words, we propose a minimum description length algorithm for detecting the latent variables so that the residual space is no longer compressible.
+How do we learn $\bar{U} = f(R_{\bar{U}})$?  In the linear case, we can use PCA, as described above, and in the non-linear case, we can use non-linear PCA, autoencoders, or other methods, as alluded to above.  However, the linear case provides a useful constraint on dimensionality, and this constraint can be derived quickly.  A useful notion of the ceiling constraint on the linear latent space dimensionality can be found in \cite{gavish_optimal_2014}.  From a practical standpoint, the dimensionality can be set even tighter, and we use a previously described heuristic approach\cite{buja_remarks_1992}.
 
 
 \begin{algorithm}%[H]
@@ -334,34 +330,6 @@ Our algorithm \ref{alg:linearPCA} is different from that proposed in \cite{elida
   \State Construct $G_{\bar{U}} = G(V, O, \bar{U})$\;
   \State Compute $S_{\bar{U}} = BIC(G_{\bar{U}})$\;
  \EndWhile
-\end{algorithmic}
-\end{algorithm}
-%\end{minipage}
-\hspace{1cm}
-%\begin{minipage}[t]{1\textwidth}
-\begin{algorithm}%[H]
- \caption{Inferring linearly optimal $\bar{U}$ and assessing its cardinality by permutations}
- \label{alg:linearPCA}
-\begin{algorithmic}
-\State {\bfseries Data:} The set of residuals $R_{\bar{U}}$ from modeling $D$ with $G_{\bar{U}}$
-\State \textbf{Result:} Linear approximation to $\bar{U}$
- \State Set significance threshold $\alpha$ (e.g. $\alpha = 0.05$)\;
- \State Learn $\bar{U} = PCA(R_{\bar{U}})$\;
- \State Calculate column-wise variance explained $V_E^{0}$ for $\bar{U}^{*}$\;
- \State Set $V_E^s = 0 \times rank(R_{\bar{U}})$, matrix of variances explained by shuffling\;
- \While{$se(\bar{U}) > \epsilon$} 
-  \State $R_{\bar{U}}^{*} = shuffle(R_{\bar{U}})$ (column-wise)\;
-  \State Calculate $\bar{U}^{*} = PCA(R_{\bar{U}}^{*})$\;
-  \State Calculate $V_E^{*}$ for $\bar{U}^{*}$\;
-  \State Concatenate row-wise: $V_E^s = \{V_E^s; V_E^{*}\}$\;
-  \State Fit $B(i)$ beta distributions to each column $i$ of $V_E$\;
-  \State For each column $i$ of $\bar{U}$, calculate:\;
-  \begin{gather*}
-  P(V_E^{0}(i) | V_E^s(i)) = \lim_{|V_E^s(i)| \to \infty} \frac{|V_E^s(i) > V_E^{0}(i)|}{|V_E^s(i)|} \approx 1 - \int_{-\infty}^{V_E^{0}(i)} PDF(B_i)
-  \end{gather*}\;
- \EndWhile
- \State $P(V_E^{0}(i) | V_E^s(i)) = P(V_E^{0}(i) \sim V_E^s(i)) \times rank(V_E)$\;
- \State Drop $V_E^{0}(i)$ for which $P(V_E^{0}(i) \sim V_E^s(i)) > \alpha$
 \end{algorithmic}
 \end{algorithm}
 
@@ -394,7 +362,7 @@ bound on the error that we can expect to obtain under perfect reconstruction of 
 
 When the confounders are unobserved, the reconstruction of the network introduces many false edges and results in a five-times-larger RMSE. Figure \ref{fig_missing} (see also supplementary Figure \ref{sup-fig_network_miss}) shows the reconstructed network, where the red edges are the true edges between $V_1$ and $V_2$ and the outcome $Z$.
 
-We ran algorithms \ref{alg:latentEM} and \ref{alg:linearPCA} for 20 iterations using PCA to reconstruct the latent space from the residuals with the assumption that the latent variables were source nodes. We then tracked the latent variable reconstruction in an out-of-sample test set as well as the error in the coefficient's estimates. Figure \ref{fig:latrecons} (supplementary Figure \ref{sup-fig_latvar_r2}) shows the adjusted $R^2$ between each of the true latent variables and the prediction obtained from the estimated latent space across iterations. The lines and error bands are calculated using locally estimated scatterplot smoothing (LOESS). The estimated latent space is predictive of both the latent variables, and the iterative procedure improves the $R^2$ with respect to $U_1$ from 0.49 at the first iterations to about 0.505 in about 3 iterations.
+We ran \ref{alg:latentEM} for 20 iterations using PCA to reconstruct the latent space from the residuals with the assumption that the latent variables were source nodes. We then tracked the latent variable reconstruction in an out-of-sample test set as well as the error in the coefficient's estimates. Figure \ref{fig:latrecons} (supplementary Figure \ref{sup-fig_latvar_r2}) shows the adjusted $R^2$ between each of the true latent variables and the prediction obtained from the estimated latent space across iterations. The lines and error bands are calculated using locally estimated scatterplot smoothing (LOESS). The estimated latent space is predictive of both the latent variables, and the iterative procedure improves the $R^2$ with respect to $U_1$ from 0.49 at the first iterations to about 0.505 in about 3 iterations.
 
 Figure \ref{fig:errorcoef} (also supplementary Figure \ref{sup-fig_coef_rmse}) shows the total error in the coefficients
 of all variables connected to the outcome $Z$ (RMSE) in the infered network as

@@ -1,22 +1,38 @@
-\documentclass[onecolumn]{article}
+\def\year{2021}\relax
+% File: LatentVars-aaai.tex
 
-% Use the following line for the initial blind version submitted for review:
-\usepackage{icml2020}
+\documentclass[letterpaper]{article}
 
-% If accepted, instead use the following line for the camera-ready submission:
-%\usepackage[accepted]{icml2020}
-
+% DO NOT CHANGE THIS
+\usepackage{aaai21} % DO NOT CHANGE THIS
+\usepackage{times} % DO NOT CHANGE THIS
+\usepackage{helvet} % DO NOT CHANGE THIS
+\usepackage{courier} % DO NOT CHANGE THIS
+\usepackage[hyphens]{url} % DO NOT CHANGE THIS
+\usepackage{graphicx} % DO NOT CHANGE THIS
+\urlstyle{rm} % DO NOT CHANGE THIS
+\def\UrlFont{\rm} % DO NOT CHANGE THIS
+\usepackage{graphicx} % DO NOT CHANGE THIS
 \usepackage{natbib}
+% DO NOT CHANGE THIS OR ADD OPTIONS
+\usepackage{caption}
+% DO NOT CHANGE THIS OR ADD OPTIONS
+\frenchspacing % DO NOT CHANGE THIS
+\setlength{\pdfpagewidth}{8.5in} % DO NOT CHANGE THIS
+\setlength{\pdfpageheight}{11in} % DO NOT CHANGE THIS
+
+% THIS IS OUR "EXTRA" SECTION - REVIEW FOR COMPLIANCE WITH AAAI RULES
+\usepackage{xr}
+\externaldocument[sup-]{supplementary}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
-\usepackage{hyperref}       % hyperlinks
-% Attempt to make hyperref and algorithmic work together better:
 \newcommand{\theHalgorithm}{\arabic{algorithm}}
 
-\usepackage{url}            % simple URL typesetting
+\usepackage{amsthm}
+
 \usepackage{booktabs}       % professional-quality tables
-\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{amsfonts}       % blackboard math symbols - THIS MAY CAUSE PROBLEMS
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 \usepackage{multirow}				% for multi-row labels
@@ -26,58 +42,68 @@
 \usepackage{placeins}				% for table and figure positioning
 \usepackage{mathtools}			% for \vdotswithin{}
 \usepackage{resizegather}   % for gathering multi-lines to one line
-%packages for graph layout
-\usepackage{graphicx}
-\usepackage[pdf]{graphviz}
-%format section headings compactly
-\usepackage[compact]{titlesec}
-\titlespacing{\section}{0pt}{2ex}{1ex}
-\titlespacing{\subsection}{0pt}{1ex}{0ex}
-\titlespacing{\subsubsection}{0pt}{0.5ex}{0ex}
+%package for graph layout
+\usepackage[pdf]{graphviz}	% THIS MAY CAUSE PROBLEMS
 
-\setlength{\textfloatsep}{3pt}
+\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 
-\icmltitlerunning{Identification of Latent Variables From Residuals}
+\externaldocument{LatentVars-aaa}
+%
+% PDF Info Is REQUIRED.
+% For /Author, add all authors within the parentheses,
+% separated by commas. No accents or commands.
+% For /Title, add Title in Mixed Case.
+% No accents or commands. Retain the parentheses.
+\pdfinfo{
+/Title (Identification of Latent Variables From Graphical Model Residuals)
+/Author (Anonymous)
+} %Leave this
+
+\title{Identification of Latent Variables From Graphical Model Residuals: Supplementary Material}
+
+\newtheorem{theorem}{Theorem}[section]
 
 \begin{document}
 
-% \twocolumn[
-\onecolumn
-\icmltitle{Supplementary Material for paper: Identification of Latent Variables From Their
-Footprint In Bayesian Network Residuals}
-
-\icmlsetsymbol{equal}{*}
-
-\begin{icmlauthorlist}
-\icmlauthor{Boris Hayete}{equal,former}
-\icmlauthor{Fred Gruber}{equal,gns}
-\icmlauthor{Anna Decker}{former}
-\icmlauthor{Raymond Yan}{gns}
-\end{icmlauthorlist}
-
-\icmlaffiliation{former}{Work completed at GNS Healthcare, Cambridge, Massachusetts, USA 02142}
-\icmlaffiliation{gns}{Department Of Precision Medicine, GNS Healthcare, Cambridge, Massachusetts, USA 02142}
-
-\icmlcorrespondingauthor{Boris Hayete}{boris@borisland.com}
-\icmlcorrespondingauthor{Fred Gruber}{fred@gnshealthcare.com}
-
-\icmlkeywords{Machine Learning, ICML, Computational Biology, Bayes Nets, Latent Variables} %revise!!!!!!!!!!!!!!!!!
-\vskip 0.1in
-%]
-
-\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
-
-% Set sizes of skips before/after equations, figures, and tables
-\setlength{\abovedisplayskip}{4pt}
-\setlength{\belowdisplayskip}{4pt} 
-\setlength{\belowcaptionskip}{-5pt}
+\maketitle
 
 \begin{abstract}
-Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency: that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" highlights the need for continued attention to the unobserved confounder problem.  
+Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency: that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" draws renewed attention to the unobserved confounder problem.  
 
-We present a novel method that aims to control for the latent structure of the data in the estimation of causal effects by iteratively deriving proxies for the latent space from the entirety of residuals of the inferred graphical model.  When used for gaussian graphical models, under mild assumptions our method improves structural inference and enhances identifiability of the causal effect. In addition, when the model is being used to predict outcomes, this method un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that such improvement of the predictive model is intrinsically capped and cannot rise beyond a certain limit as compared to the confounded model.  Furthermore, we propose an algorithm for computing a ceiling for the dimensionality of the latent space which may be useful in future approaches to the problem.  We extend our methodology beyond GGMs to ordinal variables and nonlinear cases.  Our R package provides both PCA and autoencoder implementations of the methodology, suitable for GGMs with some guarantees and for better performance in general cases but without such guarantees. 
+We present a novel method that aims to control for the latent space when estimating a DAG by iteratively deriving proxies for the latent space from the residuals of the inferred model.  Under mild assumptions, our method improves structural inference of gaussian graphical models and enhances identifiability of the causal effect. In addition, when the model is being used to predict outcomes, it un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that any improvement of prediction of an outcome is intrinsically capped and cannot rise beyond a certain limit as compared to the confounded model.  We extend our methodology beyond GGMs to ordinal variables and nonlinear cases.  Our R package provides both PCA and autoencoder implementations of the methodology, suitable for GGMs with some guarantees and for better performance in general cases but without such guarantees. 
 \end{abstract}
 
+\section{Theorems}
+\begin{theorem}[Inferrability]
+\label{inferrability}
+
+Given a DAG $D$ over variables $V$ inferred in the presence of latent space $L$, define residuals corresponding to $V$ as $R$. Assuming that $L$ is orthogonal and true relationships modeled by $D$ are linear, we can infer $L$ from $R$ up to sign and scale.  [LIST ALL ASSUMPTIONS, INCLUDING FORM ANANDKUMAR] 
+\end{theorem}
+\begin{theorem}
+\label{deconfounding}
+Inference of $L$ is guaranteed up to sign and scale only if $L$ is an orthogonal basis vector.  However, accuracy of coefficients in $D$ is robust to violation of orthogonality.
+\begin{proof}
+Consider an equation for an outcome $O$ confounded by $L$:
+\begin{equation}
+\begin{split}
+O = \beta_{0} + \beta_{1} X_1 + \ldots +\beta_{n} X_n + \beta_{L_1} L_1 + \ldots + \beta{L_k} L_k \\= B_X|L * X + B_L * L
+\end{split}
+\label{eq:confNonOrth}
+\end{equation}
+Suppose that, instead, our algorithm infers latent space $I$ based on the assumption of orthogonality.  Assuming that the graph relationships are all linear, and since $L$ and $I$ are basis vectors of the same rank (being rank($L$)), any linear combination of $I$ can be re-written as a linear combination of $L$.  From \ref{resPCA}, the original space $R$ can then be equally parameterized as:
+\begin{equation}
+R = B_L * L = B_I * I
+\end{equation}
+where $I$ and $L$ differ only in orthogonality of the basis vector.   Therefore, every local iteration of \ref{alg:latentEM} will derive:
+\begin{equation}
+B_X|I * X + B_I * I = B_X|I * X  + B_L * L = B_X|L * X + B_L * L
+\end{equation}
+That is, while parameterization of latent space may be incorrect, parameterization of the observed space will not be affected, since the deconfounding quantity will be the same for each training data sample.  Since parameterization of the observed space is the main objective of causal inference, this result gives us some comfort.  
+
+Note that, when true $D$ is not a GGM, but a modest extension thereof, such as GGM with polynomial interaction terms, the above result still holds, since, subject to (difficult) enumeration of the polynomial space of interactions, the model remains linear in the coefficients and the residual space $R$ retains a faithful linear representation of $L$.
+\end{proof}
+\end{theorem}
 \section{Additional Images}
 In this section we include additional images.
 \begin{figure}[ht!]
@@ -139,22 +165,20 @@ In this section we include additional algorithms
  \caption{Assesment Of Inference Of Latent CAG Repeat Length}
  \label{alg_cag}
 \begin{algorithmic}
-\STATE {\bfseries Data:} The CAG dataset, with CAG repeat length withheld
-\STATE \textbf{Result:} Latent space predictive of CAG in training data and code to predict out of sample
- \FOR{fold $in$ 5 folds} 
-  \STATE Train on 4/5 of the data
-  \STATE Learn latent variables (linear, autoencoder methods)
-  \STATE Predict out of sample
- \ENDFOR
- \STATE Concatenate all out-of-sample predictions across folds
- \STATE Assess $R^{2}$ for linear and autoencoder methods
+\State {\bfseries Data:} The CAG dataset, with CAG repeat length withheld
+\State \textbf{Result:} Latent space predictive of CAG in training data and code to predict out of sample
+ \For{fold $in$ 5 folds} 
+  \State Train on 4/5 of the data
+  \State Learn latent variables (linear, autoencoder methods)
+  \State Predict out of sample
+ \EndFor
+ \State Concatenate all out-of-sample predictions across folds
+ \State Assess $R^{2}$ for linear and autoencoder methods
 \end{algorithmic}
 \end{algorithm}
 
-\clearpage
 \section{Additional Examples}
 \small
 \bibliography{LatentVars}
-\bibliographystyle{icml2020}
 
 \end{document}
