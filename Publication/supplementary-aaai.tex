@@ -62,7 +62,7 @@
 
 \title{Identification of Latent Variables From Graphical Model Residuals: Supplementary Material}
 
-\newtheorem{theorem}{Theorem}[section]
+\newtheorem{theorem}{Theorem}
 
 \begin{document}
 
@@ -75,13 +75,9 @@ We present a novel method that aims to control for the latent space when estimat
 \end{abstract}
 
 \section{Theorems}
-\begin{theorem}[Inferrability]
-\label{inferrability}
 
-Given a DAG $D$ over variables $V$ inferred in the presence of latent space $L$, define residuals corresponding to $V$ as $R$. Assuming that $L$ is orthogonal and true relationships modeled by $D$ are linear, we can infer $L$ from $R$ up to sign and scale.  [LIST ALL ASSUMPTIONS, INCLUDING FORM ANANDKUMAR] 
-\end{theorem}
 \begin{theorem}
-\label{deconfounding}
+\label{thm:deconfounding}
 Inference of $L$ is guaranteed up to sign and scale only if $L$ is an orthogonal basis vector.  However, accuracy of coefficients in $D$ is robust to violation of orthogonality.
 \begin{proof}
 Consider an equation for an outcome $O$ confounded by $L$:
