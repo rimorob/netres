@@ -1,8 +1,53 @@
-@article{spirtesCausalInferencePresence2013,
+@article{wangMultipleCausesCausal2019,
+  title = {Multiple {{Causes}}: {{A Causal Graphical View}}},
+  shorttitle = {Multiple {{Causes}}},
+  author = {Wang, Yixin and Blei, David M.},
+  year = {2019},
+  month = may,
+  abstract = {Unobserved confounding is a major hurdle for causal inference from observational data. Confounders---the variables that affect both the causes and the outcome---induce spurious non-causal correlations between the two. Wang \& Blei (2018) lower this hurdle with "the blessings of multiple causes," where the correlation structure of multiple causes provides indirect evidence for unobserved confounding. They leverage these blessings with an algorithm, called the deconfounder, that uses probabilistic factor models to correct for the confounders. In this paper, we take a causal graphical view of the deconfounder. In a graph that encodes shared confounding, we show how the multiplicity of causes can help identify intervention distributions. We then justify the deconfounder, showing that it makes valid inferences of the intervention. Finally, we expand the class of graphs, and its theory, to those that include other confounders and selection variables. Our results expand the theory in Wang \& Blei (2018), justify the deconfounder for causal graphs, and extend the settings where it can be used.},
+  archivePrefix = {arXiv},
+  eprint = {1905.12793},
+  eprinttype = {arxiv},
+  file = {/Users/fred/Zotero/storage/DV3SZKAC/Wang_Blei_2019_Multiple Causes.pdf;/Users/fred/Zotero/storage/GA6NFH8T/1905.html},
+  journal = {arXiv:1905.12793 [cs, stat]},
+  keywords = {latent confounders,proxies,stage2},
+  primaryClass = {cs, stat}
+}
+
+
+@article{jabbariDiscoveryCausalModels2017,
+  title = {Discovery of {{Causal Models}} That {{Contain Latent Variables}} through {{Bayesian Scoring}} of {{Independence Constraints}}},
+  author = {Jabbari, Fattaneh and Ramsey, Joseph and Spirtes, Peter and Cooper, Gregory},
+  year = {2017},
+  pages = {142--157},
+  doi = {10.1007/978-3-319-71246-8_9},
+  abstract = {Discovering causal structure from observational data in the presence of latent variables remains an active research area. Constraint-based causal discovery algorithms are relatively efficient at discovering such causal models from data using independence tests. Typically, however, they derive and output only one such model. In contrast, Bayesian methods can generate and probabilistically score multiple models, outputting the most probable one; however, they are often computationally infeasible to apply when modeling latent variables. We introduce a hybrid method that derives a Bayesian probability that the set of independence tests associated with a given causal model are jointly correct. Using this constraint-based scoring method, we are able to score multiple causal models, which possibly contain latent variables, and output the most probable one. The structure-discovery performance of the proposed method is compared to an existing constraint-based method (RFCI) using data generated from several previously published Bayesian networks. The structural Hamming distances of the output models improved when using the proposed method compared to RFCI, especially for small sample sizes.},
+  file = {/Users/fred/Zotero/storage/RFDZSV6G/Jabbari et al_2017_Discovery of Causal Models that Contain Latent Variables through Bayesian.pdf},
+  journal = {Joint European Conference on Machine Learning and Knowledge Discovery in Databases},
+  keywords = {Bayesian analysis,causal discovery,latent confounders,notnow,revisit},
+  pmcid = {PMC5836552},
+  pmid = {29520396}
+}
+
+
+
+@inproceedings{bernstein2020ordering,
+  title = {Ordering-Based Causal Structure Learning in the Presence of Latent Variables},
+  booktitle = {International Conference on Artificial Intelligence and Statistics},
+  author = {Bernstein, Daniel and Saeed, Basil and Squires, Chandler and Uhler, Caroline},
+  year = {2020},
+  pages = {4098--4108},
+  keywords = {causal discovery,general latent confounders,latent confounders,notnow},
+  organization = {{PMLR}}
+}
+
+
+@inproceedings{spirtesCausalInferencePresence1995,
   title = {Causal {{Inference}} in the {{Presence}} of {{Latent Variables}} and {{Selection Bias}}},
+  booktitle = {Proceedings of the {{Eleventh}} Conference on {{Uncertainty}} in Artificial Intelligence},
   author = {Spirtes, Peter L. and Meek, Christopher and Richardson, Thomas S.},
-  date = {2013-02-20},
-  year = {2013},
+  year = {1995},
+  pages = {499--506},
   url = {http://arxiv.org/abs/1302.4983},
   urldate = {2018-11-09},
   abstract = {We show that there is a general, informative and reliable procedure for discovering causal relations when, for all the investigator knows, both latent variables and selection bias may be at work. Given information about conditional independence and dependence relations between measured variables, even when latent variables and selection bias may be present, there are sufficient conditions for reliably concluding that there is a causal path from one variable to another, and sufficient conditions for reliably concluding when no such causal path exists.},
@@ -10,47 +55,75 @@
   eprint = {1302.4983},
   eprinttype = {arxiv},
   file = {/Users/fred/Zotero/storage/4GPPJ8F5/Spirtes et al_2013_Causal Inference in the Presence of Latent Variables and Selection Bias.pdf;/Users/fred/Zotero/storage/ZRNTYWSM/1302.html},
-  keywords = {latent variables,stage2},
-  primaryClass = {cs}
+  keywords = {latent confounders}
+}                  
+
+@article{nandy2018high,
+  title = {High-Dimensional Consistency in Score-Based and Hybrid Structure Learning},
+  author = {Nandy, Preetam and Hauser, Alain and Maathuis, Marloes H and others},
+  year = {2018},
+  volume = {46},
+  pages = {3151--3183},
+  publisher = {{Institute of Mathematical Statistics}},
+  file = {/Users/fred/Zotero/storage/WEQ83VFY/Nandy et al_2015_High-dimensional consistency in score-based and hybrid structure learning.pdf},
+  journal = {The Annals of Statistics},
+  number = {6A}
 }
 
-@article{frotRobustCausalStructure2017,
+
+                  @article{frotRobustCausalStructure2017,
   title = {Robust Causal Structure Learning with Some Hidden Variables},
   author = {Frot, Benjamin and Nandy, Preetam and Maathuis, Marloes H.},
-  date = {2017-08-03},
   year = {2017},
-  url = {http://arxiv.org/abs/1708.01151},
-  urldate = {2019-01-18},
+  month = aug,
   abstract = {We introduce a new method to estimate the Markov equivalence class of a directed acyclic graph (DAG) in the presence of hidden variables, in settings where the underlying DAG among the observed variables is sparse, and there are a few hidden variables that have a direct effect on many of the observed ones. Building on the so-called low rank plus sparse framework, we suggest a two-stage approach which first removes the effect of the hidden variables, and then estimates the Markov equivalence class of the underlying DAG under the assumption that there are no remaining hidden variables. This approach is consistent in certain high-dimensional regimes and performs favourably when compared to the state of the art, both in terms of graphical structure recovery and total causal effect estimation.},
   archivePrefix = {arXiv},
   eprint = {1708.01151},
   eprinttype = {arxiv},
   file = {/Users/fred/Zotero/storage/BR2U66Z5/Frot et al. - 2017 - Robust causal structure learning with some hidden .pdf;/Users/fred/Zotero/storage/J5364LTN/1708.html},
-  keywords = {latent variables,stage2},
+  journal = {arXiv:1708.01151 [stat]},
+  keywords = {latent confounders,proxies,stage2},
   primaryClass = {stat}
 }
 
 
-@article{colombo_learning_2012,
+
+@inproceedings{claassenLearningSparseCausal2013,
+  title = {Learning {{Sparse Causal Models}} Is Not {{NP}}-Hard},
+  booktitle = {Proceedings of the {{Twenty}}-{{Ninth Conference}} on {{Uncertainty}} in {{Artificial Intelligence}}},
+  author = {Claassen, Tom and Mooij, Joris and Heskes, Tom},
+  year = {2013},
+  pages = {172--181},
+  url = {http://arxiv.org/abs/1309.6824},
+  urldate = {2020-09-05},
+  abstract = {This paper shows that causal model discovery is not an NP-hard problem, in the sense that for sparse graphs bounded by node degree k the sound and complete causal model can be obtained in worst case order N\^\{2(k+2)\} independence tests, even when latent variables and selection bias may be present. We present a modification of the well-known FCI algorithm that implements the method for an independence oracle, and suggest improvements for sample/real-world data versions. It does not contradict any known hardness results, and does not solve an NP-hard problem: it just proves that sparse causal discovery is perhaps more complicated, but not as hard as learning minimal Bayesian networks.},
+  archivePrefix = {arXiv},
+  eprint = {1309.6824},
+  eprinttype = {arxiv},
+  eventtitle = {Uncertainty in {{Artificial Intelligence}}},
+  keywords = {Computer Science - Artificial Intelligence}
+}
+
+
+ @article{colombo_learning_2012,
   title = {Learning High-Dimensional Directed Acyclic Graphs with Latent and Selection Variables},
   author = {Colombo, Diego and Maathuis, Marloes H. and Kalisch, Markus and Richardson, Thomas S.},
-  date = {2012-02},
-  year={2012},
-  journaltitle = {The Annals of Statistics},
+  year = {2012},
+  month = feb,
   volume = {40},
   pages = {294--321},
   issn = {0090-5364},
   doi = {10.1214/11-AOS940},
-  url = {http://arxiv.org/abs/1104.5617},
-  urldate = {2018-11-07},
   abstract = {We consider the problem of learning causal information between random variables in directed acyclic graphs (DAGs) when allowing arbitrarily many latent and selection variables. The FCI (Fast Causal Inference) algorithm has been explicitly designed to infer conditional independence and causal information in such settings. However, FCI is computationally infeasible for large graphs. We therefore propose the new RFCI algorithm, which is much faster than FCI. In some situations the output of RFCI is slightly less informative, in particular with respect to conditional independence information. However, we prove that any causal information in the output of RFCI is correct in the asymptotic limit. We also define a class of graphs on which the outputs of FCI and RFCI are identical. We prove consistency of FCI and RFCI in sparse high-dimensional settings, and demonstrate in simulations that the estimation performances of the algorithms are very similar. All software is implemented in the R-package pcalg.},
   archivePrefix = {arXiv},
   eprint = {1104.5617},
   eprinttype = {arxiv},
-  file = {/Users/fred/Zotero/storage/B843NB9R/Colombo et al_2012_Learning high-dimensional directed acyclic graphs with latent and selection.pdf;/Users/fred/Zotero/storage/XLBBQDJH/1104.html},
+  journal = {The Annals of Statistics},
   keywords = {Computer Science - Machine Learning,Mathematics - Statistics Theory,Statistics - Methodology},
   number = {1}
 }
+
+
 
 @article{kaltenpoth_we_2019,
 	title = {We {Are} {Not} {Your} {Real} {Parents}: {Telling} {Causal} from {Confounded} using {MDL}},
@@ -510,14 +583,18 @@
 }
 
 @article{wang_deconfounder_2019,
-  title={The blessings of multiple causes},
-  author={Wang, Yixin and Blei, David M},
-  journal={Journal of the American Statistical Association},
-  number={just-accepted},
-  pages={1--71},
-  year={2019},
-  publisher={Taylor \& Francis}
+  title = {The {{Blessings}} of {{Multiple Causes}}},
+  author = {Wang, Yixin and Blei, David M.},
+  year = {2019},
+  volume = {114},
+  pages = {1574--1596},
+  file = {/Users/fred/Zotero/storage/4JZNG5UE/Wang and Blei - 2018 - The Blessings of Multiple Causes.pdf},
+  journal = {Journal of the American Statistical Association},
+  keywords = {latent confounders,proxies,stage2},
+  number = {528}
 }
+                  
+
 
 @misc{ranjan_build_2019,
 	title = {Build the right {Autoencoder} — {Tune} and {Optimize} using {PCA} principles. {Part} {II}},
