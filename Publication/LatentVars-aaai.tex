@@ -298,12 +298,13 @@ Equation \ref{eq:resPCA} tells us that, for graphical Gaussian models, component
 
 \begin{theorem}[Inferrability]
 \label{thm:inferrability}
-Posit that we know the true DAG $G$ over $D$, but not $U = G_u \setminus G$, the latent space's edges to observed variables.  Assume that $L$ is orthogonal, with no variable in $D$ a parent of any variable in $U$. Define as $R_C = C^{U,G} - \bar{C}^{U,G}$ the residuals of all children of $U$ that also have parents in $G$.  If relationships described by $G$ are linear, we can infer $U$ from $R^*_{U,C}$ up to sign and scale.  
+Posit that we know the true DAG $G$ over $D$, but not $U = G_u \setminus G$, the latent space's edges to observed variables.  Assume that $L$ is orthogonal, with no variable in $D$ a parent of any variable in $U$. Define as $R_C = C^{U,G} - \bar{C}^{U,G}$ the residuals of all children of $U$ that also have parents in $G$. Define as $R^*$ the residuals when $U$ is unknown and can't be used in estimation - when we only know $G$. If relationships described by $G$ are linear, we can infer $U$ from $R^*_{U,C}$ up to sign and scale.  
 
 \begin{proof}
 Consider $G_u$ (\ref{fig:residualsInGraph}).  Since all variables in $U$ are upstream of $C^{U,G}$, and since all residuals $R_{U,C}$ are downstream of $C^{U,G}$, we can write $U \perp\!\!\!\perp R_{U,C^{U,G}} | C^{U,G}$.  Therefore, all paths $U \rightarrow R$ have form $U \rightarrow C^{U,G} \rightarrow R_{U,C^{U,G}}$.  Further, $R_i \perp\!\!\!\perp R_j | C_i,C_j,U,   \forall C_i, C_j \in C^{U,G}$. Also, $U_i \perp\!\!\!\perp U_j, \forall i, j \in U$ by definition of orthogonality.  Therefore, no paths exist in $G_u$ within $U$ or within $R$, so it is a bipartite graph with respect to the variables in $U$ and $R$.  \cite{anandkumar_learning_2013} showed that, if such a bipartite graph met the expansion property, the latent space of $R$ could be inferred up to sign and scale.  That is, starting with $G$, it is possible to infer $U$, where $G$ is needed to compute $R$.  
 
-To summarize, to detect latent space $U$, define as $R^*$ the residuals when $U$ is unknown and can't be used in estimation - when we only know $G$.   Now $\exists i, j s.t. R^*_i \not\perp\!\!\!\perp R^*_j | \bar{C}_i, \bar{C}_j$. Thus, it is the violation of independence of residuals given graph that gives rise to identifiability. 
+To summarize, to detect latent space $U$, define as $R^*$ the residuals when $U$ is unknown - when we only know $G$.   Now $\exists i, j
+\, s.t. \, R^*_i \not\perp\!\!\!\perp R^*_j | \bar{C}_i, \bar{C}_j$. Thus, it is the violation of independence of residuals given graph that gives rise to identifiability. 
 \end{proof}
 \end{theorem}
 
