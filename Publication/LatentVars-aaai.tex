@@ -128,6 +128,7 @@ Consider a factorized joint probability distribution over a set of observed and 
  $U$ & unobserved predictor variables & $U_l, l \in \{1, \dots, u\}$ \\
  $O$ & outcomes (sinks) & $O_k, k \in \{1, \dots, o\}$ \\
  $D$ & $\{V, O\}$ - observable data matrix & \\
+ $\bar{D}$ & estimate of variables in D from their parents & \\
  $D_u$ & $\{V, O, U\}$ - implied data matrix& \\
  $\theta$ & parameters & $\theta_i, i \in \{1, \dots, t\}$ \\
  $Pa^N$ & parents of variable $N$ & $Pa^N_i, i \in \{1, \dots, p\}$\\
@@ -282,14 +283,16 @@ Equation \ref{eq:resPCA} tells us that, for graphical Gaussian models, component
 
 \begin{theorem}[Inferrability]
 \label{thm:inferrability}
-Given the true DAG $G$ over variables $V$ and latent space $L$, define residuals corresponding to $V$ as $R$. Assume that $L$ is orthogonal and that no variable in $V$ is a parent of any variable in $L$.  If true relationships described by $G$ are linear, we can infer $L$ from $R$ up to sign and scale.  
+Posit that we know the true DAG $G$ over $D$, but not $G_u \setminus G$, the latent space's edges to observed variables.  Assume that $L$ is orthogonal, with no variable in $D$ a parent of any variable in $L$. Define as $R_C = C^{L,G} - \bar{C}^{L,G}$ the residuals of all children of $L$ that also have parents in $G$.  If relationships described by $G$ are linear, we can infer $L$ from $R^*_{L,C}$ up to sign and scale.  
 
 \begin{proof}
-Since all variables in $L$ are upstream of $V$, and since all residuals $R$ are downstream of $V$, we can write $L \perp R | V$.  Therefore, all paths $L \rightarrow R$ have form $L \rightarrow V \rightarrow R$.  Further, by definition of residuals, $R_i \perp R_j | V, \forall i, j \in R$, while $L_i \perp L_j, \forall i, j \in L$ by definition of orthogonality.  Therefore, no paths exist within L or within R.  Therefore $G$ is a bipartite graph with respect to the variables in $L$ and $R$.  \cite{anandkumar_learning_2013} showed that such a bipartite graph met the expansion property and that latent space of $R$ could be inferred up to sign and scale in this case.
+Consider $G_u$.  Since all variables in $L$ are upstream of $C^{L,G}$, and since all residuals $R_{L,C}$ are downstream of $C^{L,G}$, we can write $L \perp\!\!\!\perp R_{L,C^{L,G}} | C^{L,G}$.  Therefore, all paths $L \rightarrow R$ have form $L \rightarrow C^{L,G} \rightarrow R_{L,C^{L,G}}$.  Further, $R_i \perp\!\!\!\perp R_j | C_i,C_j,L,   \forall C_i, C_j \in C^{L,G}$. Also, $L_i \perp\!\!\!\perp L_j, \forall i, j \in L$ by definition of orthogonality.  Therefore, no paths exist in $G_u$ within $L$ or within $R$, so it is a bipartite graph with respect to the variables in $L$ and $R$.  \cite{anandkumar_learning_2013} showed that, if such a bipartite graph met the expansion property, the latent space of $R$ could be inferred up to sign and scale.  That is, starting with $G$, it is possible to infer $L$, where $G$ is needed to compute $R$.
+
+Now define as $R^*$ the residuals when $L$ is unknown and can't be used in estimation - when we only know $G$.   Now $\exists i, j s.t. R^*_i \not\perp\!\!\!\perp R^*_j | \bar{C}_i, \bar{C}_j$. Intuitively, violation of independence of residuals given graph gives rise to identifiability. 
 \end{proof}
 \end{theorem}
 
-From Theorem \ref{thm:inferrability}, we see that focusing on residuals of a graph permits identification of the latent space in some circumstances.  Supplementary theorem \ref{sup-thm:deconfounding} relaxes the need for orthogonality when latent space's structure is irrelevant but controlling for it is important.
+Theorem \ref{thm:inferrability} does require G to be known, which will give rise to an iterative algorithm later on.  However, from it we see that focusing on residuals of a graph permits identification of the latent space in some circumstances.  Supplementary theorem \ref{sup-thm:deconfounding} relaxes the need for orthogonality when latent space's structure is irrelevant but controlling for it is important.
 
 Note that this approach is similar, in the linear case, to that in \cite{elidan_ideal_2007} except insofar as we show the principal components of the entire residual matrix to be optimal for the discovery of the whole latent space of a given DAG, and thus couple structure inference and latent space discovery via EM (\ref{alg:latentEM}).
 
