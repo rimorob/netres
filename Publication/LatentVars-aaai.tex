@@ -89,7 +89,7 @@ Hitherto, the causal inference literature has largely focused on addressing the 
 Causal Algorithm (FCI) \cite{spirtesCausalInferencePresence1995} can
 deal with general latent structures but do not scale well to large
 problems. While faster variants of FCI like RFCI \cite{colombo_learning_2012}
-and  FCI+ \cite{claassenLearningSparseCausal2013} exists, scored based
+and  FCI+ \cite{claassenLearningSparseCausal2013} exist, score-based
 approaches tend to perform better than purely constraint-based methods. This
 has been demonstrated in problems without latent confounders
 \cite{nandy2018high} and has been suggested that this is because
@@ -100,14 +100,14 @@ on \cite{bernstein2020ordering}. It is likely that these limitations also
 affect FCI-type algorithms. Furthermore, while FCI can deal with
 general latent structures, in certain scenarios where a few latent confounders
 drive  many observed variables  most observed variables are
-conditional dependent which implies dense maximal ancestral graphs
+conditionally dependent which implies dense maximal ancestral graphs
 where very few edges can be oriented
 \cite{frotRobustCausalStructure2017}. Finally, another disadvantage of
 constraint based methods is that they generate a single model and do
 not provide a score summarizing how likely the network is given the
 data while score based methods can generate this type of scores by using Bayesian or ensemble approaches \cite{jabbariDiscoveryCausalModels2017}. Relatively computationally efficient score-based methods have been proposed for inferring latent variables affecting GMs by the means of expectation maximization (EM) (as far back as \cite{friedman1997learning,friedman1998bayesian}).  However, for a large enough network, local gradients do not provide a reliable guide, nor do they address the cardinality of the latent space.  Methods for using near-cliques for detection of latent variables in directed acyclic graphs (DAGs) with Gaussian graphical models (GGMs) have been proposed that address both problems by analyzing near-cliques in DAGs \cite{elidan_discovering_2001,silva_learning_2006}.  A method related to ours has been proposed for calculating latent variables in a greedy fashion in linear and "invertible continuous" networks, and relating such estimates to observed data to speed up structure search and enable discovery of hidden variables \cite{elidan_ideal_2007}. However, with a clique-driven approach it is impossible to tell whether any cliques have shared parents and, importantly, whether any signal remained to be modeled, resulting in score-based testing rejecting proposed "ideal parents". Additionally, Wang and Blei (2019) introduced the deconfounder approach to detecting and adjusting for latent confounders of causal effects in the presence of multiple causes but in the context of a fixed DAG under relatively strict conditions \cite{wang_deconfounder_2019,wangMultipleCausesCausal2019}. 
 
-We show that there exist circumstances when causal sufficiency can be asymptotically achieved and exchangeability ensured even when the causal drivers of outcome are confounded by a number of latent variables.  This can be achieved when the confounding is \textbf{pleiotropic}, that is,  when the latent variable affects a "large enough" number of variables, some driving an outcome of interest and others not (this is the same as the expansion property defined in \cite{anandkumar_learning_2013}).  Notably, this objective cannot be achieved when confounding affects only the variables of interest and their causal parents (\cite{damour_multi-cause_2019}). We detail an algorithm for diagnosing and accounting for latent confounding in closed form [IS THIS TOO BOLD?  DOES IT IMPLY GLOBALLY OPTIMAL SOLUTION?] for a GGM example, demonstrate the implementation in a simulated data set, and discuss extensions to other functional forms.  Importantly, our approach is provably locally optimal given a proposed graph. This allows for an iterative expectation maximization approach over structure and latent space, leading to the algorithm proposed below.
+We show that there exist circumstances when causal sufficiency can be asymptotically achieved and exchangeability ensured even when the causal drivers of outcome are confounded by a number of latent variables.  This can be done when confounding is \textbf{pleiotropic}, that is,  when the latent variable affects a "large enough" number of variables, some driving an outcome of interest and others not (we tie this to the expansion property defined in \cite{anandkumar_learning_2013}).  Notably, this objective cannot be achieved when confounding affects only the variables of interest and their causal parents (\cite{damour_multi-cause_2019}).  Our approach is provably optimal given a proposed graph. This leads to the iterative EM-like optimization approach over structure and latent space proposed below.
 
 The outline of this paper is as follows: In the first two sections, we discuss the process of diagnosting latent confounding in the special case of GGMs where closed-form local solutions exist. In the third section, we derive the improvement cap for predictive performance of the graph thus learned. In the fourth section, we discuss implementation, and in the fifth demonstrate the approach on simulated and real data. Finally, we propose some extensions to the approach for more complex graphical model structures and functional forms. 
 
@@ -235,7 +235,7 @@ R_N = \beta_0 + \beta_1 U + \xi_N.
 \hline
 \multirow{3}{*}{\rotatebox[origin=c]{90}{Samples  }}
 &$V_{11}$&$V_{12}$&\dots&$V_{1v}$\\
-&\vdots&\vdots&\vdots&\vdots\\
+&\dots&\dots&\dots&\dots\\
 &$V_{s1}$&$V_{s2}$&\dots&$V_{sv}$\\
 \end{tabular}}
 \qquad
@@ -248,7 +248,7 @@ R_N = \beta_0 + \beta_1 U + \xi_N.
 \hline
 \multirow{3}{*}{\rotatebox[origin=c]{90}{Samples  }}
 &$R_{11}$&$R_{12}$&\dots&$R_{1v}$\\
-&\vdots&\vdots&\vdots&\vdots\\
+&\dots&\dots&\dots&\dots\\
 &$R_{s1}$&$R_{s2}$&\dots&$R_{sv}$\\
 \end{tabular}}
 \caption{The training data frame (Variables) implies a matching data frame (Residuals) once the joint distribution of all variables is specified via a graph and its parameterization}
@@ -260,7 +260,7 @@ Therefore, the columns in the residuals table corresponding to $G$ (Table \ref{t
 \begin{equation}
 \begin{split}
 R_1 = \beta_{10} &+ \beta_{11} U + \xi_1\\
-& \vdots\\
+& \hdots\\
 R_k = \beta_{k0} &+ \beta_{k1} U + \xi_k.
 \end{split}
 \end{equation}
@@ -273,37 +273,12 @@ U = \beta_i^{*} R_1 + \dots + \beta_k^{*} R_k + \xi = B R + \xi.
 
 Equation \ref{eq:resPCA} tells us that, for graphical Gaussian models, components of $U$ are obtainable from linear combinations of residuals, or principal components (PCs) of the residual table $R$.  In other words, $U$ is identifiable by principal component analysis (PCA).  Whether the residuals needed for this identification exist depends on the \textit{expansion property} as defined in \cite{anandkumar_learning_2013}.
 
-\begin{figure}[h]
-	\centering
-	\digraph[scale=0.5]{g3}{
-			graph[ranksep=0.1];
-      node [shape=circle, style="filled"];
-      U1 [fillcolor=red, label=<U<SUB>1</SUB>>];
-      V1 [fillcolor=gray, label=<V<SUB>2</SUB>>];
-      R1 [fillcolor=white, label=<V<SUB>2</SUB>>, style=dotted];     
-      V2 [fillcolor=gray, label=<V<SUB>3</SUB>>];
-      R2 [fillcolor=white, label=<V<SUB>3</SUB>>, style=dotted];  
-      V3 [fillcolor=gray, label=<V<SUB>4</SUB>>];
-      R3 [fillcolor=white, label=<V<SUB>4</SUB>>, style=dotted];  
-      V4 [fillcolor=gray, label=<V<SUB>5</SUB>>];
-      R4 [fillcolor=white, label=<V<SUB>5</SUB>>, style=dotted];  
-      V5 [fillcolor=white, label=<V<SUB>7</SUB>>];
-      O1 [fillcolor=green, label=<O<SUB>1</SUB>>];
-      RO1 [fillcolor=white, label=<R<SUB>O<SUB>1</SUB></SUB>>, style=dotted];  
-      U1 -> V1; U1 -> V2; U1-> V3; U1 -> V4; V3-> O1; V4 -> O1; U1 -> O1; V1 -> V2; V4 -> V5; V5 -> O1; V1 -> R1; V2 -> R2; V3 -> R3; V4 -> R4; O1 -> RO1
-	}
-	\caption{Residuals $R$ can be calculated from graph $G = G_u \setminus L$ and data $D$.  Residuals of descendants of latent space $L$ will contain its "shadows".  It may be helpful to view them as leaf nodes in some contexts.}
-	\label{fig:residualsInGraph}
-\end{figure}
-
 \begin{theorem}[Inferrability]
 \label{thm:inferrability}
 Posit that we know the true DAG $G$ over $D$, but not $U = G_u \setminus G$, the latent space's edges to observed variables.  Assume that $L$ is orthogonal, with no variable in $D$ a parent of any variable in $U$. Define as $R_C = C^{U,G} - \bar{C}^{U,G}$ the residuals of all children of $U$ that also have parents in $G$.  If relationships described by $G$ are linear, we can infer $U$ from $R_C$ up to sign and scale.  
 
 \begin{proof}
-Consider $G_u$ (\ref{fig:residualsInGraph}).  Since all variables in $U$ are upstream of $C^{U,G}$, and since all residuals $R_{U,C}$ are downstream of $C^{U,G}$, we can write $U \perp\!\!\!\perp R_C | C^{U,G}$.  Therefore, all paths $U \rightarrow R_C$ have the form $U \rightarrow C^{U,G} \rightarrow R_C$.  Further, $R_i \perp\!\!\!\perp R_j | C_i,C_j,U,   \forall C_i, C_j \in C^{U,G}$. Also, $U_i \perp\!\!\!\perp U_j, \forall i, j \in U$ by definition of orthogonality.  Therefore, no paths exist in $G_u$ within $U$ or within $R$, so it is a bipartite graph with respect to the variables in $U$ and $R$.  \cite{anandkumar_learning_2013} showed that, if such a bipartite graph met the expansion property, the latent space of $R$ could be inferred up to sign and scale.  That is, starting with $G$, it is possible to infer $U$, where $G$ is needed to compute $R$.  
-
-To summarize, to detect latent space $U$, we can compute $R^*_C$ when $U$ is unknown and can't be used in estimation - when we only know $G$.   Now, $\exists i, j s.t. R^*_i \not\perp\!\!\!\perp R^*_j | \bar{C}_i, \bar{C}_j$. These collinear (or rank-correlated) residuals contain signal from latent space, as shown earlier.  Thus, it is the violation of independence of residuals  that gives rise to identifiability. 
+For proof, refer to supplement, theorem \ref{sup-thm:inferrability}.
 \end{proof}
 \end{theorem}
 

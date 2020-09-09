@@ -76,8 +76,42 @@ We present a novel method that aims to control for the latent space when estimat
 
 \section{Theorems}
 
+\begin{figure}[h]
+	\centering
+	\digraph[scale=0.5]{g3}{
+			graph[ranksep=0.1];
+      node [shape=circle, style="filled"];
+      U1 [fillcolor=red, label=<U<SUB>1</SUB>>];
+      V1 [fillcolor=gray, label=<V<SUB>2</SUB>>];
+      R1 [fillcolor=white, label=<V<SUB>2</SUB>>, style=dotted];     
+      V2 [fillcolor=gray, label=<V<SUB>3</SUB>>];
+      R2 [fillcolor=white, label=<V<SUB>3</SUB>>, style=dotted];  
+      V3 [fillcolor=gray, label=<V<SUB>4</SUB>>];
+      R3 [fillcolor=white, label=<V<SUB>4</SUB>>, style=dotted];  
+      V4 [fillcolor=gray, label=<V<SUB>5</SUB>>];
+      R4 [fillcolor=white, label=<V<SUB>5</SUB>>, style=dotted];  
+      V5 [fillcolor=white, label=<V<SUB>7</SUB>>];
+      O1 [fillcolor=green, label=<O<SUB>1</SUB>>];
+      RO1 [fillcolor=white, label=<R<SUB>O<SUB>1</SUB></SUB>>, style=dotted];  
+      U1 -> V1; U1 -> V2; U1-> V3; U1 -> V4; V3-> O1; V4 -> O1; U1 -> O1; V1 -> V2; V4 -> V5; V5 -> O1; V1 -> R1; V2 -> R2; V3 -> R3; V4 -> R4; O1 -> RO1
+	}
+	\caption{Residuals $R$ can be calculated from graph $G = G_u \setminus L$ and data $D$.  Residuals of descendants of latent space $L$ will contain its "shadows".  It may be helpful to view them as leaf nodes in some contexts.}
+	\label{fig:residualsInGraph}
+\end{figure}
+
+\begin{theorem}[Inferrability]
+\label{thm:inferrability}
+Posit that we know the true DAG $G$ over $D$, but not $U = G_u \setminus G$, the latent space's edges to observed variables.  Assume that $L$ is orthogonal, with no variable in $D$ a parent of any variable in $U$. Define as $R_C = C^{U,G} - \bar{C}^{U,G}$ the residuals of all children of $U$ that also have parents in $G$.  If relationships described by $G$ are linear, we can infer $U$ from $R_C$ up to sign and scale.  
+
+\begin{proof}
+Consider $G_u$ (\ref{fig:residualsInGraph}).  Since all variables in $U$ are upstream of $C^{U,G}$, and since all residuals $R_{U,C}$ are downstream of $C^{U,G}$, we can write $U \perp\!\!\!\perp R_C | C^{U,G}$.  Therefore, all paths $U \rightarrow R_C$ have the form $U \rightarrow C^{U,G} \rightarrow R_C$.  Further, $R_i \perp\!\!\!\perp R_j | C_i,C_j,U,   \forall C_i, C_j \in C^{U,G}$. Also, $U_i \perp\!\!\!\perp U_j, \forall i, j \in U$ by definition of orthogonality.  Therefore, no paths exist in $G_u$ within $U$ or within $R$, so it is a bipartite graph with respect to the variables in $U$ and $R$.  \cite{anandkumar_learning_2013} showed that, if such a bipartite graph met the expansion property, the latent space of $R$ could be inferred up to sign and scale.  That is, starting with $G$, it is possible to infer $U$, where $G$ is needed to compute $R$.  
+
+To summarize, to detect latent space $U$, we can compute $R^*_C$ when $U$ is unknown and can't be used in estimation - when we only know $G$.   Now, $\exists i, j s.t. R^*_i \not\perp\!\!\!\perp R^*_j | \bar{C}_i, \bar{C}_j$. These collinear (or rank-correlated) residuals contain signal from latent space, as shown earlier.  Thus, it is the violation of independence of residuals  that gives rise to identifiability. 
+\end{proof}
+\end{theorem}
+
 \begin{theorem}
-\label{thm:deconfounding}
+\label{thm:deconfounding}[Deconfounding]
 Inference of $L$ is guaranteed up to sign and scale only if $L$ is an orthogonal basis vector.  However, accuracy of coefficients in $D$ is robust to violation of orthogonality.
 \begin{proof}
 Consider an equation for an outcome $O$ confounded by $L$:
