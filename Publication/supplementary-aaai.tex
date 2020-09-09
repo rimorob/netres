@@ -80,18 +80,28 @@ We present a novel method that aims to control for the latent space when estimat
 Posit that we know the true DAG $G$ over $D$, but not $U = G_u \setminus G$, the latent space's edges to observed variables.  Assume that $L$ is orthogonal, with no variable in $D$ a parent of any variable in $U$. Define as $R_C = C^{U,G} - \bar{C}^{U,G}$ the residuals of all children of $U$ that also have parents in $G$.  If relationships described by $G$ are linear, we can infer $U$ from $R_C$ up to sign and scale.  
 
 \begin{proof}
-Consider $G_u$ (Figure \ref{fig:residualsInGraph}).  Since all variables in $U$ are upstream of $C^{U,G}$, and since all residuals $R_{U,C}$ are downstream of $C^{U,G}$, we can write $U \perp\!\!\!\perp R_C | C^{U,G}$.  Therefore, all paths $U \rightarrow R_C$ have the form $U \rightarrow C^{U,G} \rightarrow R_C$.  Further, $R_i \perp\!\!\!\perp R_j | C_i,C_j,U,   \forall C_i, C_j \in C^{U,G}$. Also, $U_i \perp\!\!\!\perp U_j, \forall i, j \in U$ by definition of orthogonality.  Therefore, no paths exist in $G_u$ within $U$ or within $R$.  Here we would like to show that this entails that $U->R$ form a bipartite graph.
+Consider $G_u$ (Figure \ref{fig:residualsInGraph}).  Since all
+variables in $U$ are upstream of $C^{U,G}$, and since all residuals
+$R_{U,C}$ are downstream of $C^{U,G}$, we can write $U
+\perp\!\!\!\perp R_C | C^{U,G}$.  Therefore, all paths $U \rightarrow
+R_C$ have the form $U \rightarrow C^{U,G} \rightarrow R_C$.  Further,
+$R_i \perp\!\!\!\perp R_j | C_i,C_j,U,   \forall C_i, C_j \in
+C^{U,G}$. Also, $U_i \perp\!\!\!\perp U_j, \forall i, j \in U$ by
+definition of orthogonality.  Therefore, no paths exist in $G_u$
+within $U$ or within $R$.  Here we would like to show that this
+entails that $U\rightarrow R$ form a bipartite graph.
 
-To wit, with respect to individual residuals (and their immediate parent variables), each $Pa(R_i)$ can be written as a linear combination of parents of $R_i$'s corresponding $V_i \in G$ by progressive summation upwards from $R_i$, thus collapsing complex paths within $G$ to direct edges of the form $U_i -> O_j$ (Figure \ref{fig:linearizingDagCatchment}).  Alternatively, for a GGM we can write a structural expression, plugging in all values of children of $U$ expressed in terms of $U$:
+To wit, with respect to individual residuals (and their immediate parent variables), each $Pa(R_i)$ can be written as a linear combination of parents of $R_i$'s corresponding $V_i \in G$ by progressive summation upwards from $R_i$, thus collapsing complex paths within $G$ to direct edges of the form $U_i \rightarrow O_j$ (Figure \ref{fig:linearizingDagCatchment}).  Alternatively, for a GGM we can write a structural expression, plugging in all values of children of $U$ expressed in terms of $U$:
 \begin{equation}
 \label{eq:bipartiteRepresentation}
-\bar{V} = \sum_i \prod_j \beta_{ij}*U_i
-\end{equation}, where $i$ is the $i$th path upstream of a variable $V$ with corresponding residuals $R$, and $j$ indexes over path length.  Residuals could then be computed via:
+\bar{V} = \sum_i \prod_j \beta_{ij}*U_i,
+\end{equation} where $i$ is the $i$th path upstream of a variable $V$ with corresponding residuals $R$, and $j$ indexes over path length.  Residuals could then be computed via:
 \begin{equation}
 R = V - \bar{V}
 \end{equation}
 
-This logical procedure demonstrates that $U->G->R$ can be viewed as a bipartite graph $U->R$ .  \cite{anandkumar_learning_2013} showed that, if such a bipartite graph met the expansion property, the latent space of $R$ could be inferred up to sign and scale.  That is, starting with $G$, it is possible to infer $U$, where $G$ is needed to compute $R$.  
+This logical procedure demonstrates that $U\rightarrow G\rightarrow R$
+can be viewed as a bipartite graph $U\rightarrow R$ .  \cite{anandkumar_learning_2013} showed that, if such a bipartite graph met the expansion property, the latent space of $R$ could be inferred up to sign and scale.  That is, starting with $G$, it is possible to infer $U$, where $G$ is needed to compute $R$.  
 
 To summarize, to detect latent space $U$, we can compute $R^*_C$ when $U$ is unknown and can't be used in estimation - when we only know $G$.   Now, $\exists i, j s.t. R^*_i \not\perp\!\!\!\perp R^*_j | \bar{C}_i, \bar{C}_j$. These collinear (or rank-correlated) residuals contain signal from latent space, as shown earlier.  Thus, it is the violation of independence of residuals  that gives rise to identifiability. 
 \end{proof}
