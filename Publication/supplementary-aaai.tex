@@ -75,6 +75,16 @@ We present a novel method that aims to control for the latent space when estimat
 \end{abstract}
 
 \section{Theorems}
+\begin{theorem}[Inferrability]
+\label{thm:inferrability}
+Posit that we know the true DAG $G$ over $D$, but not $U = G_u \setminus G$, the latent space's edges to observed variables.  Assume that $L$ is orthogonal, with no variable in $D$ a parent of any variable in $U$. Define as $R_C = C^{U,G} - \bar{C}^{U,G}$ the residuals of all children of $U$ that also have parents in $G$.  If relationships described by $G$ are linear, we can infer $U$ from $R_C$ up to sign and scale.  
+
+\begin{proof}
+Consider $G_u$ (Figure \ref{fig:residualsInGraph}).  Since all variables in $U$ are upstream of $C^{U,G}$, and since all residuals $R_{U,C}$ are downstream of $C^{U,G}$, we can write $U \perp\!\!\!\perp R_C | C^{U,G}$.  Therefore, all paths $U \rightarrow R_C$ have the form $U \rightarrow C^{U,G} \rightarrow R_C$.  Further, $R_i \perp\!\!\!\perp R_j | C_i,C_j,U,   \forall C_i, C_j \in C^{U,G}$. Also, $U_i \perp\!\!\!\perp U_j, \forall i, j \in U$ by definition of orthogonality.  Therefore, no paths exist in $G_u$ within $U$ or within $R$.  Further, with respect to individual residuals (and their immediate parent variables), each $Pa(R_i)$ can be written as a linear combination of parents of $R_i$ by progressive summation upwards from $R_i$, thus collapsing complex paths within $G$ to single meta-nodes.  This logical procedure demonstrates that $U->G->R$ can be viewed as a bipartite graph $U->R$ (Figure \ref{fig:linearizingDagCatchment}).  \cite{anandkumar_learning_2013} showed that, if such a bipartite graph met the expansion property, the latent space of $R$ could be inferred up to sign and scale.  That is, starting with $G$, it is possible to infer $U$, where $G$ is needed to compute $R$.  
+
+To summarize, to detect latent space $U$, we can compute $R^*_C$ when $U$ is unknown and can't be used in estimation - when we only know $G$.   Now, $\exists i, j s.t. R^*_i \not\perp\!\!\!\perp R^*_j | \bar{C}_i, \bar{C}_j$. These collinear (or rank-correlated) residuals contain signal from latent space, as shown earlier.  Thus, it is the violation of independence of residuals  that gives rise to identifiability. 
+\end{proof}
+\end{theorem}
 
 \begin{figure}[h]
 	\centering
@@ -99,16 +109,52 @@ We present a novel method that aims to control for the latent space when estimat
 	\label{fig:residualsInGraph}
 \end{figure}
 
-\begin{theorem}[Inferrability]
-\label{thm:inferrability}
-Posit that we know the true DAG $G$ over $D$, but not $U = G_u \setminus G$, the latent space's edges to observed variables.  Assume that $L$ is orthogonal, with no variable in $D$ a parent of any variable in $U$. Define as $R_C = C^{U,G} - \bar{C}^{U,G}$ the residuals of all children of $U$ that also have parents in $G$.  If relationships described by $G$ are linear, we can infer $U$ from $R_C$ up to sign and scale.  
+\begin{figure}[h]
+	\centering
+	\digraph[scale=0.5]{g4}{
+			graph[ranksep=0.1];
+      node [shape=circle, style="filled"];
+      G1U1 [fillcolor=red, label=<U<SUB>1</SUB>>]; 
+      G1Ell1 [fillcolor=red, label="..."];
+      G1U2 [fillcolor=red, label=<U<SUB>2</SUB>>];
+      G1Uk [fillcolor=red, label=<U<SUB>k</SUB>>];
+      G1G1 [fillcolor=gray, label=<G<SUB>1</SUB>>];
+      G1G2 [fillcolor=gray, label=<G<SUB>2</SUB>>];
+      G1Ell2 [fillcolor=gray, label="..."];
+      G1Gi [fillcolor=gray, label=<G<SUB>i</SUB>>];
+      G1Gj [fillcolor=gray, label=<G<SUB>j</SUB>>];
+	  G1Gk [fillcolor=gray, label=<G<SUB>k</SUB>>];
+      G1O1 [fillcolor=green, label=<O<SUB>1</SUB>>];
+      G1O2 [fillcolor=green, label=<O<SUB>2</SUB>>];
+      G2U1 [fillcolor=red, label=<U<SUB>1</SUB>>]; 
+      G2Ell1 [fillcolor=red, label="..."];
+      G2U2 [fillcolor=red, label=<U<SUB>2</SUB>>];
+      G2Uk [fillcolor=red, label=<U<SUB>k</SUB>>];
+      G2Pa1 [fillcolor=gray, label=<GPa<SUB>1</SUB>>];
+      G2Pa2 [fillcolor=gray, label=<GPa<SUB>2</SUB>>];
+      G2O1 [fillcolor=green, label=<O<SUB>1</SUB>>];
+      G2O2 [fillcolor=green, label=<O<SUB>2</SUB>>];	 
+	 
+     subgraph cluster_DAG {
+     	color = black;
+     	subgraph G1Latent {
+      		rank = "same";
+      		G1U1
+      		G1Ell1
+      		G1U2
+      		G1Uk
+      	}
+     	G1U1 -> G1G1 -> G1G2; G1U2 -> G1Gk[weight=20]; G1U2 -> G1Gi; G1G2 -> G1Gj; G1Gi -> G1Gj; G1Gj -> G1O1; G1Ell1 -> G1Ell2; G1Ell2 -> G1Gk; G1Gk -> G1O2; G1Gj -> G1Gk; G1U1 -> G1U2[style="invis"]; G1U2 -> G1Ell1[style="invis"]; G1Ell1 -> G1Uk[style="invis"]; G1Uk -> G1Ell2
+     } 
+     subgraph cluster_summDAG {
+     	color=black;
+     	G2U1 -> G2Pa1; G2U2 -> G2Pa1; G2U2 -> G2Pa2; G2Ell1 -> G2Pa2; G2Uk -> G2Pa2; G2Pa1 -> G2O1; G2Pa2 -> G2O2
+     }
+	}
+	\caption{A Graphical Gaussian Model can be collapsed into linear paths by summing along each leaf node's "catchment".  These "catchments" can be correlated due to node overlap.}
+	\label{fig:linearizingDagCatchment}
+\end{figure}
 
-\begin{proof}
-Consider $G_u$ (\ref{fig:residualsInGraph}).  Since all variables in $U$ are upstream of $C^{U,G}$, and since all residuals $R_{U,C}$ are downstream of $C^{U,G}$, we can write $U \perp\!\!\!\perp R_C | C^{U,G}$.  Therefore, all paths $U \rightarrow R_C$ have the form $U \rightarrow C^{U,G} \rightarrow R_C$.  Further, $R_i \perp\!\!\!\perp R_j | C_i,C_j,U,   \forall C_i, C_j \in C^{U,G}$. Also, $U_i \perp\!\!\!\perp U_j, \forall i, j \in U$ by definition of orthogonality.  Therefore, no paths exist in $G_u$ within $U$ or within $R$, so it is a bipartite graph with respect to the variables in $U$ and $R$.  \cite{anandkumar_learning_2013} showed that, if such a bipartite graph met the expansion property, the latent space of $R$ could be inferred up to sign and scale.  That is, starting with $G$, it is possible to infer $U$, where $G$ is needed to compute $R$.  
-
-To summarize, to detect latent space $U$, we can compute $R^*_C$ when $U$ is unknown and can't be used in estimation - when we only know $G$.   Now, $\exists i, j s.t. R^*_i \not\perp\!\!\!\perp R^*_j | \bar{C}_i, \bar{C}_j$. These collinear (or rank-correlated) residuals contain signal from latent space, as shown earlier.  Thus, it is the violation of independence of residuals  that gives rise to identifiability. 
-\end{proof}
-\end{theorem}
 
 \begin{theorem}
 \label{thm:deconfounding}[Deconfounding]
