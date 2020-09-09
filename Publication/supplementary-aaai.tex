@@ -23,7 +23,7 @@
 
 % THIS IS OUR "EXTRA" SECTION - REVIEW FOR COMPLIANCE WITH AAAI RULES
 \usepackage{xr}
-\externaldocument[sup-]{supplementary}
+\externaldocument[main-]{LatentVars-aaai}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
@@ -83,13 +83,13 @@ We present a novel method that aims to control for the latent space when estimat
       node [shape=circle, style="filled"];
       U1 [fillcolor=red, label=<U<SUB>1</SUB>>];
       V1 [fillcolor=gray, label=<V<SUB>2</SUB>>];
-      R1 [fillcolor=white, label=<V<SUB>2</SUB>>, style=dotted];     
+      R1 [fillcolor=white, label=<R<SUB>2</SUB>>, style=dotted];     
       V2 [fillcolor=gray, label=<V<SUB>3</SUB>>];
-      R2 [fillcolor=white, label=<V<SUB>3</SUB>>, style=dotted];  
+      R2 [fillcolor=white, label=<R<SUB>3</SUB>>, style=dotted];  
       V3 [fillcolor=gray, label=<V<SUB>4</SUB>>];
-      R3 [fillcolor=white, label=<V<SUB>4</SUB>>, style=dotted];  
+      R3 [fillcolor=white, label=<R<SUB>4</SUB>>, style=dotted];  
       V4 [fillcolor=gray, label=<V<SUB>5</SUB>>];
-      R4 [fillcolor=white, label=<V<SUB>5</SUB>>, style=dotted];  
+      R4 [fillcolor=white, label=<R<SUB>5</SUB>>, style=dotted];  
       V5 [fillcolor=white, label=<V<SUB>7</SUB>>];
       O1 [fillcolor=green, label=<O<SUB>1</SUB>>];
       RO1 [fillcolor=white, label=<R<SUB>O<SUB>1</SUB></SUB>>, style=dotted];  
@@ -121,11 +121,11 @@ O = \beta_{0} + \beta_{1} X_1 + \ldots +\beta_{n} X_n + \beta_{L_1} L_1 + \ldots
 \end{split}
 \label{eq:confNonOrth}
 \end{equation}
-Suppose that, instead, our algorithm infers latent space $I$ based on the assumption of orthogonality.  Assuming that the graph relationships are all linear, and since $L$ and $I$ are basis vectors of the same rank (being rank($L$)), any linear combination of $I$ can be re-written as a linear combination of $L$.  From \ref{resPCA}, the original space $R$ can then be equally parameterized as:
+Suppose that, instead, our algorithm infers latent space $I$ based on the assumption of orthogonality.  Assuming that the graph relationships are all linear, and since $L$ and $I$ are basis vectors of the same rank (being rank($L$)), any linear combination of $I$ can be re-written as a linear combination of $L$.  From main paper, equation \ref{main-eq:resPCA}, the original space $R$ can then be equally parameterized as:
 \begin{equation}
 R = B_L * L = B_I * I
 \end{equation}
-where $I$ and $L$ differ only in orthogonality of the basis vector.   Therefore, every local iteration of \ref{alg:latentEM} will derive:
+where $I$ and $L$ differ only in orthogonality of the basis vector.   Therefore, every local iteration of main paper algorithm \ref{main-alg:latentEM} will derive:
 \begin{equation}
 B_X|I * X + B_I * I = B_X|I * X  + B_L * L = B_X|L * X + B_L * L
 \end{equation}
