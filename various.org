@@ -59,6 +59,7 @@ source("LatentConfounderBNlearnv2.R")
 reticulate::conda_list()
 reticulate::use_condaenv("tensorflowv1")
 reticulate::source_python("aupy.py")
+setwd("/Users/fred/Documents/projects/latvar/")
 load("/Users/fred/Documents/projects/latvar/res_alldata.RData", verbose = T)
 load("final_model_nolvp_novp.RData", verbose = T)
 

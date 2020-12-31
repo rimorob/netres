@@ -78,7 +78,7 @@ getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, outp
 	class = 'bnlearn_ens')
 }
 
-<<<<<<< HEAD
+
 ## print.bnlearn_ens = function(obj){
 ##     message("Bnlearn Ensemble")
 ##     message("\nNboot: ", obj$Nboot)
@@ -115,8 +115,6 @@ getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, outp
 
 ##     ppPlotIgraph(ig, ...)
 ## }
-=======
->>>>>>> 712cd915c1419e9d22f038e254861425c9079b8c
 
 library(bnlearn)
   library(foreach)
@@ -1108,20 +1106,13 @@ library(foreach)
 ##' @param storeDirs FLAG whether to store each of the directories created during the run. Useful for debugging purposes
 ##' @param vars variable to include in analysis
 ##' @return LatentConfounder object
-<<<<<<< HEAD
-##' @author Fred Gruber
-=======
->>>>>>> 712cd915c1419e9d22f038e254861425c9079b8c
+
 latentDiscovery = function(
 			   ens,
 			   data,
 			   output = NULL,
 			   freqCutoff = 0.1,
-<<<<<<< HEAD
-			   maxpath = 6,
-=======
 			   maxpath = 1,
->>>>>>> 712cd915c1419e9d22f038e254861425c9079b8c
 			   alpha = 0.05,
 			   expand = F,
 			   nSamples = 5,
@@ -1155,13 +1146,8 @@ latentDiscovery = function(
 			   discretize_confounders = F,
 			   missing_code = NA,
                            testdata = NULL,
-<<<<<<< HEAD
-                           height = 8,
-                           width = 10,
-=======
                            height = 10,
                            width = 12,
->>>>>>> 712cd915c1419e9d22f038e254861425c9079b8c
                            showplots = TRUE,
                            ...
 			   ){
@@ -1815,10 +1801,6 @@ ens2coefold = function(ens, variable, summary = FALSE, sumfun = mean){
 ##' @param nbins number of bins to use in B-Spline method
 ##' @param splineorder order of spline in B-Spline method
 ##' @return data.framae with latent varibles. Also an attribute with eigenvalues
-<<<<<<< HEAD
-##' @author Fred Gruber
-=======
->>>>>>> 712cd915c1419e9d22f038e254861425c9079b8c
 miPCA = function(train,
 		 mi_type = c(
 		     "B-Spline MI",
@@ -2318,7 +2300,6 @@ layer_tied_dense <- function(object, master_layer, name = NULL, trainable = TRUE
 }
 
 
-<<<<<<< HEAD
 ## TiedDenseLayer <- R6::R6Class(
 ##   "TiedDenseLayer",
 ##   inherit = KerasLayer,
@@ -2376,8 +2357,6 @@ layer_tied_dense <- function(object, master_layer, name = NULL, trainable = TRUE
 ##   ))
 ## }
 
-=======
->>>>>>> 712cd915c1419e9d22f038e254861425c9079b8c
 
 plot_history = function(history, type = "loss"){
     res = history$history
