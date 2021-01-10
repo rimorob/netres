@@ -74,7 +74,7 @@
 \begin{abstract}
 Graph-based causal discovery methods aim to capture conditional independencies consistent with the observed data and differentiate causal relationships from indirect or induced ones.  Successful construction of graphical models of data depends on the assumption of causal sufficiency: that is, that all confounding variables are measured. When this assumption is not met, learned graphical structures may become arbitrarily incorrect and effects implied by such models may be wrongly attributed, carry the wrong magnitude, or mis-represent direction of correlation.  Wide application of graphical models to increasingly less curated "big data" draws renewed attention to the unobserved confounder problem.  
 
-We present a novel method that aims to control for the latent space when estimating a DAG by iteratively deriving proxies for the latent space from the residuals of the inferred model.  Under mild assumptions, our method improves structural inference of gaussian graphical models and enhances identifiability of the causal effect. In addition, when the model is being used to predict outcomes, it un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that any improvement of prediction of an outcome is intrinsically capped and cannot rise beyond a certain limit as compared to the confounded model.  We extend our methodology beyond GGMs to ordinal variables and nonlinear cases.  Our R package provides both PCA and autoencoder implementations of the methodology, suitable for GGMs with some guarantees and for better performance in general cases but without such guarantees. 
+We present a novel method that aims to control for the latent space when estimating a DAG by iteratively deriving proxies for the latent space from the residuals of the inferred model.  Under mild assumptions, our method improves structural inference of gaussian graphical models and enhances identifiability of the causal effect. In addition, when the model is being used to predict outcomes, it un-confounds the coefficients on the parents of the outcomes and leads to improved predictive performance when out-of-sample regime is very different from the training data.  We show that any improvement of prediction of an outcome is intrinsically capped and cannot rise beyond a certain limit as compared to the confounded model.  We extend our methodology beyond GGMs to ordinal variables and nonlinear cases.  Our R package provides both PCA/kernel PCA and autoencoder implementations of the methodology, suitable for GGMs with some guarantees and for better performance in general cases but without such guarantees. 
 \end{abstract}
 
 \section{Theorems}
@@ -204,6 +204,54 @@ That is, while parameterization of latent space may be incorrect, parameterizati
 Note that, when true $D$ is not a GGM, but a modest extension thereof, such as GGM with polynomial interaction terms, the above result still holds, since, subject to (difficult) enumeration of the polynomial space of interactions, the model remains linear in the coefficients and the residual space $R$ retains a faithful linear representation of $L$.
 \end{proof}
 \end{theorem}
+
+\begin{theorem}
+\label{thm:ceilingTheorem}
+Consider a variable $V$ with a non-null set of parents.  The success of modeling $V$ given its parents can be described by the Bayesian score, e.g. BIC, $b = BIC(V|P^V)$.  Thus, improvement in this score by revealing $U$ can be described as a Bayes factor, $b - b_u = BIC(P^V|G) - BIC(P^V|G_u)$).  We show that 
+\begin{align}
+b - b_u < k * \log(n).
+\end{align}
+where $k$ is the difference in the number of terms between the two models.
+
+Define cardinality of the graph as $|G|$.  Then total improvement, $I$, can be capped as
+\begin{align}
+I = \sum_i (b^i - b^i_u) < |G| * \log(n) * \sum_i k_i
+\end{align}
+\begin{proof} 
+While it is difficult to describe the limit of error on the coefficients of the parents of $V$, it is straightforward to put a ceiling on the improvement in the likelihood obtainable from modeling $U$ and approximating $G_u$ with $G_{\bar{u}}$.  Suppose we eventually model $U$ as a linear combination of a set of variables $X \subset V$, and denote by $X \setminus W$ the set difference: members of $X$ not in $W$.  Then for any variable $V_i$ predicted by a set of variables $W$ in the graph $G$ and in truth predicted by the set $Z + U$, we can contrast three expressions (from $G$ and $G_{\bar{U}}$ respectively):
+\begin{equation}
+\begin{split}
+V = \beta_{0} + B_W W (a) + \xi \qquad (a)\\
+V = \beta_{0} + B_W W + B_{X \setminus W} (X \setminus W)
+ + \xi \qquad (b)\\
+V^U = \beta_{i0}^U + B_Z^U Z + B^U U + \xi \qquad (c).
+\end{split}
+\end{equation}
+
+Model (a) is the model that was actually accepted, subject to regularization, in G.  Model (b) is the "complete" model of $V$ that controls for $U$ non-parsimoniously by controlling for all variables affected by $U$ and not originally in the model.  The third model, (c), is the ideal parsimonious model when U is known.  We can compare the quality of these models via, for instance, the Bayesian Score, which can approximated by the Bayesian Information Criterion (BIC) in large samples \cite{koller_probabilistic_2009}.  We assume that model (c) would have the lowest BIC (being the best model), and model (a) would be slightly better, since we know that the set of variables $X \setminus W$ didn't make it into the first equation subject to regularization by BIC.  Assuming $n$ samples,
+
+\begin{align}
+b_{a} &= BIC(V = \beta_{0} + B_W W + \xi)  \\
+b_{b} &= BIC(V = \beta_{0} + B_W W  \\
+               &  + B_{X \setminus W} (X \setminus W) + \xi) \nonumber \\
+&  = b_c + |X\setminus W| log(n) \nonumber \\
+b_{c} &= BIC(V^U = \beta_{0}^U + B_Z^U Z + B^U U + \xi)
+\end{align}
+
+The "complete model" - model (b) - includes all of the true predictors of $V$.  Therefore its score will be the same as that of the true model - model (c) - plus the BIC penalty, $log(n)$, for each extra term, minus the cost of having $U$ in the true model (that is, the cardinality of the relevant part of the latent space).  We know that the extra information carried by this model was not big enough to improve upon model (a), that is $b_a < b_c + k * \log(n)$, where $k = |X \setminus W| - |U|$.  Rearranging:
+\begin{equation}
+    b_c - b_a > -k * \log(n).
+    \label{eq:ceilingTheorem}
+\end{equation}
+
+Define cardinality of the graph as $|G|$.  Then total improvement, $I$, can be summed over all $V \in G$ and capped:
+\begin{align}
+I = \sum_i (b^i - b^i_u) < |G| \log(n) \sum_i k_i 
+\end{align}
+
+\end{proof}
+\end{theorem}
+
 \section{Additional Images}
 In this section we include additional images.
 \begin{figure}[ht!]

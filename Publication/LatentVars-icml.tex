@@ -126,19 +126,19 @@ Consider a factorized joint probability distribution over a set of observed and 
  & from their parents & \\
  $D_u$ & $\{V, O, U\}$ - implied data matrix& \\
  $\theta$ & parameters & $\theta_i, i \in \{1, \dots, t\}$ \\
- $Pa^N$ & parents of variable $N$ & $Pa^N_i, i \in \{1, \dots, p\}$\\
+ $P^N$ & parents of variable $N$ & $P^N_i, i \in \{1, \dots, p\}$\\
  $C^N$ & children of variable $N$ & $C^N_i, i \in \{1, \dots, c\}$\\
  $G$ & graph over $D$ &\\
  $G_u$ & graph over $D_u$& \\
- $R$ & residuals - matrix matching $D$ &\\
+ $R$ & residuals - matrix matching $D$ &
 \end{tabular}}
 \caption{Notation}
 \label{tab:notation}
 \end{table}
 
-Assume that the joint distribution $D_{u}$ over the full data or $D$ over the observed data is factorized as a directed acyclic graph, $G_{u}$ or $G$.  We will consider individual conditional probabilities describing nodes and their parents, $P(V | Pa^{V}, \theta)$, where $\theta$ refers to the parameters linking  the parents of $V$ to $V$.  $\hat{\theta}$ will refer to an estimate of these parameters.  We will further assume that $G$ is constructed subject to regularization and using unbiased estimators for $P(V | Pa^{V}, \hat{\theta})$.  We will further assume that $D_u$ plus any given constraints are sufficient to infer the true graph up to Markov equivalence.  For convenience, we'll focus on the actual true graph's parameters, so that, using unbiased estimators, $E[\hat{\theta_m}|D_u] = \theta_m, \forall m$.
+Assume that the joint distribution $D_{u}$ over the full data or $D$ over the observed data is factorized as a directed acyclic graph, $G_{u}$ or $G$.  We will consider individual conditional probabilities describing nodes and their parents, $P(V | P^{V}, \theta)$, where $\theta$ refers to the parameters linking  the parents of $V$ to $V$.  $\hat{\theta}$ will refer to an estimate of these parameters.  We will further assume that $G$ is constructed subject to regularization and using unbiased estimators for $P(V | P^{V}, \hat{\theta})$.  We will further assume that $D_u$ plus any given constraints are sufficient to infer the true graph up to Markov equivalence.  For convenience, we'll focus on the actual true graph's parameters, so that, using unbiased estimators, $E[\hat{\theta_m}|D_u] = \theta_m, \forall m$.
 
-Mirroring $D$ (or $D_u$), we will define a matrix $R$ of the same dimensions ($s \times (v + o)$) that captures the residuals of modeling every variable $N \in \{V, O, (U)\}$ via $G$ (or $G_u$).  Note that $R_u$ - the residuals matrix that contains residuals of $U$ - doesn't make sense and isn't defined.  In the linear case, these would be regular linear model residuals, but more generally we will consider probability scale residuals (PSR, \cite{shepherd_probability-scale_2016}).  That is, we define $R[i, j] = PSR(P(V_j | Pa^{V_j}, \hat{\theta}_j) | D[i, j])$, the residuals of $V_j$ given its graph parents.  The use of probability-scale residuals allows us to define $R$ for all ordinal variable types, up to rank-equivalence.
+Mirroring $D$ (or $D_u$), we will define a matrix $R$ of the same dimensions ($s \times (v + o)$) that captures the residuals of modeling every variable $N \in \{V, O, (U)\}$ via $G$ (or $G_u$).  Note that $R_u$ - the residuals matrix that contains residuals of $U$ - doesn't make sense and isn't defined.  In the linear case, these would be regular linear model residuals, but more generally we will consider probability scale residuals (PSR, \cite{shepherd_probability-scale_2016}).  That is, we define $R[i, j] = PSR(P(V_j | P^{V_j}, \hat{\theta}_j) | D[i, j])$, the residuals of $V_j$ given its graph parents.  The use of probability-scale residuals allows us to define $R$ for all ordinal variable types, up to rank-equivalence.
 
 \section{Diagnosing Latent Confounding} 
 
@@ -295,33 +295,25 @@ Formula \ref{eq:VIF} describes the \textit{variance inflation factor} (VIF) of $
 \label{eq:vifImprovement}
 \end{equation}
 
-Consider an output $O_j$.  While it is difficult to describe the limit of error on the coefficients of the drivers of $O_j$, it is straightforward to put a ceiling on the improvement in the likelihood obtainable from modeling $U$ and approximating $G_u$ with $G_{\bar{u}}$.  Suppose we eventually model $U$ as a linear combination of a set of variables $X \subset V$, and denote by $X \setminus W$ the set difference: members of $X$ not in $W$.  Then for any outcome $O_i$ predicted by a set of variables $W$ in the graph $G$ and in truth predicted by the set $Z + U$, we can contrast three expressions (from $G$ and $G_{\bar{U}}$ respectively):
-\begin{equation}
-\begin{split}
-O_i = \beta_{i0} + B_W W (a) + \xi_i \qquad (a)\\
-O_i = \beta_{i0} + B_W W + B_{X \setminus W} (X \setminus W)
- + \xi_i \qquad (b)\\
-O_i^U = \beta_{i0}^U + B_Z^U Z + B^U U + \xi_i \qquad (c).
-\end{split}
-\end{equation}
-Model (a) is the model that was actually accepted, subject to regularization, in G.  Model (b) is the "complete" model of $O_i$ that controls for $U$ non-parsimoniously by controlling for all variables affected by $U$ and not originally in the model.  The third model, (c), is the ideal parsimonious model when U is known.  We can compare the quality of these models via the Bayesian Score, and the full score, which can approximated by the Bayesian Information Criterion (BIC) in large samples \cite{koller_probabilistic_2009}.  We assume that model (c) would have the lowest BIC (being the best model), and model (a) would be slightly better, since we know that the set of variables $X \setminus W$ didn't make it into the first equation subject to regularization by BIC.  Assuming $n$ samples,
-
+Consider some variable $V \in G$.  While it is difficult to describe the limit of error on the coefficients of the parents of $V$, it is straightforward to put a ceiling on the improvement in the likelihood obtainable from modeling $U$ and approximating $G_u$ with $G_{\bar{u}}$.  
+\begin{theorem}
+\label{thm:ceilingTheorem}
+Consider a variable $V$ with a non-null set of parents.  The success of modeling $V$ given its parents can be described by the Bayesian score, e.g. BIC, $b = BIC(V|P^V)$.  Thus, improvement in this score by revealing $U$ can be described as a Bayes factor, $b - b_u = BIC(P^V|G) - BIC(P^V|G_u)$).  We show that 
 \begin{align}
-b_{a} &= BIC(O_{i} = \beta_{i0} + B_W W + \xi_i)  \\
-b_{b} &= BIC(O_i = \beta_{i0} + B_W W  \\
-               &  + B_{X \setminus W} (X \setminus W) + \xi_i) \nonumber \\
-&  = b_c + |X\setminus W| log(n) \nonumber \\
-b_{c} &= BIC(O_i^U = \beta_{i0}^U + B_Z^U Z + B^U U + \xi_i)
+b - b_u < k * \log(n).
 \end{align}
+where $k$ is the difference in the number of terms between the two models.
 
-The "complete model" - model (b) - includes all of the true predictors of $O_j$.  Therefore its score will be the same as that of the true model - model (c) - plus the BIC penalty, $log(n)$, for each extra term, minus the cost of having $U$ in the true model (that is, the cardinality of the relevant part of the latent space).  We know that the extra information carried by this model was not big enough to improve upon model (a), that is $b_a < b_c + k \log(n)$ for some $k$.  Rearranging:
-\begin{equation}
-    b_c - b_a > -k\log(n).
-    \label{eq:ceilingTheorem}
-\end{equation}
-Any improvement in $G_{\bar{U}}$ owing to modeling of $\bar{U}$ cannot, therefore, exceed $k\log(n)$ logs, where $k = |X \setminus W| - |U|$: the information contained in the "complete" model is smaller than its cost.
+Define cardinality of the graph as $|G|$.  Then total improvement, $I$, can be capped as
+\begin{align}
+I = \sum_i (b^i - b^i_u) < |G| * \log(n) * \sum_i k_i
+\end{align}
+\begin{proof} 
+See proof in supplement theorem \ref{sup-thm:ceilingTheorem}
+\end{proof}
+\end{theorem}
 
-Although the available improvement in predictive power is also capped in some way, it is still important to aim for that limit.  The reason is, correct inference of causality, especially in the presence of latent variables, is the only way to ensure transportability of models in real-world (heterogeneous-data) applications (see, e.g., \cite{bareinboim_causal_2016}).
+The attainable improvements in likelihood and predictive power are capped.  It is still important to aim for those limits.  The reason is that correct inference of causality, especially in the presence of latent variables, is the only way to ensure transportability of models in the real-world (heterogeneous-data) applications (see, e.g., \cite{bareinboim_causal_2016}).
 
 This approach is a generalization of work presented in \cite{anandkumar_learning_2013}, where the authors show that, under some assumptions. the latent space can be learned exactly, which is also related to the deconfounder approach described by \cite{wang_deconfounder_2019}.  However, our approach does not require that the observables be conditionally independent given the latent space and instead \textit{generate} such independence by the use of causal network's residuals, which are conditionally independent of each other \textit{given the graph and the latent space}.  However, since the network among the observables is undefined in the beginning, the structure of the observable network must be learned at the same time as the structure of the latent space, which leads us to the iterative/variational bayes approach presented in Algorithm \ref{alg:latentEM}.  Lastly, the use of the entirety of the residual space is different from the work described in \cite{elidan_ideal_2007}, where local residuals are pursued with the goal to accelerate structure learning while simultaneously discovering the latent space.
 
@@ -350,7 +342,7 @@ How do we learn $\bar{U} = f(R_{\bar{U}})$?  In the linear case, we can use PCA,
   \STATE Set $\bar{U}$ to arbitrary constant values\;
   \FORALL{child node $C \in G_{\bar{U}}, C \notin \bar{U}$}
   	\STATE Set parents to training data\;
-  	\STATE $\bar{C} = C|parents(C)$\;
+  	\STATE $\bar{C} = C|P^C$\;
   	\STATE Set $R_C = PSR(\bar{C}, C)$\;
   \ENDFOR
   \STATE Estimate $\bar{U} = f(R_{\bar{U}})$\;
@@ -491,13 +483,15 @@ In principle, PSRs can be extended to the case of non-ordinal categorical variab
 \section{Conclusions and Future Directions}
 In this work we present a method for describing the latent variable space which is locally optimal under linearity, up to rank-linearity.  The method does not place \textit{a priori} constraints on the number of latent variables, and will infer the upper bound on this dimensionality automatically.  
 
-In real-data situations, some assumptions of our linear approach may not hold - PCA and related methods may not suffice.  For such cases, we provide a heuristic autoencoder implementation.  Autoencoders have shown utility when the structure of the causal model is already known \cite{louizos_causal_2017}.  Learning structure over observed data as well as unconstrained latent space via autoencoders, as in our work, results in a hybrid "deep causal discovery" generalization of that approach.  
+In real-data situations, some assumptions of our linear approach may not hold - PCA and related methods may not suffice.  For such cases, we provide heuristic implementations based on kernel PCA (not discussed) and autoencoders.  Autoencoders have shown utility when the structure of the causal model is already known \cite{louizos_causal_2017}.  Learning structure over observed data as well as unconstrained latent space via autoencoders, as in our work, results in a hybrid "deep causal discovery" generalization of that approach.  
 
 Many domains can benefit from joint causal discovery and inference of latent space.  For instance, in epidemiology neither the model structure nor the latent space are typically well-understood beyond simple examples.  Multi-omic biological datasets are another area of applicability, since it's impossible to collect all biological data modalities in practice.  In clinical trials, epidemiological features of multi-omic datasets may be hard to fully account for.  
 
 Combining causal discovery and causal inference improves statements about ACE, and helps assess data set limitations.  Further, we provide a relatively fast implementation suitable to real problems.  Therefore, we hope that our work will open new practical applications of both paradigms.
  
+\clearpage
 \small
 \bibliography{LatentVars-icml}
+\bibliographystyle{icml2021}
 
 \end{document}
