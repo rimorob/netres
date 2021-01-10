@@ -1,0 +1,698 @@
+@article{wangMultipleCausesCausal2019,
+  title = {Multiple {{Causes}}: {{A Causal Graphical View}}},
+  shorttitle = {Multiple {{Causes}}},
+  author = {Wang, Yixin and Blei, David M.},
+  year = {2019},
+  month = may,
+  abstract = {Unobserved confounding is a major hurdle for causal inference from observational data. Confounders---the variables that affect both the causes and the outcome---induce spurious non-causal correlations between the two. Wang \& Blei (2018) lower this hurdle with "the blessings of multiple causes," where the correlation structure of multiple causes provides indirect evidence for unobserved confounding. They leverage these blessings with an algorithm, called the deconfounder, that uses probabilistic factor models to correct for the confounders. In this paper, we take a causal graphical view of the deconfounder. In a graph that encodes shared confounding, we show how the multiplicity of causes can help identify intervention distributions. We then justify the deconfounder, showing that it makes valid inferences of the intervention. Finally, we expand the class of graphs, and its theory, to those that include other confounders and selection variables. Our results expand the theory in Wang \& Blei (2018), justify the deconfounder for causal graphs, and extend the settings where it can be used.},
+  archivePrefix = {arXiv},
+  eprint = {1905.12793},
+  eprinttype = {arxiv},
+  file = {/Users/fred/Zotero/storage/DV3SZKAC/Wang_Blei_2019_Multiple Causes.pdf;/Users/fred/Zotero/storage/GA6NFH8T/1905.html},
+  journal = {arXiv:1905.12793 [cs, stat]},
+  keywords = {latent confounders,proxies,stage2},
+  primaryClass = {cs, stat}
+}
+
+
+@article{jabbariDiscoveryCausalModels2017,
+  title = {Discovery of {{Causal Models}} That {{Contain Latent Variables}} through {{Bayesian Scoring}} of {{Independence Constraints}}},
+  author = {Jabbari, Fattaneh and Ramsey, Joseph and Spirtes, Peter and Cooper, Gregory},
+  year = {2017},
+  pages = {142--157},
+  doi = {10.1007/978-3-319-71246-8_9},
+  abstract = {Discovering causal structure from observational data in the presence of latent variables remains an active research area. Constraint-based causal discovery algorithms are relatively efficient at discovering such causal models from data using independence tests. Typically, however, they derive and output only one such model. In contrast, Bayesian methods can generate and probabilistically score multiple models, outputting the most probable one; however, they are often computationally infeasible to apply when modeling latent variables. We introduce a hybrid method that derives a Bayesian probability that the set of independence tests associated with a given causal model are jointly correct. Using this constraint-based scoring method, we are able to score multiple causal models, which possibly contain latent variables, and output the most probable one. The structure-discovery performance of the proposed method is compared to an existing constraint-based method (RFCI) using data generated from several previously published Bayesian networks. The structural Hamming distances of the output models improved when using the proposed method compared to RFCI, especially for small sample sizes.},
+  file = {/Users/fred/Zotero/storage/RFDZSV6G/Jabbari et al_2017_Discovery of Causal Models that Contain Latent Variables through Bayesian.pdf},
+  journal = {Joint European Conference on Machine Learning and Knowledge Discovery in Databases},
+  keywords = {Bayesian analysis,causal discovery,latent confounders,notnow,revisit},
+  pmcid = {PMC5836552},
+  pmid = {29520396}
+}
+
+
+
+@inproceedings{bernstein2020ordering,
+  title = {Ordering-Based Causal Structure Learning in the Presence of Latent Variables},
+  booktitle = {International Conference on Artificial Intelligence and Statistics},
+  author = {Bernstein, Daniel and Saeed, Basil and Squires, Chandler and Uhler, Caroline},
+  year = {2020},
+  pages = {4098--4108},
+  keywords = {causal discovery,general latent confounders,latent confounders,notnow},
+  organization = {{PMLR}}
+}
+
+
+@inproceedings{spirtesCausalInferencePresence1995,
+  title = {Causal {{Inference}} in the {{Presence}} of {{Latent Variables}} and {{Selection Bias}}},
+  booktitle = {Proceedings of the {{Eleventh}} Conference on {{Uncertainty}} in Artificial Intelligence},
+  author = {Spirtes, Peter L. and Meek, Christopher and Richardson, Thomas S.},
+  year = {1995},
+  pages = {499--506},
+  url = {http://arxiv.org/abs/1302.4983},
+  urldate = {2018-11-09},
+  abstract = {We show that there is a general, informative and reliable procedure for discovering causal relations when, for all the investigator knows, both latent variables and selection bias may be at work. Given information about conditional independence and dependence relations between measured variables, even when latent variables and selection bias may be present, there are sufficient conditions for reliably concluding that there is a causal path from one variable to another, and sufficient conditions for reliably concluding when no such causal path exists.},
+  archivePrefix = {arXiv},
+  eprint = {1302.4983},
+  eprinttype = {arxiv},
+  file = {/Users/fred/Zotero/storage/4GPPJ8F5/Spirtes et al_2013_Causal Inference in the Presence of Latent Variables and Selection Bias.pdf;/Users/fred/Zotero/storage/ZRNTYWSM/1302.html},
+  keywords = {latent confounders}
+}                  
+
+@article{nandy2018high,
+  title = {High-Dimensional Consistency in Score-Based and Hybrid Structure Learning},
+  author = {Nandy, Preetam and Hauser, Alain and Maathuis, Marloes H and others},
+  year = {2018},
+  volume = {46},
+  pages = {3151--3183},
+  publisher = {{Institute of Mathematical Statistics}},
+  file = {/Users/fred/Zotero/storage/WEQ83VFY/Nandy et al_2015_High-dimensional consistency in score-based and hybrid structure learning.pdf},
+  journal = {The Annals of Statistics},
+  number = {6A}
+}
+
+
+                  @article{frotRobustCausalStructure2017,
+  title = {Robust Causal Structure Learning with Some Hidden Variables},
+  author = {Frot, Benjamin and Nandy, Preetam and Maathuis, Marloes H.},
+  year = {2017},
+  month = aug,
+  abstract = {We introduce a new method to estimate the Markov equivalence class of a directed acyclic graph (DAG) in the presence of hidden variables, in settings where the underlying DAG among the observed variables is sparse, and there are a few hidden variables that have a direct effect on many of the observed ones. Building on the so-called low rank plus sparse framework, we suggest a two-stage approach which first removes the effect of the hidden variables, and then estimates the Markov equivalence class of the underlying DAG under the assumption that there are no remaining hidden variables. This approach is consistent in certain high-dimensional regimes and performs favourably when compared to the state of the art, both in terms of graphical structure recovery and total causal effect estimation.},
+  archivePrefix = {arXiv},
+  eprint = {1708.01151},
+  eprinttype = {arxiv},
+  file = {/Users/fred/Zotero/storage/BR2U66Z5/Frot et al. - 2017 - Robust causal structure learning with some hidden .pdf;/Users/fred/Zotero/storage/J5364LTN/1708.html},
+  journal = {arXiv:1708.01151 [stat]},
+  keywords = {latent confounders,proxies,stage2},
+  primaryClass = {stat}
+}
+
+
+
+@inproceedings{claassenLearningSparseCausal2013,
+  title = {Learning {{Sparse Causal Models}} Is Not {{NP}}-Hard},
+  booktitle = {Proceedings of the {{Twenty}}-{{Ninth Conference}} on {{Uncertainty}} in {{Artificial Intelligence}}},
+  author = {Claassen, Tom and Mooij, Joris and Heskes, Tom},
+  year = {2013},
+  pages = {172--181},
+  url = {http://arxiv.org/abs/1309.6824},
+  urldate = {2020-09-05},
+  abstract = {This paper shows that causal model discovery is not an NP-hard problem, in the sense that for sparse graphs bounded by node degree k the sound and complete causal model can be obtained in worst case order N\^\{2(k+2)\} independence tests, even when latent variables and selection bias may be present. We present a modification of the well-known FCI algorithm that implements the method for an independence oracle, and suggest improvements for sample/real-world data versions. It does not contradict any known hardness results, and does not solve an NP-hard problem: it just proves that sparse causal discovery is perhaps more complicated, but not as hard as learning minimal Bayesian networks.},
+  archivePrefix = {arXiv},
+  eprint = {1309.6824},
+  eprinttype = {arxiv},
+  eventtitle = {Uncertainty in {{Artificial Intelligence}}},
+  keywords = {Computer Science - Artificial Intelligence}
+}
+
+
+ @article{colombo_learning_2012,
+  title = {Learning High-Dimensional Directed Acyclic Graphs with Latent and Selection Variables},
+  author = {Colombo, Diego and Maathuis, Marloes H. and Kalisch, Markus and Richardson, Thomas S.},
+  year = {2012},
+  month = feb,
+  volume = {40},
+  pages = {294--321},
+  issn = {0090-5364},
+  doi = {10.1214/11-AOS940},
+  abstract = {We consider the problem of learning causal information between random variables in directed acyclic graphs (DAGs) when allowing arbitrarily many latent and selection variables. The FCI (Fast Causal Inference) algorithm has been explicitly designed to infer conditional independence and causal information in such settings. However, FCI is computationally infeasible for large graphs. We therefore propose the new RFCI algorithm, which is much faster than FCI. In some situations the output of RFCI is slightly less informative, in particular with respect to conditional independence information. However, we prove that any causal information in the output of RFCI is correct in the asymptotic limit. We also define a class of graphs on which the outputs of FCI and RFCI are identical. We prove consistency of FCI and RFCI in sparse high-dimensional settings, and demonstrate in simulations that the estimation performances of the algorithms are very similar. All software is implemented in the R-package pcalg.},
+  archivePrefix = {arXiv},
+  eprint = {1104.5617},
+  eprinttype = {arxiv},
+  journal = {The Annals of Statistics},
+  keywords = {Computer Science - Machine Learning,Mathematics - Statistics Theory,Statistics - Methodology},
+  number = {1}
+}
+
+
+
+@article{kaltenpoth_we_2019,
+	title = {We {Are} {Not} {Your} {Real} {Parents}: {Telling} {Causal} from {Confounded} using {MDL}},
+	shorttitle = {We {Are} {Not} {Your} {Real} {Parents}},
+	url = {http://arxiv.org/abs/1901.06950},
+	abstract = {Given data over variables (X1, ..., Xm, Y ) we consider the problem of nding out whether X jointly causes Y or whether they are all confounded by an unobserved latent variable Z . To do so, we take an information-theoretic approach based on Kolmogorov complexity. In a nutshell, we follow the postulate that rst encoding the true cause, and then the e ects given that cause, results in a shorter description than any other encoding of the observed variables.},
+	language = {en},
+	urldate = {2019-01-25},
+	journal = {arXiv:1901.06950 [cs, stat]},
+	author = {Kaltenpoth, David and Vreeken, Jilles},
+	month = jan,
+	year = {2019},
+	note = {arXiv: 1901.06950},
+	keywords = {Statistics - Machine Learning, Computer Science - Machine Learning},
+	annote = {Comment: 10 pages, 6 figures},
+	file = {Kaltenpoth and Vreeken - 2019 - We Are Not Your Real Parents Telling Causal from .pdf:/Users/boris/Zotero/storage/DCEGYLAN/Kaltenpoth and Vreeken - 2019 - We Are Not Your Real Parents Telling Causal from .pdf:application/pdf}
+}
+
+@inproceedings{friedman1998bayesian,
+	title = {The {Bayesian} structural {EM} algorithm},
+	booktitle = {Proceedings of the {Fourteenth} conference on {Uncertainty} in artificial intelligence},
+	author = {Friedman, Nir},
+	year = {1998},
+	pages = {129--138},
+	file = {Friedman_The Bayesian Structural EM Algorithm.pdf:/Users/boris/Zotero/storage/WP4Q5F5B/Friedman_The Bayesian Structural EM Algorithm.pdf:application/pdf}
+}
+
+@inproceedings{friedman1997learning,
+	title = {Learning belief networks in the presence of missing values and hidden variables},
+	volume = {97},
+	booktitle = {{ICML}},
+	author = {Friedman, Nir},
+	year = {1997},
+	pages = {125--133},
+	file = {Friedman_Learning Belief Networks in the Presence of Missing Values and Hidden Variables.pdf:/Users/boris/Zotero/storage/6BXWLAMU/Friedman_Learning Belief Networks in the Presence of Missing Values and Hidden Variables.pdf:application/pdf}
+}
+
+@article{anandkumar_learning_2012,
+	title = {Learning {Topic} {Models} and {Latent} {Bayesian} {Networks} {Under} {Expansion} {Constraints}},
+	url = {http://arxiv.org/abs/1209.5350},
+	abstract = {Unsupervised estimation of latent variable models is a fundamental problem central to numerous applications of machine learning and statistics. This work presents a principled approach for estimating broad classes of such models, including probabilistic topic models and latent linear Bayesian networks, using only second-order observed moments. The sufficient conditions for identifiability of these models are primarily based on weak expansion constraints on the topic-word matrix, for topic models, and on the directed acyclic graph, for Bayesian networks. Because no assumptions are made on the distribution among the latent variables, the approach can handle arbitrary correlations among the topics or latent factors. In addition, a tractable learning method via \${\textbackslash}ell\_1\$ optimization is proposed and studied in numerical experiments.},
+	urldate = {2018-10-29},
+	journal = {arXiv:1209.5350 [cs, stat]},
+	author = {Anandkumar, Animashree and Hsu, Daniel and Javanmard, Adel and Kakade, Sham M.},
+	month = sep,
+	year = {2012},
+	note = {arXiv: 1209.5350},
+	keywords = {Statistics - Applications, \_tablet\_modified, Statistics - Machine Learning, Computer Science - Machine Learning},
+	annote = {Comment: 38 pages, 6 figures, 2 tables, applications in topic models and Bayesian networks are studied. Simulation section is added},
+	file = {Anandkumar et al_2012_Learning Topic Models and Latent Bayesian Networks Under Expansion Constraints.pdf:/Users/boris/Zotero/storage/SRRD9DZ5/Anandkumar et al_2012_Learning Topic Models and Latent Bayesian Networks Under Expansion Constraints.pdf:application/pdf;arXiv.org Snapshot:/Users/boris/Zotero/storage/EA6I7GC6/1209.html:text/html}
+}
+
+@incollection{elidan_discovering_2001,
+	title = {Discovering {Hidden} {Variables}: {A} {Structure}-{Based} {Approach}},
+	shorttitle = {Discovering {Hidden} {Variables}},
+	url = {http://papers.nips.cc/paper/1940-discovering-hidden-variables-a-structure-based-approach.pdf},
+	urldate = {2018-06-22},
+	booktitle = {Advances in {Neural} {Information} {Processing} {Systems} 13},
+	publisher = {MIT Press},
+	author = {Elidan, Gal and Lotner, Noam and Friedman, Nir and Koller, Daphne},
+	editor = {Leen, T. K. and Dietterich, T. G. and Tresp, V.},
+	year = {2001},
+	keywords = {\_tablet\_modified},
+	pages = {479--485},
+	file = {Elidan et al_2001_Discovering Hidden Variables.pdf:/Users/boris/Zotero/storage/BK5LFVY6/Elidan et al_2001_Discovering Hidden Variables.pdf:application/pdf;NIPS Snapshort:/Users/boris/Zotero/storage/PT8PYV4F/1940-discovering-hidden-variables-a-structure-based-approach.html:text/html}
+}
+
+@article{shepherd_probability-scale_2016,
+	title = {Probability-scale residuals for continuous, discrete, and censored data},
+	volume = {44},
+	issn = {0319-5724},
+	url = {https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5364820/},
+	doi = {10.1002/cjs.11302},
+	abstract = {We describe a new residual for general regression models, defined as pr(Y* {\textless} y) − pr(Y* {\textgreater} y), where y is the observed outcome and Y* is a random variable from the fitted distribution. This probability-scale residual can be written as E \{sign(y, Y*)\} whereas the popular observed-minus-expected residual can be thought of as E(y − Y*). Therefore, the probability-scale residual is useful in settings where differences are not meaningful or where the expectation of the fitted distribution cannot be calculated. We present several desirable properties of the probability-scale residual that make it useful for diagnostics and measuring residual correlation, especially across different outcome types. We demonstrate its utility for continuous, ordered discrete, and censored outcomes, including current status data, and with various models including Cox regression, quantile regression, and ordinal cumulative probability models, for which fully specified distributions are not desirable or needed, and in some cases suitable residuals are not available. The residual is illustrated with simulated data and real datasets from HIV-infected patients on therapy in the southeastern United States and Latin America.},
+	number = {4},
+	urldate = {2019-02-28},
+	journal = {The Canadian journal of statistics = Revue canadienne de statistique},
+	author = {Shepherd, Bryan E. and Li, Chun and Liu, Qi},
+	month = dec,
+	year = {2016},
+	pmid = {28348453},
+	pmcid = {PMC5364820},
+	pages = {463--479},
+	file = {PubMed Central Full Text PDF:/Users/boris/Zotero/storage/T2DBB6I4/Shepherd et al. - 2016 - Probability-scale residuals for continuous, discre.pdf:application/pdf}
+}
+
+@book{fisher_machine_1997,
+	address = {San Francisco, Calif},
+	title = {Machine learning: proceedings of the fourteenth international conference},
+	isbn = {978-1-55860-486-5},
+	shorttitle = {Machine learning},
+	language = {eng},
+	publisher = {Morgan Kaufmann Publ},
+	editor = {Fisher, Douglas H. and ICML},
+	year = {1997},
+	note = {OCLC: 38263765},
+	annote = {Includes bibliographical references},
+	file = {Table of Contents PDF:/Users/boris/Zotero/storage/DX32KYSV/Fisher and ICML - 1997 - Machine learning proceedings of the fourteenth in.pdf:application/pdf}
+}
+
+@article{ranganath_multiple_2018,
+	title = {Multiple {Causal} {Inference} with {Latent} {Confounding}},
+	url = {http://arxiv.org/abs/1805.08273},
+	abstract = {Causal inference from observational data requires assumptions. These assumptions range from measuring confounders to identifying instruments. Traditionally, causal inference assumptions have focused on estimation of effects for a single treatment. In this work, we construct techniques for estimation with multiple treatments in the presence of unobserved confounding. We develop two assumptions based on shared confounding between treatments and independence of treatments given the confounder. Together, these assumptions lead to a confounder estimator regularized by mutual information. For this estimator, we develop a tractable lower bound. To recover treatment effects, we use the residual information in the treatments independent of the confounder. We validate on simulations and an example from clinical medicine.},
+	urldate = {2019-03-11},
+	journal = {arXiv:1805.08273 [cs, stat]},
+	author = {Ranganath, Rajesh and Perotte, Adler},
+	month = may,
+	year = {2018},
+	note = {arXiv: 1805.08273},
+	keywords = {Statistics - Machine Learning, Computer Science - Machine Learning},
+	file = {arXiv\:1805.08273 PDF:/Users/boris/Zotero/storage/4VUDKNIZ/Ranganath and Perotte - 2018 - Multiple Causal Inference with Latent Confounding.pdf:application/pdf;arXiv.org Snapshot:/Users/boris/Zotero/storage/IP24CAJM/1805.html:text/html}
+}
+@article{kraskov_estimating_2004,
+	title = {Estimating mutual information},
+	volume = {69},
+	issn = {1539-3755, 1550-2376},
+	url = {https://link.aps.org/doi/10.1103/PhysRevE.69.066138},
+	doi = {10.1103/PhysRevE.69.066138},
+	language = {en},
+	number = {6},
+	urldate = {2019-04-04},
+	journal = {Physical Review E},
+	author = {Kraskov, Alexander and Stögbauer, Harald and Grassberger, Peter},
+	month = jun,
+	year = {2004},
+	file = {Full Text:/Users/boris/Zotero/storage/UZD8RAJT/Kraskov et al. - 2004 - Estimating mutual information.pdf:application/pdf}
+}
+
+@article{hernan_estimating_2006,
+	title = {Estimating causal effects from epidemiological data},
+	volume = {60},
+	issn = {0143-005X},
+	doi = {10.1136/jech.2004.029496},
+	abstract = {In ideal randomised experiments, association is causation: association measures can be interpreted as effect measures because randomisation ensures that the exposed and the unexposed are exchangeable. On the other hand, in observational studies, association is not generally causation: association measures cannot be interpreted as effect measures because the exposed and the unexposed are not generally exchangeable. However, observational research is often the only alternative for causal inference. This article reviews a condition that permits the estimation of causal effects from observational data, and two methods -- standardisation and inverse probability weighting -- to estimate population causal effects under that condition. For simplicity, the main description is restricted to dichotomous variables and assumes that no random error attributable to sampling variability exists. The appendix provides a generalisation of inverse probability weighting.},
+	language = {eng},
+	number = {7},
+	journal = {Journal of Epidemiology and Community Health},
+	author = {Hernán, Miguel A. and Robins, James M.},
+	month = jul,
+	year = {2006},
+	pmid = {16790829},
+	pmcid = {PMC2652882},
+	keywords = {Humans, Data Interpretation, Statistical, Causality, Confounding Factors (Epidemiology), Effect Modifier, Epidemiologic, Epidemiologic Research Design, Epidemiologic Studies, Probability, Research Design},
+	pages = {578--586}
+}
+
+@article{louizos_causal_2017,
+	title = {Causal {Effect} {Inference} with {Deep} {Latent}-{Variable} {Models}},
+	url = {http://arxiv.org/abs/1705.08821},
+	abstract = {Learning individual-level causal effects from observational data, such as inferring the most effective medication for a specific patient, is a problem of growing importance for policy makers. The most important aspect of inferring causal effects from observational data is the handling of confounders, factors that affect both an intervention and its outcome. A carefully designed observational study attempts to measure all important confounders. However, even if one does not have direct access to all confounders, there may exist noisy and uncertain measurement of proxies for confounders. We build on recent advances in latent variable modeling to simultaneously estimate the unknown latent space summarizing the confounders and the causal effect. Our method is based on Variational Autoencoders (VAE) which follow the causal structure of inference with proxies. We show our method is significantly more robust than existing methods, and matches the state-of-the-art on previous benchmarks focused on individual treatment effects.},
+	urldate = {2019-04-12},
+	journal = {arXiv:1705.08821 [cs, stat]},
+	author = {Louizos, Christos and Shalit, Uri and Mooij, Joris and Sontag, David and Zemel, Richard and Welling, Max},
+	month = may,
+	year = {2017},
+	note = {arXiv: 1705.08821},
+	keywords = {Statistics - Machine Learning, Computer Science - Machine Learning},
+	annote = {Comment: Published as a conference paper at NIPS 2017},
+	file = {arXiv\:1705.08821 PDF:/Users/boris/Zotero/storage/T6FP2AJI/Louizos et al. - 2017 - Causal Effect Inference with Deep Latent-Variable .pdf:application/pdf;arXiv.org Snapshot:/Users/boris/Zotero/storage/WHCP9XWZ/1705.html:text/html}
+}
+
+@article{verny_learning_2017,
+	title = {Learning causal networks with latent variables from multivariate information in genomic data},
+	volume = {13},
+	issn = {1553-7358},
+	url = {http://dx.plos.org/10.1371/journal.pcbi.1005662},
+	doi = {10.1371/journal.pcbi.1005662},
+	language = {en},
+	number = {10},
+	urldate = {2019-04-12},
+	journal = {PLOS Computational Biology},
+	author = {Verny, Louis and Sella, Nadir and Affeldt, Séverine and Singh, Param Priya and Isambert, Hervé},
+	editor = {Listgarten, Jennifer},
+	month = oct,
+	year = {2017},
+	pages = {e1005662},
+	file = {Full Text:/Users/boris/Zotero/storage/U5WILN3J/Verny et al. - 2017 - Learning causal networks with latent variables fro.pdf:application/pdf}
+}
+
+@article{damour_multi-cause_2019,
+	title = {On {Multi}-{Cause} {Causal} {Inference} with {Unobserved} {Confounding}: {Counterexamples}, {Impossibility}, and {Alternatives}},
+	shorttitle = {On {Multi}-{Cause} {Causal} {Inference} with {Unobserved} {Confounding}},
+	url = {http://arxiv.org/abs/1902.10286},
+	abstract = {Unobserved confounding is a central barrier to drawing causal inferences from observational data. Several authors have recently proposed that this barrier can be overcome in the case where one attempts to infer the effects of several variables simultaneously. In this paper, we present two simple, analytical counterexamples that challenge the general claims that are central to these approaches. In addition, we show that nonparametric identification is impossible in this setting. We discuss practical implications, and suggest alternatives to the methods that have been proposed so far in this line of work: using proxy variables and shifting focus to sensitivity analysis.},
+	urldate = {2019-04-12},
+	journal = {arXiv:1902.10286 [cs, stat]},
+	author = {D'Amour, Alexander},
+	month = feb,
+	year = {2019},
+	note = {arXiv: 1902.10286},
+	keywords = {Statistics - Machine Learning, Computer Science - Machine Learning},
+	annote = {Comment: Accepted to AISTATS 2019. Since last revision: corrected constant factors in linear gaussian example; fixed typos},
+	file = {arXiv\:1902.10286 PDF:/Users/boris/Zotero/storage/H3A3IVFT/D'Amour - 2019 - On Multi-Cause Causal Inference with Unobserved Co.pdf:application/pdf;arXiv.org Snapshot:/Users/boris/Zotero/storage/XYI4MQFQ/1902.html:text/html}
+}
+
+@book{mackay_information_2003,
+	address = {Cambridge, UK ; New York},
+	title = {Information theory, inference, and learning algorithms},
+	isbn = {978-0-521-64298-9},
+	publisher = {Cambridge University Press},
+	author = {MacKay, David J. C.},
+	year = {2003},
+	keywords = {Information theory}
+}
+
+@article{friedman_being_2013,
+	title = {Being {Bayesian} about {Network} {Structure}},
+	url = {http://arxiv.org/abs/1301.3856},
+	abstract = {In many domains, we are interested in analyzing the structure of the underlying distribution, e.g., whether one variable is a direct parent of the other. Bayesian model-selection attempts to find the MAP model and use its structure to answer these questions. However, when the amount of available data is modest, there might be many models that have non-negligible posterior. Thus, we want compute the Bayesian posterior of a feature, i.e., the total posterior probability of all models that contain it. In this paper, we propose a new approach for this task. We first show how to efficiently compute a sum over the exponential number of networks that are consistent with a fixed ordering over network variables. This allows us to compute, for a given ordering, both the marginal probability of the data and the posterior of a feature. We then use this result as the basis for an algorithm that approximates the Bayesian posterior of a feature. Our approach uses a Markov Chain Monte Carlo (MCMC) method, but over orderings rather than over network structures. The space of orderings is much smaller and more regular than the space of structures, and has a smoother posterior `landscape'. We present empirical results on synthetic and real-life datasets that compare our approach to full model averaging (when possible), to MCMC over network structures, and to a non-Bayesian bootstrap approach.},
+	urldate = {2019-05-13},
+	journal = {arXiv:1301.3856 [cs, stat]},
+	author = {Friedman, Nir and Koller, Daphne},
+	month = jan,
+	year = {2013},
+	note = {arXiv: 1301.3856},
+	keywords = {Statistics - Machine Learning, Computer Science - Artificial Intelligence, Computer Science - Machine Learning},
+	annote = {Comment: Appears in Proceedings of the Sixteenth Conference on Uncertainty in Artificial Intelligence (UAI2000)},
+	file = {arXiv\:1301.3856 PDF:/Users/boris/Zotero/storage/U44BHI4L/Friedman and Koller - 2013 - Being Bayesian about Network Structure.pdf:application/pdf;arXiv.org Snapshot:/Users/boris/Zotero/storage/3WS8K68J/1301.html:text/html}
+}
+
+@article{gavish_optimal_2014,
+	title = {The {Optimal} {Hard} {Threshold} for {Singular} {Values} is {\textbackslash}(4/{\textbackslash}sqrt \{3\}{\textbackslash})},
+	volume = {60},
+	issn = {0018-9448, 1557-9654},
+	url = {http://ieeexplore.ieee.org/document/6846297/},
+	doi = {10.1109/TIT.2014.2323359},
+	number = {8},
+	urldate = {2019-05-13},
+	journal = {IEEE Transactions on Information Theory},
+	author = {Gavish, Matan and Donoho, David L.},
+	month = aug,
+	year = {2014},
+	pages = {5040--5053},
+	file = {Submitted Version:/Users/boris/Zotero/storage/U7LGTG96/Gavish and Donoho - 2014 - The Optimal Hard Threshold for Singular Values is .pdf:application/pdf}
+}
+
+@book{pearl_causality:_2000,
+	address = {Cambridge, U.K.; New York},
+	title = {Causality: models, reasoning, and inference},
+	isbn = {978-1-139-64936-0 978-0-511-80316-1},
+	shorttitle = {Causality},
+	url = {http://dx.doi.org/10.1017/CBO9780511803161},
+	language = {English},
+	urldate = {2019-05-14},
+	publisher = {Cambridge University Press},
+	author = {Pearl, Judea},
+	year = {2000},
+	note = {OCLC: 834142635}
+}
+
+@article{pearl_testability_2013,
+	title = {On the {Testability} of {Causal} {Models} with {Latent} and {Instrumental} {Variables}},
+	url = {http://arxiv.org/abs/1302.4976},
+	abstract = {Certain causal models involving unmeasured variables induce no independence constraints among the observed variables but imply, nevertheless, inequality contraints on the observed distribution. This paper derives a general formula for such instrumental variables, that is, exogenous variables that directly affect some variables but not all. With the help of this formula, it is possible to test whether a model involving instrumental variables may account for the data, or, conversely, whether a given variables can be deemed instrumental.},
+	urldate = {2019-05-14},
+	journal = {arXiv:1302.4976 [cs]},
+	author = {Pearl, Judea},
+	month = feb,
+	year = {2013},
+	note = {arXiv: 1302.4976},
+	keywords = {Computer Science - Artificial Intelligence},
+	annote = {Comment: Appears in Proceedings of the Eleventh Conference on Uncertainty in Artificial Intelligence (UAI1995)},
+	file = {arXiv\:1302.4976 PDF:/Users/boris/Zotero/storage/RI76HKG8/Pearl - 2013 - On the Testability of Causal Models with Latent an.pdf:application/pdf;arXiv.org Snapshot:/Users/boris/Zotero/storage/UQ89PB4R/1302.html:text/html}
+}
+
+@article{silva_learning_2006,
+	title = {Learning the {Structure} of {Linear} {Latent} {Variable} {Models}},
+	volume = {7},
+	journal = {J. Mach. Learn. Res.},
+	author = {Silva, Ricardo and Scheines, Richard and Glymour, Clark and Spirtes, Peter},
+	year = {2006},
+	pages = {191--246}
+}
+
+@article{karatzoglou_kernlab_2004,
+	title = {\textbf{kernlab} - {An} \textit{{S}4} {Package} for {Kernel} {Methods} in \textit{{R}}},
+	volume = {11},
+	issn = {1548-7660},
+	url = {http://www.jstatsoft.org/v11/i09/},
+	doi = {10.18637/jss.v011.i09},
+	language = {en},
+	number = {9},
+	urldate = {2019-05-15},
+	journal = {Journal of Statistical Software},
+	author = {Karatzoglou, Alexandros and Smola, Alex and Hornik, Kurt and Zeileis, Achim},
+	year = {2004},
+	file = {Full Text:/Users/boris/Zotero/storage/XAJ5TWJU/Karatzoglou et al. - 2004 - bkernlabb - An iS4i Package for Kernel M.pdf:application/pdf}
+}
+
+@book{rawlings_applied_1998,
+	address = {New York},
+	edition = {2nd ed},
+	series = {Springer texts in statistics},
+	title = {Applied regression analysis: a research tool},
+	isbn = {978-0-387-98454-4},
+	shorttitle = {Applied regression analysis},
+	publisher = {Springer},
+	author = {Rawlings, John O. and Pantula, Sastry G. and Dickey, David A.},
+	year = {1998},
+	keywords = {Regression analysis}
+}
+
+@book{koller_probabilistic_2009,
+	address = {Cambridge, MA},
+	series = {Adaptive computation and machine learning},
+	title = {Probabilistic graphical models: principles and techniques},
+	isbn = {978-0-262-01319-2},
+	shorttitle = {Probabilistic graphical models},
+	publisher = {MIT Press},
+	author = {Koller, Daphne and Friedman, Nir},
+	year = {2009},
+	keywords = {Bayesian statistical decision theory, Graphic methods, Graphical modeling (Statistics)}
+}
+
+@article{bareinboim_causal_2016,
+	title = {Causal inference and the data-fusion problem},
+	volume = {113},
+	issn = {0027-8424, 1091-6490},
+	url = {http://www.pnas.org/lookup/doi/10.1073/pnas.1510507113},
+	doi = {10.1073/pnas.1510507113},
+	language = {en},
+	number = {27},
+	urldate = {2019-05-16},
+	journal = {Proceedings of the National Academy of Sciences},
+	author = {Bareinboim, Elias and Pearl, Judea},
+	month = jul,
+	year = {2016},
+	pages = {7345--7352},
+	file = {Full Text:/Users/boris/Zotero/storage/WL3JJV6Z/Bareinboim and Pearl - 2016 - Causal inference and the data-fusion problem.pdf:application/pdf}
+}
+
+@inproceedings{anandkumar_learning_2013,
+	address = {Atlanta, Georgia, USA},
+	series = {Proceedings of {Machine} {Learning} {Research}},
+	title = {Learning {Linear} {Bayesian} {Networks} with {Latent} {Variables}},
+	volume = {28},
+	url = {http://proceedings.mlr.press/v28/anandkumar13.html},
+	abstract = {This work considers the problem of learning linear Bayesian networks when some of the variables are unobserved. Identifiability and efficient recovery from low-order observable moments are established under a novel graphical constraint. The constraint concerns the expansion properties of the underlying directed acyclic graph (DAG) between observed and unobserved variables in the network, and it is satisfied by many natural families of DAGs that include multi-level DAGs, DAGs with effective depth one, as well as certain families of polytrees.},
+	booktitle = {Proceedings of the 30th {International} {Conference} on {Machine} {Learning}},
+	publisher = {PMLR},
+	author = {Anandkumar, Animashree and Hsu, Daniel and Javanmard, Adel and Kakade, Sham},
+	editor = {Dasgupta, Sanjoy and McAllester, David},
+	month = jun,
+	year = {2013},
+	pages = {249--257}
+}
+
+@article{elidan_learning_2005,
+	title = {Learning {Hidden} {Variable} {Networks}: {The} {Information} {Bottleneck} {Approach}},
+	volume = {6},
+	issn = {1532-4435},
+	url = {http://dl.acm.org/citation.cfm?id=1046920.1046924},
+	journal = {J. Mach. Learn. Res.},
+	author = {Elidan, Gal and Friedman, Nir},
+	month = dec,
+	year = {2005},
+	pages = {81--127}
+}
+
+@inproceedings{elidan_learning_2001,
+	address = {San Francisco, CA, USA},
+	series = {{UAI}'01},
+	title = {Learning the {Dimensionality} of {Hidden} {Variables}},
+	isbn = {1-55860-800-1},
+	url = {http://dl.acm.org/citation.cfm?id=2074022.2074041},
+	booktitle = {Proceedings of the {Seventeenth} {Conference} on {Uncertainty} in {Artificial} {Intelligence}},
+	publisher = {Morgan Kaufmann Publishers Inc.},
+	author = {Elidan, Gal and Friedman, Nir},
+	year = {2001},
+	note = {event-place: Seattle, Washington},
+	pages = {144--151}
+}
+
+@inproceedings{adams_learning_2010,
+	address = {Proceedings of Machine Learning Research},
+	title = {Learning the {Structure} of {Deep} {Sparse} {Graphical} {Models}},
+	volume = {9},
+	url = {http://proceedings.mlr.press},
+	abstract = {Deep belief networks are a powerful way to model complex probability   distributions.  However, it is difficult to learn the structure of a   belief network, particularly one with hidden units.  The Indian   buffet process has been used as a nonparametric Bayesian prior on   the structure of a directed belief network with a single infinitely   wide hidden layer. Here, we introduce the cascading Indian   buffet process (CIBP), which provides a prior on the structure of a   layered, directed belief network that is unbounded in both depth and   width, yet allows tractable inference.  We use the CIBP prior with   the nonlinear Gaussian belief network framework to allow each unit   to vary its behavior between discrete and continuous   representations.  We use Markov chain Monte Carlo for inference in   this model and explore the structures learned on image data.},
+	booktitle = {Proceedings of {Machine} {Learning} {Research}},
+	publisher = {PMLR},
+	author = {Adams, Ryan and Wallach, Hanna and Ghahramani, Zoubin},
+	editor = {Teh, Yee Whye and Titterington, Mike},
+	year = {2010},
+	pages = {1--8}
+}
+
+@article{nachman_ideal_2012,
+	title = {"{Ideal} {Parent}" {Structure} {Learning} for {Continuous} {Variable} {Networks}},
+	url = {http://arxiv.org/abs/1207.4133},
+	abstract = {In recent years, there is a growing interest in learning Bayesian networks with continuous variables. Learning the structure of such networks is a computationally expensive procedure, which limits most applications to parameter learning. This problem is even more acute when learning networks with hidden variables. We present a general method for significantly speeding the structure search algorithm for continuous variable networks with common parametric distributions. Importantly, our method facilitates the addition of new hidden variables into the network structure efficiently. We demonstrate the method on several data sets, both for learning structure on fully observable data, and for introducing new hidden variables during structure search.},
+	urldate = {2019-05-19},
+	journal = {arXiv:1207.4133 [cs, stat]},
+	author = {Nachman, Iftach and Elidan, Gal and Friedman, Nir},
+	month = jul,
+	year = {2012},
+	note = {arXiv: 1207.4133},
+	keywords = {Computer Science - Machine Learning, Statistics - Machine Learning},
+	annote = {Comment: Appears in Proceedings of the Twentieth Conference on Uncertainty in Artificial Intelligence (UAI2004)},
+	file = {arXiv\:1207.4133 PDF:/Users/boris/Zotero/storage/XYX65YEL/Nachman et al. - 2012 - Ideal Parent Structure Learning for Continuous V.pdf:application/pdf;arXiv.org Snapshot:/Users/boris/Zotero/storage/HAJ85H8I/1207.html:text/html}
+}
+
+@article{elidan_ideal_2007,
+	title = {“{Ideal} {Parent}” {Structure} {Learning} for {Continuous} {Variable} {Bayesian} {Networks}},
+	volume = {8},
+	abstract = {Bayesian networks in general, and continuous variable networks in particular, have become increasingly popular in recent years, largely due to advances in methods that facilitate automatic learning from data. Yet, despite these advances, the key task of learning the structure of such models remains a computationally intensive procedure, which limits most applications to parameter learning. This problem is even more acute when learning networks in the presence of missing values or hidden variables, a scenario that is part of many real-life problems. In this work we present a general method for speeding structure search for continuous variable networks with common parametric distributions. We efﬁciently evaluate the approximate merit of candidate structure modiﬁcations and apply time consuming (exact) computations only to the most promising ones, thereby achieving signiﬁcant improvement in the running time of the search algorithm. Our method also naturally and efﬁciently facilitates the addition of useful new hidden variables into the network structure, a task that is typically considered both conceptually difﬁcult and computationally prohibitive. We demonstrate our method on synthetic and real-life data sets, both for learning structure on fully and partially observable data, and for introducing new hidden variables during structure search.},
+	language = {en},
+	journal = {Journal of Machine Learning Research},
+	author = {Elidan, Gal and Nachman, Iftach and Friedman, Nir},
+	month = aug,
+	year = {2007},
+	pages = {35},
+	file = {Elidan et al_“Ideal Parent” Structure Learning for Continuous Variable Bayesian Networks.pdf:/Users/boris/Zotero/storage/2IB2BGQR/Elidan et al_“Ideal Parent” Structure Learning for Continuous Variable Bayesian Networks.pdf:application/pdf}
+}
+
+@book{spirtes_causation_1993,
+	address = {New York},
+	series = {Lecture notes in statistics},
+	title = {Causation, prediction, and search},
+	isbn = {978-0-387-97979-3},
+	number = {81},
+	publisher = {Springer-Verlag},
+	author = {Spirtes, Peter and Glymour, Clark N. and Scheines, Richard},
+	year = {1993},
+	keywords = {Mathematical statistics}
+}
+
+@book{scutari_bayesian_2015,
+	address = {Boca Raton, Fla.},
+	series = {Texts in statistical science},
+	title = {Bayesian networks: with examples in {R}},
+	isbn = {978-1-4822-2558-7},
+	shorttitle = {Bayesian networks},
+	language = {eng},
+	publisher = {CRC Press},
+	author = {Scutari, Marco and Denis, Jean-Baptiste},
+	year = {2015},
+	note = {OCLC: 900652592},
+	annote = {Literaturverz. S. 215 - 221},
+	file = {Table of Contents PDF:/Users/boris/Zotero/storage/PK6WAHXA/Scutari and Denis - 2015 - Bayesian networks with examples in R.pdf:application/pdf}
+}
+
+@article{scutari_learning_2010,
+	title = {Learning {Bayesian} {Networks} with the \textbf{bnlearn} \textit{{R}} {Package}},
+	volume = {35},
+	issn = {1548-7660},
+	url = {http://www.jstatsoft.org/v35/i03/},
+	doi = {10.18637/jss.v035.i03},
+	language = {en},
+	number = {3},
+	urldate = {2019-05-23},
+	journal = {Journal of Statistical Software},
+	author = {Scutari, Marco},
+	year = {2010},
+	file = {Full Text:/Users/boris/Zotero/storage/LG3KSKC6/Scutari - 2010 - Learning Bayesian Networks with the bbnlearnb.pdf:application/pdf}
+}
+
+@article{wang_deconfounder_2019,
+  title = {The {{Blessings}} of {{Multiple Causes}}},
+  author = {Wang, Yixin and Blei, David M.},
+  year = {2019},
+  volume = {114},
+  pages = {1574--1596},
+  file = {/Users/fred/Zotero/storage/4JZNG5UE/Wang and Blei - 2018 - The Blessings of Multiple Causes.pdf},
+  journal = {Journal of the American Statistical Association},
+  keywords = {latent confounders,proxies,stage2},
+  number = {528}
+}
+                  
+
+
+@misc{ranjan_build_2019,
+	title = {Build the right {Autoencoder} — {Tune} and {Optimize} using {PCA} principles. {Part} {II}},
+	url = {https://towardsdatascience.com/build-the-right-autoencoder-tune-and-optimize-using-pca-principles-part-ii-24b9cca69bd6},
+	abstract = {In continuation of Part I, here we will define and implement custom constraints for building a well-posed Autoencoder. A well-posed…},
+	language = {en},
+	urldate = {2020-02-04},
+	journal = {Medium},
+	author = {Ranjan, Chitta},
+	month = jul,
+	year = {2019},
+	file = {Snapshot:/Users/fred/Zotero/storage/G85766U6/build-the-right-autoencoder-tune-and-optimize-using-pca-principles-part-ii-24b9cca69bd6.html:text/html}
+}
+
+@misc{pca_ae,
+	title = {python - {Tying} {Autoencoder} {Weights} in a {Dense} {Keras} {Layer}},
+	url = {https://stackoverflow.com/questions/53751024/tying-autoencoder-weights-in-a-dense-keras-layer},
+	author={Mikhail Berlinkov},
+	urldate = {2018-12-18},
+	year={2018},
+	journal = {Stack Overflow},
+	file = {Snapshot:/Users/fred/Zotero/storage/EK6SXJRR/tying-autoencoder-weights-in-a-dense-keras-layer.html:text/html}
+}
+@misc{reticulate_2020,
+	title = {rstudio/reticulate},
+	copyright = {Apache-2.0},
+	url = {https://github.com/rstudio/reticulate},
+	author={Kevin Ushey},
+	abstract = {R Interface to Python. Contribute to rstudio/reticulate development by creating an account on GitHub.},
+	urldate = {2020-02-04},
+	publisher = {RStudio},
+	month = feb,
+	year = {2020},
+	note = {original-date: 2017-02-06T18:59:46Z}
+}
+@article{langfelder_integrated_2016,
+	title = {Integrated genomics and proteomics to define huntingtin {CAG} length-dependent networks in {HD} {Mice}},
+	volume = {19},
+	issn = {1097-6256},
+	url = {https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5984042/},
+	doi = {10.1038/nn.4256},
+	abstract = {To gain insight into how mutant huntingtin (mHtt) CAG repeat length modifies Huntington’s disease (HD) pathogenesis, we profiled mRNA in over 600 brain and peripheral tissue samples from HD knock-in mice with increasing CAG repeat lengths. We find repeat length dependent transcriptional signatures are prominent in the striatum, less so in cortex, and minimal in the liver. Co-expression network analyses reveal 13 striatal and 5 cortical modules that are highly correlated with CAG length and age, and that are preserved in HD models and some in the patients. Top striatal modules implicate mHtt CAG length and age in graded impairment of striatal medium spiny neuron identity gene expression and in dysregulation of cAMP signaling, cell death, and protocadherin genes. Importantly, we used proteomics to confirm 790 genes and 5 striatal modules with CAG length-dependent dysregulation at both RNA and protein levels, and validated 22 striatal module genes as modifiers of mHtt toxicities in vivo.},
+	number = {4},
+	urldate = {2020-02-04},
+	journal = {Nature neuroscience},
+	author = {Langfelder, Peter and Cantle, Jeffrey P. and Chatzopoulou, Doxa and Wang, Nan and Gao, Fuying and Al-Ramahi, Ismael and Lu, Xiao-Hong and Ramos, Eliana Marisa and El-Zein, Karla and Zhao, Yining and Deverasetty, Sandeep and Tebbe, Andreas and Schaab, Christoph and Lavery, Daniel J. and Howland, David and Kwak, Seung and Botas, Juan and Aaronson, Jeffrey S. and Rosinski, Jim and Coppola, Giovanni and Horvath, Steve and Yang, X. William},
+	month = apr,
+	year = {2016},
+	pmid = {26900923},
+	pmcid = {PMC5984042},
+	pages = {623--633},
+	file = {Langfelder et al_2016_Integrated genomics and proteomics to define huntingtin CAG length-dependent.pdf:/Users/fred/Zotero/storage/A9FSQETP/Langfelder et al_2016_Integrated genomics and proteomics to define huntingtin CAG length-dependent.pdf:application/pdf}
+}
+@misc{ioffe2015batch,
+    title={Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift},
+    author={Sergey Ioffe and Christian Szegedy},
+    year={2015},
+    eprint={1502.03167},
+    archivePrefix={arXiv},
+    primaryClass={cs.LG}
+}
+@misc{latent_2020,
+	title = {Latent {Confounder}},
+	url = {https://github.com/rimorob/netres},
+	abstract = {A secret repository. Contribute to rimorob/netres development by creating an account on GitHub.},
+	urldate = {2020-02-05},
+	author = {github},
+	month = feb,
+	year = {2020},
+	note = {original-date: 2020-02-05T03:35:01Z}
+}
+
+@article{buja_remarks_1992,
+	title = {Remarks on {Parallel} {Analysis}},
+	volume = {27},
+	issn = {0027-3171, 1532-7906},
+	url = {http://www.tandfonline.com/doi/abs/10.1207/s15327906mbr2704_2},
+	doi = {10.1207/s15327906mbr2704_2},
+	language = {en},
+	number = {4},
+	urldate = {2020-09-02},
+	journal = {Multivariate Behavioral Research},
+	author = {Buja, Andreas and Eyuboglu, Nermin},
+	month = oct,
+	year = {1992},
+	pages = {509--540}
+}
+
+@inproceedings{tenzer_generalized_2016,
+	address = {Proceedings of Machine Learning Research},
+	title = {Generalized {Ideal} {Parent} ({GIP}): {Discovering} non-{Gaussian} {Hidden} {Variables}},
+	volume = {51},
+	url = {http://proceedings.mlr.press},
+	abstract = {A formidable challenge in uncertainty modeling in general, and when learning Bayesian networks in particular, is the discovery of  unknown hidden variables. Few works that tackle this task are typically limited to discrete or Gaussian domains, or to tree structures.  We propose a novel general purpose approach for discovering hidden variables in flexible non-Gaussian domains using the powerful class of  Gaussian copula networks. Briefly, we define the concept of a hypothetically optimal predictor of variable and  show it can be used to discover  useful hidden variables in the  expressive framework of copula networks.  Our approach leads to  performance and compactness advantages  over competitors in a variety of domains.},
+	booktitle = {Proceedings of {Machine} {Learning} {Research}},
+	publisher = {PMLR},
+	author = {Tenzer, Yaniv and Elidan, Gal},
+	editor = {Gretton, Arthur and Robert, Christian C.},
+	year = {2016},
+	pages = {222--230}
+}
