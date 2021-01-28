@@ -1,4 +1,4 @@
-#+TITLE:Variost terst 
+#+TITLE:Various Tests
 #+AUTHOR: Fred K. Gruber
 #+email: fred@gnshealthcare.com
 #+PROPERTY: header-args :tangle yes :eval never-export
@@ -1314,3 +1314,195 @@ model %>%
   layer_dense(units = 32, input_shape = c(32,32)) %>% 
   layer_custom(output_dim = 32)
 #+end_src
+
+* Metrics to compare networks
+use metric that can be applied to partially directed graph.
+
+- also we may want to update the algorithm to use the sampling in bnlearn to generate the predictions rather than the current way we are using.
+
+  
+
+THe ideas was to use bnlearn::CPDAG to convert estimated bnlearn object and then to score it.
+We can then compare it to the output of FCI.
+
+to score the functions instead of a structural score. What is CPDAG?
+
+CPDAG simply compare a dag into a cpdag. this useful to compare resulits of FCI with a dag
+Some references:
+https://www.researchgate.net/post/How-can-I-measure-similarity-between-two-networks
+
+
+ 
+** some basic function to compare dags
+shd calculates de hamming distance after converting the networks fo PDAG. This can be used to compare the output  of FCI with a dag. THe problem is that we have additional nodes representing the estimated latent variables so we can't use this function as is.
+
+Maybe the way around this is to calculate the error with respect to the true by removing all edges involving the latent variable.
+We can compare FCI and the Score based method with respect to the true. If the latent variable is well estimated then you epxcect the skeleton will be closer to the true.
+
+
+
+
+#+begin_src R
+library(bnlearn)
+dag1 = model2network("[A][B|A][C|A]")
+dag2 = model2network("[A|B:C][B][C]")
+
+dag3 = model2network("[A][B|A]")
+dag4 = model2network("[A][B|A][C|A]")
+
+compare(dag1, dag2)
+
+compare(dag3, dag4, arcs = TRUE)
+
+hamming(dag1, dag2)
+
+hamming(dag3, dag4)
+
+
+cpdag(dag1)
+cpdag(dag2)
+
+shd(dag1, dag2)
+
+shd(dag3, dag4)
+
+par(mfrow = c(3, 2))
+graphviz.compare(dag1, dag2, dag3, dag4-)
+#+end_src
+
+** Scoring Proposal
+Lets a synthetic dataset and estimate the inferred network with a score-based method like tabu search. Assume that the resulting  network is true.
+   #+begin_src R
+library(bnlearn)
+library(tidyverse)
+data(gaussian.test)
+
+truenet = tabu(gaussian.test) ## true network
+
+res_rm = remove.node(res, "A")
+plot(res_rm)
+
+## suppose A is the latent variable
+datalat = gaussian.test %>% select(-A)
+ddim = dim(datalat)
+
+noisesd =4
+datalatnoise = datalat + matrix(rnorm(prod(ddim), sd = noisesd), nrow = ddim[1])
+
+reslat = tabu(datalatnoise)
+plot(reslat)
+
+reslat2 = fast.iamb(datalatnoise)
+plot(reslat2)
+
+pcalg::fci(datalatnoise)
+
+bnlearn::shd(reslat, res_rm)
+bnlearn::shd(reslat2, res_rm)
+
+
+
+
+
+library(CompareCausalNetworks)
+rfcinetmat = getParents(datalatnoise, method = "rfci")
+colnames(rfcinetmat) = colnames(datalatnoise)
+rownames(rfcinetmat) = colnames(datalatnoise)
+rfci_ig = igraph::graph_from_adjacency_matrix(rfcinetmat)
+
+rfci_bn = as.bn(rfci_ig)
+plot(rfci_bn)
+
+bnlearn::shd(rfci_bn, truenet_rm)
+   #+end_src
+
+#+BEGIN_SRC R  :results output graphics file :exports both :file img/fig_score_0.png
+plot(truenet)
+#+END_SRC
+
+#+RESULTS:
+[[file:img/fig_score_0.png]]
+Now suppose the node A is latent. The best structure that we can generate would be what we would get by removing node A from the true network:
+#+BEGIN_SRC R  :results output graphics file :exports both :file img/fig_score_1.png
+truenet_rm = remove.node(truenet, "A")
+plot(truenet_rm)
+
+#+END_SRC
+
+#+RESULTS:
+[[file:img/fig_score_1.png]]
+
+Now we can try to learn networks from the dataset with the latent using both score and constraint-based methods.
+
+We remove the node A from the  dataset and add noise
+#+begin_src R
+datalat = gaussian.test %>% select(-A)
+ddim = dim(datalat)
+noisesd =4
+datalatnoise = datalat + matrix(rnorm(prod(ddim), sd = noisesd), nrow = ddim[1])
+
+#+end_src
+
+Using Tabu:
+#+BEGIN_SRC R  :results output graphics file :exports both :file img/fig_score_2.png
+estnet_tabu = tabu(datalatnoise)
+plot(estnet_tabu)
+#+end_src
+
+#+RESULTS:
+[[file:img/fig_score_2.png]]
+
+Score for tabu search:
+#+begin_src R
+bnlearn::shd(estnet_tabu, truenet_rm)
+#+end_src
+
+#+RESULTS:
+: 3
+
+Using Fast Incremental Association (Fast-IAMB) Learning Algorithm:
+#+BEGIN_SRC R  :results output graphics file :exports both :file img/fig_score_3.png
+estnet_iamb = fast.iamb(datalatnoise)
+plot(estnet_iamb)
+
+#+end_src
+
+#+RESULTS:
+[[file:img/fig_score_3.png]]
+
+#+begin_src R
+bnlearn::shd(estnet_iamb, truenet_rm)
+#+end_src
+
+#+RESULTS:
+: 5
+
+
+Finally using RFCI
+#+BEGIN_SRC R  :results output graphics file :exports both :file img/fig_score_4.png
+library(CompareCausalNetworks)
+rfcinetmat = getParents(datalatnoise, method = "rfci")
+colnames(rfcinetmat) = colnames(datalatnoise)
+rownames(rfcinetmat) = colnames(datalatnoise)
+rfci_ig = igraph::graph_from_adjacency_matrix(rfcinetmat)
+rfci_bn = as.bn(rfci_ig)
+plot(rfci_bn)
+#+end_src
+
+#+RESULTS:
+[[file:img/fig_score_4.png]]
+
+#+begin_src R
+bnlearn::shd(rfci_bn, truenet_rm)
+#+end_src
+
+#+RESULTS:
+: 6
+
+* Additional algorithm to compare
+one with R code so we can easily test it. Also one that it is easy to use.
+
+* Additional examples
+  Look at some of the papers and how they test their algorithms. See if there is something we can use easily.
+
+- It would be good to have an example showing the advantage of using the residuals over not using them.

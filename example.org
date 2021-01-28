@@ -1,10 +1,13 @@
 #+TITLE:Examples for paper: "Identification of Latent Variables From Their Footprint In Bayesian Network Residuals"
 #+AUTHOR: Anonymous
-#+PROPERTY: header-args :tangle yes :eval never-export
-#+PROPERTY: header-args:R :session *R:3:latvar* :exports both
+#+PROPERTY: header-args :tangle yes :eval never-export :comments both 
+#+PROPERTY: header-args:R :session *R:3:latvar* :exports both 
 #+OPTIONS: ^:{}
 -----
 * Simple Example
+  :PROPERTIES:
+  :ID:       A2741453-06EB-414B-9679-496BFDBCF0DF
+  :END:
 First we load the codes and dataset.
 #+begin_src R
 ## Load libraries
@@ -26,6 +29,9 @@ plotIgraph(figtrue, layout = 'neato', sep = 0.0001,
 #+RESULTS:
 [[file:img_example/fig_true.png]]
 ** Structure learning with no missing  variables
+   :PROPERTIES:
+   :ID:       4D522327-83A0-40C8-BB3A-550ECC577C96
+   :END:
 If we observe all the variables we can get a good estimate the graph structure:
 #+begin_src R
 train = datalist$data_noisy
@@ -81,6 +87,9 @@ plot(res_alldata,
 #+RESULTS:
 [[file:img_example/fig_graph_all_data.png]]
 ** Reconstruction with missing confounders.
+   :PROPERTIES:
+   :ID:       8D9528DA-7AD2-4F73-B959-CB3704DBDB38
+   :END:
 Suppose that now we try to reconstruct the structure without observing U1.out and U2.out.
 The resulting graph will be more complicated since many variables will try to compensate for the 
 missing U1.out and U2.out.
@@ -120,6 +129,9 @@ plot(res_missing,"Z",
 #+RESULTS:
 [[file:img_example/fig_missing.png]]
 ** Reconstruction estimating missing confounders
+   :PROPERTIES:
+   :ID:       71A1CEAA-2F6B-4EDC-BB69-C011BC8D306E
+   :END:
 Here we used the propose algorithm to learn the missing variables and improve the structure search.
 #+begin_src R
 seed = 123
@@ -164,12 +176,18 @@ plot(latvar_simple$details$final_ensemble,
 [[file:img_example/fig_reconstr_simple.png]]
 
 ** Cleanup
+   :PROPERTIES:
+   :ID:       981E1400-F763-4255-808C-69D290E0DBDA
+   :END:
 Close the parallelization cluster:
 #+begin_src R
 stopCluster(cl)
 #+end_src
 * Medium Example
 ** True network
+   :PROPERTIES:
+   :ID:       333CAB53-F7CF-4880-ABBC-1155942E84F0
+   :END:
 #+begin_src R
 source("LatentConfounderBNlearnv2.R")
 suppressWarnings(load("final_model_nolvp_withvp.RData", verbose = T))
@@ -198,6 +216,9 @@ plotIgraph(figtrue_med, layout = 'dot', nodesep = 0.00001,
 #+RESULTS:
 [[file:img_example/fig_true_medium.png]]
 ** Structure search with missing variables
+   :PROPERTIES:
+   :ID:       E415ABAC-C801-411D-9BAA-BC28C885AD65
+   :END:
 
 #+begin_src R
 train_med = datalist_med$data_noisy
@@ -240,6 +261,9 @@ plot(res_missing_med_small,
 #+RESULTS:
 3[[file:img_example/fig_nolatvar_med.png]]
 ** Structure search estimating latent variables
+   :PROPERTIES:
+   :ID:       DC5D2AE4-2C27-4DA6-B0F8-89FE7A3E8172
+   :END:
 
 #+begin_src R
 seed = 123
@@ -283,6 +307,9 @@ plot(medium_evo$details$final_ensemble,
 #+RESULTS:
 [[file:img_example/fig_reconstr_medium.png]]
 * Final Example
+  :PROPERTIES:
+  :ID:       8F9AF2D0-3530-461B-8322-A183E15D07DA
+  :END:
 #+begin_src R
 suppressWarnings(load("final_model_withlvp_withvp.RData", verbose = T))
 datalist_com = datalist
@@ -311,6 +338,9 @@ plotIgraph(figtrue_com, layout = 'dot', nodesep = 0.00001,
 #+RESULTS:
 [[file:img_example/fig_true_com.png]]
 ** Structure search with missing confounders.
+   :PROPERTIES:
+   :ID:       6F9DEBD2-700A-402B-8D1B-F3E2B60E2032
+   :END:
 #+begin_src R
 train_com = datalist_com$data_noisy
 
@@ -356,6 +386,9 @@ plot(res_missing_com,
 #+RESULTS:
 [[file:img_example/fig_missing_comp.png]]
 ** Reconstruction with estimated latent variables
+   :PROPERTIES:
+   :ID:       84079C63-F315-4062-BC0E-8000C025142D
+   :END:
 #+begin_src R
 seed = 123
 set.seed(seed)
