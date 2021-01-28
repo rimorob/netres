@@ -30,6 +30,7 @@ isDiscrete = function (x, th = sqrt(length(x)))
 }
 
 library(bnlearn)
+library(pcalg)
 library(data.table)
 library(igraph)
 library(Rgraphviz)
@@ -117,8 +118,9 @@ getEnsemble = function(train, Nboot = 50, algorithm = "hc", cluster = NULL, outp
 ## }
 
 library(bnlearn)
-  library(foreach)
-  library(igraph)
+library(foreach)
+library(igraph)
+library(pcalg)
 getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, output = NULL, ...){
     if(!is.null(output)){
         if(!output %in% colnames(train)){
@@ -139,18 +141,37 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ou
              edges = rbind(xx[[3]], yy[[3]]),
              boot_order = c(xx[[4]], yy[[4]]))
     }
+    gesToBnGraph <- function(net) {
+        repr = net$repr
+        nodes = repr$.nodes
+        inEdges = repr$.in.edges
+        adjMat = matrix(0L, ncol = length(nodes), nrow = length(nodes),
+                        dimnames = list(nodes, nodes))
+        for (outIdx in 1:length(inEdges)) {
+            adjMat[outIdx, inEdges[[outIdx]]] = 1
+        }
+        net = empty.graph(nodes)
+        amat(net) = adjMat
+        return(net)
+    }
     pdaboot = foreach(ii = 1:Nboot,
-                      .combine = mycomb, .packages = c("bnlearn", "foreach", "igraph","dplyr")) %op% {
+                      .combine = mycomb, .packages = c("bnlearn", "foreach", "igraph","dplyr", 'pcalg')) %op% {
                           bootorder = sample(1:nrow(train), nrow(train), replace = TRUE)
                           trainb = train[bootorder, ]
                           if(algorithm == "hc") {
                               net = bnlearn::hc(trainb, ...)
                           } else if (algorithm == 'tabu') {
                               net = bnlearn::tabu(trainb, ...)
+                          } else if (algorithm == 'GES') {
+                              suffStat = list(C = cor(trainb), n = nrow(trainb))
+                              ## Define the score (BIC)
+                              score <- new("GaussL0penObsScore", trainb)
+                              ## Estimate the essential gr
+                              net = gesToBnGraph(ges(score))
                           } else {
-                              stop("Unknown Algorithm. Only hc and tabu.")
+                              stop("Unknown algorithm. Only hc, tabu, and GES")
                           }
-                          mod = bn.fit(net, train[bootorder, ])
+                          mod = bn.fit(net, trainb)
                           ## fit edges
                           edgedf = arc.strength(net,trainb) %>% as.data.frame %>%
                               mutate(Boot = ii)
@@ -555,15 +576,8 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
                     ## - should I use the 2nd column as I'm doing here
                     ## - or should  I use column called "1"
                     ##
-                    dX[ri] = X[ri] - Xbar[ri, 2, 1] ##note the extra column from GNS REFS usage
+                    dX[ri] = X[ri] - Xbar[ri, 2, 1] ##note the extra column from historical usage
                 } else if (isDiscrete(X)) {
-                    ##probably broken because of posterior dimensionality; needs to be fixed
-                     ##will crash as-is
-                    ## assuming the level on the first column is the lowest
-                    ## FG: fixed now.
-                    ## FG: assuming
-
-                    ##BH (1/31/20): changing in the following ways:
                     ##1. ordinal variable is assumed to be represented as integer levels
                     ##(this should change into as.ordered() representation later)
                     ##2. results are presumed to be numeric
@@ -582,11 +596,11 @@ residualDeviance <- function(trainingData, modelPrediction, isOrdinal, missing_c
                         dX[ri] = massBelow - massAbove #as per definition of PSR in Shepherd et al
                     }
 
-                } else { #continuous
+                } else { #ranks
                     ##currently compute probabilities based on counts
                     ##but consider using densities to be more precise
                     ##on the other hand, that may not be robust in the
-                    ##presence of outlie""rs
+                    ##presence of outliers
                     ##flatten xbar, which is data samples x network samples x networks, but may want to eventually compute this per network to check which is better
                     massAbove = length(which(as.numeric(Xbar[ri,,]) > X[ri]))/length(as.numeric(Xbar[ri,,]))
                     massBelow = length(which(as.numeric(Xbar[ri,,]) < X[ri]))/length(as.numeric(Xbar[ri,,]))
@@ -1213,7 +1227,7 @@ latentDiscovery = function(
 	## start calculation of latent variables ##
 	###########################################
 	##  residuals
-	message("Calculate Residuals")
+	message("Calculate residuals")
 	if(useResiduals){
 	    resList = getGraphResiduals (newens,
                                          newvars,
@@ -2414,7 +2428,7 @@ predict.LatentConfounder <- function(latConf,
                 allvars,
                 data = newdata
              )
-            message("Calculating PSR")
+            message("Calculating residuals")
             resDev = residualDeviance(newdata,
                                       resList,
                                       isOrdinal=isOrdinal,
@@ -2423,7 +2437,7 @@ predict.LatentConfounder <- function(latConf,
             newdata = resDev
         }
     }
-    ##res = predict(latConf$details$pcObj, newdata)
+
     message("predicting latent variables")
     if(latConf$details$method == 'kernel'){
         varsel = colnames(kernlab::xmatrix(latConf$details$pcObj))
