@@ -163,12 +163,26 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ou
                           } else if (algorithm == 'tabu') {
                               net = bnlearn::tabu(trainb, ...)
                           } else if (algorithm == 'GES') {
-                              suffStat = list(C = cor(trainb), n = nrow(trainb))
-                              ## Define the score (BIC)
-                              score <- new("GaussL0penObsScore", trainb)
+                              ##suffStat = list(C = cor(trainb), n = nrow(trainb))
+                                source("lrps-admm/utils/run_GES.R")
+                              net0 = run.GES.and.select.with.BIC0(trainb)
                               ## Estimate the essential gr
-                              net = gesToBnGraph(ges(score))
-                          } else {
+                              bestfit = net0$best.fit
+                              net = gesToBnGraph(bestfit)
+                              attributes(net)$path = net0$path
+                              attributes(net)$best.essgraph = net0$best.essgraph
+                          } else if(algorithm == "LRPS"){
+                              source("lrps-admm/utils/run_GES.R")
+                              source("lrps-admm/utils/simulate_data_from_latent_dag.R")
+                              source("lrps-admm/lrps/cross_validation.R")
+                              source("lrps-admm/lrps/fast_lrps_admm.R")
+                              source("lrps-admm/lrps/fit_path.R")
+                              net0 = estimateGraph_lrps0(trainb)
+                              bestfit = net0$best.fit
+                              net = gesToBnGraph(bestfit)
+                              attributes(net)$path = net0$path
+                              attributes(net)$best.essgraph = net0$best.essgraph
+                          }else {
                               stop("Unknown algorithm. Only hc, tabu, and GES")
                           }
                           mod = bn.fit(net, trainb)
@@ -194,8 +208,8 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ou
 	##   	   function(ff){
 	##   	       bn.fit(ff, train)
 	##   	   })
-    message("calculate coefficients")
     if(!is.null(output)){
+        message("calculate coefficients")
         allcoef = purrr::map_df(1:length(pdaboot$fitmodels),
                                 function(ii){
                                   pdaboot$fitmodels[[ii]][[output]]$coefficients %>% t() %>%
@@ -1193,7 +1207,12 @@ latentDiscovery = function(
     if (!is.null(output)) {
         vars = getDrivers(ens, output, maxpath = maxpath, cutoff = freqCutoff)$Drivers
     } else {
+        ## if there is not output we can't use getDrivers
         vars = colnames(data)
+        recompute_vars = FALSE
+        include_downstream = FALSE
+        include_upstream = FALSE
+        include_output = FALSE
     }
     if(include_output){
 	vars = unique(c(vars, output)) #unique in case output is already in vars
@@ -1316,6 +1335,10 @@ latentDiscovery = function(
 		parallel = parallel,
                 output = output
 	    )
+        if(debug){
+            message("after bnlearn")
+            browser()
+        }
 	## }else{
 	##     newens = getEnsemble(
 	##         newdata,
@@ -2453,4 +2476,66 @@ predict.LatentConfounder <- function(latConf,
     colnames(res) = paste('LV', 1:ncol(res), sep = '_')
     latConf$confounders = res
     return(latConf)
+}
+
+
+run.GES.and.select.with.BIC0 <- function(obs.data) {
+  nv = ncol(obs.data)
+  rho <- 100000 # Compute the path, starting with this value of Rho
+  rho.base <- 1.1 # The next value of Rho is Rho / 1.1
+  path <- list()
+  counter <- 1
+  while(T) {
+    score <- new("GaussL0penObsScore", obs.data, lambda = rho)
+    start.time <- Sys.time()
+    ges.fit <- ges(score)
+    end.time <- Sys.time()
+    time.taken <- end.time - start.time
+    
+    u.amat <- as(ges.fit$essgraph, "matrix") * 1
+    if(sum(u.amat) == 0) {
+      rho <- rho / rho.base
+      next()
+    }
+    # Compute the BIC
+    bn <- empty.graph(colnames(obs.data))
+    amat(bn) <- as(ges.fit$repr, "matrix")
+    bn <- bn.fit(bn, as.data.frame(obs.data))
+    BIC <- BIC(bn, data = as.data.frame(obs.data))
+    LogLik <- logLik(bn, data = as.data.frame(obs.data))
+    NEdges <- sum(amat(bn)!=0)
+    
+    est.cpdag <- as(ges.fit$essgraph, "matrix") * 1
+    # Compare to the true CPDAG
+    ## perf.metrics <- compute_metrics(true.dag = sim.data$true.obs.dag.amat, 
+    ##                                 est.cpdag = est.cpdag)
+    
+    # Record these results
+    path[[counter]] <- list()
+    path[[counter]]$rho <- rho
+    ##path[[counter]]$metric <- perf.metrics
+    path[[counter]]$NEdges <- NEdges
+    path[[counter]]$BIC <- BIC
+    path[[counter]]$LogLik <- LogLik
+    path[[counter]]$fitting.time <- time.taken
+    path[[counter]]$est.cpdag = est.cpdag    
+    if (NEdges / choose(nv, 2) > 0.5) {
+      break()
+    }
+    
+    counter <- counter + 1
+    rho <- rho / rho.base
+  }
+  
+  # Get the value of lambda that gives the best BIC
+  BIC <- unlist(sapply(path, function(a){get("BIC", a)}))
+  idx <- which.max(BIC)
+  rho.bic <- unlist(sapply(path, function(a) {get("rho", a)}))[idx]
+  
+  # Refit the model with this value of Rho
+    score <- new("GaussL0penObsScore", obs.data, lambda = rho.bic)
+  ges.fit <- ges(score)
+  u.amat <- as(ges.fit$essgraph, "matrix") * 1
+  
+  list(path=path, best.essgraph=u.amat, best.fit=ges.fit)
 }
