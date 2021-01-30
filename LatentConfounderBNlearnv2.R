@@ -2479,63 +2479,170 @@ predict.LatentConfounder <- function(latConf,
 }
 
 
-run.GES.and.select.with.BIC0 <- function(obs.data) {
-  nv = ncol(obs.data)
-  rho <- 100000 # Compute the path, starting with this value of Rho
-  rho.base <- 1.1 # The next value of Rho is Rho / 1.1
-  path <- list()
-  counter <- 1
-  while(T) {
-    score <- new("GaussL0penObsScore", obs.data, lambda = rho)
-    start.time <- Sys.time()
-    ges.fit <- ges(score)
-    end.time <- Sys.time()
-    time.taken <- end.time - start.time
-    
-    u.amat <- as(ges.fit$essgraph, "matrix") * 1
-    if(sum(u.amat) == 0) {
-      rho <- rho / rho.base
-      next()
-    }
-    # Compute the BIC
-    bn <- empty.graph(colnames(obs.data))
-    amat(bn) <- as(ges.fit$repr, "matrix")
-    bn <- bn.fit(bn, as.data.frame(obs.data))
-    BIC <- BIC(bn, data = as.data.frame(obs.data))
-    LogLik <- logLik(bn, data = as.data.frame(obs.data))
-    NEdges <- sum(amat(bn)!=0)
-    
-    est.cpdag <- as(ges.fit$essgraph, "matrix") * 1
-    # Compare to the true CPDAG
-    ## perf.metrics <- compute_metrics(true.dag = sim.data$true.obs.dag.amat, 
-    ##                                 est.cpdag = est.cpdag)
-    
-    # Record these results
-    path[[counter]] <- list()
-    path[[counter]]$rho <- rho
-    ##path[[counter]]$metric <- perf.metrics
-    path[[counter]]$NEdges <- NEdges
-    path[[counter]]$BIC <- BIC
-    path[[counter]]$LogLik <- LogLik
-    path[[counter]]$fitting.time <- time.taken
-    path[[counter]]$est.cpdag = est.cpdag    
-    if (NEdges / choose(nv, 2) > 0.5) {
-      break()
-    }
-    
-    counter <- counter + 1
-    rho <- rho / rho.base
+
+getResultsGES = function(allnet, remove = NULL){
+  results_lrps = map_df(1:length(allnet),
+                        function(nnet){
+                          netc = allnet[[nnet]]
+                          npp = attributes(netc)$path %>% length
+                          map_df(1:npp,
+                                 function(ii){
+                                   rho = attributes(netc)$path[[ii]]$rho
+                                   est.cpdag <- as(attributes(netc)$path[[ii]]$est.cpdag, "matrix") * 1
+                                   if(!is.null(remove)){
+                                     allnodes = allnet[[1]]$nodes %>% names
+                                     iikeep = which(!grepl(remove, allnodes))
+                                     est.cpdag = est.cpdag[iikeep, iikeep]
+                                   }
+                                   compute_metrics(true.dag = toy.data$true.obs.dag.amat, 
+                                                   est.cpdag = est.cpdag) %>% as.data.frame %>%
+                                     mutate(Boot = nnet,
+                                            Path = ii,
+                                            Rho = rho)
+                                 })
+                        })
+  return(results_lrps)
+}
+
+source("lrps-admm//utils/generate_data_for_GES.R")
+source("lrps-admm/utils/run_GES.R")
+source("lrps-admm/utils/compute_metrics.R")
+source("lrps-admm/utils/process_curve.R")
+source("lrps-admm/utils/simulate_data_from_latent_dag.R")
+source("lrps-admm/lrps/cross_validation.R")
+source("lrps-admm/lrps/fast_lrps_admm.R")
+source("lrps-admm/lrps/fit_path.R")
+
+
+ens2edj = function(ens){
+  allcoef = ens$details$final_ensemble$edges
+  allcoef = filter(allcoef, from != "(Intercept)",
+                   !from %in% colnames(ens$confounders),
+                   !to%in% colnames(ens$confounders) )
+  return(allcoef)
+}
+
+getEdgeList = function(ens){
+  allcoef = getCoef(ens$details$final_ensemble, ".*", as.regex = T)
+  allcoef = filter(allcoef, input != "(Intercept)" )
+  allcoef = filter(allcoef, !input %in% colnames(ens$confounders),
+                   !output %in% colnames(ens$confounders))
+  return(allcoef)
+}
+
+ens2adj = function(ens, th, allcoef = NULL){
+  if(is.null(allcoef)){
+    allcoef = geteEdgeList(ens)
   }
-  
-  # Get the value of lambda that gives the best BIC
-  BIC <- unlist(sapply(path, function(a){get("BIC", a)}))
-  idx <- which.max(BIC)
-  rho.bic <- unlist(sapply(path, function(a) {get("rho", a)}))[idx]
-  
-  # Refit the model with this value of Rho
-    score <- new("GaussL0penObsScore", obs.data, lambda = rho.bic)
-  ges.fit <- ges(score)
-  u.amat <- as(ges.fit$essgraph, "matrix") * 1
-  
-  list(path=path, best.essgraph=u.amat, best.fit=ges.fit)
+  ig1 = allcoef %>%
+    mutate(freq = ifelse(freq > th, 1, 0)) %>%
+    dplyr::select(input, output, freq) %>%
+    igraph::graph_from_data_frame()
+  adj1 = as_adjacency_matrix(ig1,sparse=F,attr='freq')
+  return(adj1)
+}
+
+ens2adj2 = function(ens, th, edges = NULL){
+  if(is.null(edges))
+    allcoef = ens$edges
+  else
+    allcoef = edges
+  ig1 = allcoef %>% 
+    mutate(freq = ifelse(freq > th, 1, 0)) %>%
+    dplyr::select(from, to, freq) %>%
+    igraph::graph_from_data_frame()
+  adj1 = as_adjacency_matrix(ig1,sparse=F,attr='freq')
+  return(adj1)
+}
+
+
+compareNetwork = function(truedag,
+                          estdag){
+  estdag = dagTocpdag(estdag)
+  compute_metrics(truedag, estdag)
+}
+
+dagTocpdag = function(dag){
+  dag <- 1 * (dag !=0)
+  cpdag <- as(dag2cpdag(as(dag, "graphNEL")), "matrix")
+return(cpdag)
+}
+
+plotAdj = function(adj, title = ""){
+  gnsutils::ppPlotIgraph(igraph::graph_from_adjacency_matrix(adj),nodesep=0.001, title = title)
+}
+
+
+estimateGraph_lrps = function(data, trueamt){
+  xval.path = optimalFactorization(data)
+  finalnet = getOptNetwork(xval.path, data, trueamt)
+  return(finalnet)
+}
+
+estimateGraph_lrps0 = function(data){
+  xval.path = optimalFactorization(data)
+  finalnet = getOptNetwork0(xval.path, data)
+  return(finalnet)
+}
+
+
+
+optimalFactorization = function(X){
+  xval.lls <- c()
+  gammas <- c(0.05, 0.07, 0.1, 0.12, 0.15, 0.17, 0.2, 0.3, 0.5, 0.8, 1)
+  for(gamma in gammas) {
+    xval.path <- cross.validate.low.rank.plus.sparse(
+      X = X,
+      gamma = gamma,
+      n = nrow(X),
+      covariance.estimator = cor, 
+      n.folds = 5, 
+      verbose = FALSE, seed = 1,
+      n.lambdas = 40, lambda.ratio = 1e-04)
+    bf <- choose.cross.validate.low.rank.plus.sparse(xval.path)$mean_xval_ll
+    xval.lls <- c(xval.lls, bf)
+  }
+  ## pick best gamma
+  best.gamma <- gammas[which.min(xval.lls)]
+  print(paste("Selected value of Gamma", best.gamma))
+  xval.path <- cross.validate.low.rank.plus.sparse(
+    X = X,
+    gamma = best.gamma,
+    n = nrow(X),
+    covariance.estimator = cor, 
+    n.folds = 5, 
+    verbose = FALSE, seed = 1,
+    n.lambdas = 40, lambda.ratio = 1e-04)
+  return(xval.path)
+}
+
+getOptNetwork = function(xval.path, toy.data, trueamt){
+  selected.S <- choose.cross.validate.low.rank.plus.sparse(xval.path)$fit$S
+  n = nrow(toy.data)
+  p = ncol(toy.data)
+  fake.data <- generate.data.for.GES(Sest = selected.S,
+                                     n=n, p=p)
+  colnames(fake.data) = colnames(toy.data)
+  datal = list(true.obs.dag.amat = trueamt)
+  lrps.ges.output <- run.GES.and.select.with.BIC(obs.data = fake.data, nv = p, sim.data = datal)
+  colnames(lrps.ges.output$best.essgraph) = colnames(toy.data)
+  rownames(lrps.ges.output$best.essgraph) = colnames(toy.data)
+  lrps.ges.output$selected.S = selected.S
+  lrps.ges.output$data = fake.data
+  return(lrps.ges.output)
+}
+
+getOptNetwork0 = function(xval.path, toy.data){
+  selected.S <- choose.cross.validate.low.rank.plus.sparse(xval.path)$fit$S
+  n = nrow(toy.data)
+  p = ncol(toy.data)
+  fake.data <- generate.data.for.GES(Sest = selected.S,
+                                     n=n, p=p)
+  colnames(fake.data) = colnames(toy.data)
+  lrps.ges.output <- run.GES.and.select.with.BIC0(obs.data = fake.data)
+  colnames(lrps.ges.output$best.essgraph) = colnames(toy.data)
+  rownames(lrps.ges.output$best.essgraph) = colnames(toy.data)
+  lrps.ges.output$selected.S = selected.S
+  lrps.ges.output$data = fake.data
+  return(lrps.ges.output)
 }
