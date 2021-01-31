@@ -183,7 +183,7 @@ getEnsemble2 = function(train, Nboot = 50, algorithm = "hc",parallel = FALSE, ou
                               attributes(net)$path = net0$path
                               attributes(net)$best.essgraph = net0$best.essgraph
                           }else {
-                              stop("Unknown algorithm. Only hc, tabu, and GES")
+                              stop("Unknown algorithm. Only hc, tabu, LRPS, or GES")
                           }
                           mod = bn.fit(net, trainb)
                           ## fit edges

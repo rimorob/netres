@@ -33,8 +33,8 @@ results_ges = getResultsGES(res_ges$allnet)
 res_lrps2 = getEnsemble2(Xdf, 
                          Nboot = 2,
                          algorithm = "LRPS",
-                         parallel = T,
-                         debug = F
+                         parallel = F,
+                         debug = T
                          )
 
 results_lrps2 = getResultsGES(res_lrps2$allnet)
