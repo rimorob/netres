@@ -1,0 +1,11 @@
+Package: NetRes
+Type: Package
+Title: What the package does (short line)
+Encoding: UTF-8
+Version: 1.0
+Date: 2021-07-24
+Author: Boris Hayete, Fred Gruber
+Maintainer: Who to complain to <yourfault@somewhere.net>
+Description: More about what it does (maybe more than one line)
+License: What license is it under?
+RoxygenNote: 7.1.1
