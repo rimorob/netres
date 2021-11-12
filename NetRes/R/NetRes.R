@@ -33,11 +33,12 @@ NetRes <- R6Class("NetRes",
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
                       self$train.data = dframe %>% select_if(!grepl(lvPrefix, names(.)))
                       self$true.graph = true.graph
-                      
+                      require(parallel)
                       train = self$train.data
                       stopifnot(is.list(algorithm.args))
                       nCores = detectCores() - 1
                       cluster = makeCluster(nCores)
+                      clusterEvalQ(cluster,library(bnlearn))
                       for (ni in 1:nIter) {
                         curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix)
                         self$ensemble[[ni]] = curRes$ensemble
