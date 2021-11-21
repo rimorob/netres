@@ -132,7 +132,7 @@ NetRes <- R6Class("NetRes",
                     # @param cluster The cluster object, as returned by makeCluster from package "parallel"
                     # @param lvPrefix The latent variable prefix (default = "U_"; use perl regexp)
                     # @return TBD
-                    runOneIteration = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_") {
+                    runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_") {
                       dud = function(x) x
                       
                       algorithm.args$blacklist = private$makeBlacklist(dframe, lvPrefix)
@@ -252,3 +252,184 @@ NetRes <- R6Class("NetRes",
                     }
                   )
 )
+
+plotIgraph = function(g,
+                      edgelabels=F,
+                      edgeweights = FALSE,
+                      edgelabelsFilter = 0,
+                      edgelabelsFilter_useabs = TRUE,
+                      lwdmin = 0.5,
+                      lwdmax = 3,
+                      damping = 0.2,
+                      overlap = F,
+                      splines = TRUE,
+                      nodesep = 1,
+                      pad = .5,
+                      sep = 1,
+                      ranksep = 0.05,
+                      start = 123,
+                      layoutType = 'dot',
+                      saveToFile = F,
+                      filename = 'net.pdf',
+                      width = 1000 / 100,
+                      height = 1000 / 100,
+                      other_pdf_options = list(),
+                      nodeThickness = 1,
+                      nodeThickness_important = 2,
+                      fill = NULL,
+                      edge_color = NULL,
+                      edge_labels = NULL,
+                      label_pad = 2
+                      ){
+    allnodes = names(igraph::V(g))
+    if(!is.null(fill)){
+	fill = expandListRegex(fill, allnodes)
+    }
+    if(!is.null(edge_color)){
+	edge_color = expandDfRegex(edge_color, allnodes)
+    }
+    ##library(Rgraphviz)
+    node_width = NULL
+    node_height = NULL
+    node_fixedSize = FALSE
+    gr = igraph:::as_graphnel(g)
+    eAttrs <- list()
+					#w <- w[setdiff(seq(along=w), removedEdges(gr))]
+    if(length(igraph::get.edge.attribute(g)) == 0){
+        edgelabels = FALSE
+        edgeweights = FALSE
+    }
+    if(edgeweights | edgelabels){
+        w = signif(igraph::get.edge.attribute(g)[[1]], 2)
+        names(w) = sub("\\|", "~", attributes(igraph::E(g))$vnames)
+        ##names(w) <- edgeNames(gr, recipEdges="distinct")
+        ##names(eAttrs$lwd) = edgeNames(gr, recipEdges="distinct")
+    }
+    if(edgelabels){
+        if(!is.null(edge_labels)){
+            edgs = paste(edge_labels[[1]], edge_labels[[2]], sep = '~')
+            alledges = graph::edgeNames(gr)
+            alledgeslab= rep("", length(alledges))
+            names(alledgeslab) = alledges
+            alledgeslab[edgs] = as.character(edge_labels[[3]])
+            namesw = names(alledgeslab)
+            alledgeslab = paste0(paste0(rep(" ",label_pad),collapse=""),alledgeslab)
+            names(alledgeslab) = namesw
+            eAttrs$label = alledgeslab
+            
+        }else{
+            if(edgelabelsFilter_useabs)
+                iiw = which(abs(w) > edgelabelsFilter)
+            else
+                iiw = which(w > edgelabelsFilter)
+            eAttrs$label = rep("", length(w))
+            names(eAttrs$label) = names(w)
+            wval = w[iiw]
+            wval = paste0(paste0(rep(" ",label_pad),collapse=""),wval)
+            eAttrs$label[names(w[iiw])] = wval
+        }
+    }
+    if(edgeweights){
+        wn = as.numeric(w)
+        eAttrs$lwd <- (lwdmax - lwdmin) * (wn - min(wn)) / (max(wn) - min(wn)) + lwdmin
+        names(eAttrs$lwd) = sub("\\|", "~", attributes(igraph::E(g))$vnames)
+    }
+    eAttrs$direction = rep("forward", length(graph::edgeNames(gr, recipEdges="distinct")))
+    names(eAttrs$direction) = graph::edgeNames(gr, recipEdges="distinct")
+    ## edge colors
+    if(!is.null(edge_color)){
+        alledges = graph::edgeNames(gr)
+        alledgescol = rep("black", length(alledges))
+        names(alledgescol) = alledges
+        edgs = paste(edge_color[[1]], edge_color[[2]], sep = '~')
+        alledgescol[edgs] = as.character(edge_color[[3]])
+        eAttrs$color = alledgescol
+    }
+    attrs = list(node = list(shape = "ellipse",
+                             fixedsize = node_fixedSize,
+                             width = node_width,
+                             height = node_height,
+                             lwd = nodeThickness,
+                             color = 'black'
+                             ),
+                 edge=list(
+                           direction = 'forward',
+                           concentrate = F
+                           ),
+                 graph = list(damping = damping,
+                              nodesep = nodesep,
+                              pad = pad,
+                              ranksep = ranksep,
+                              splines = splines,
+                              start = start,
+                              dim = 2,
+                              sep = sep,
+                              concentrate = FALSE,
+                              overlap = overlap))
+    nAttrs = list()
+    gr = Rgraphviz::layoutGraph(gr, layoutType = layoutType,
+                                attrs = attrs,
+                                nodeAttrs=nAttrs,
+                                edgeAttrs=eAttrs,
+                                recipEdges="distinct"
+                                )
+    ## add filler
+    nAttrs$fill = fill
+    ## add node edge width
+    if(!is.null(node_width)){
+        nAttrs$width = node_width
+        ## graph::nodeRenderInfo(gr) = list(
+        ##     width = node_width)
+    }
+    if(!is.null(node_height)){
+        nAttrs$height = node_height
+        ## graph::nodeRenderInfo(gr) = list(
+        ##     height = node_height)
+    }
+    nAttrs$fixedSize = node_fixedSize
+    graph::nodeRenderInfo(gr) = nAttrs
+    ##graph::nodeRenderInfo(gr) =list(fixedSize = node_fixedSize)
+    graph::edgeRenderInfo(gr) = eAttrs
+    if(saveToFile){
+        other_pdf_options = c(other_pdf_options,
+                              file = filename,
+                              width = width,
+                              height = height)
+        do.call(pdf, args = other_pdf_options)
+					#pdf(filename, width = width, height = height)
+        Rgraphviz::renderGraph(gr)
+        dev.off()
+    }else
+        Rgraphviz::renderGraph(gr)
+}
+
+
+expandListRegex = function(mylist, allnames){
+    newlist = list()
+    for(ll in 1:length(mylist)){
+	rg = names(mylist)[ll]
+	rg = paste0("^", rg, "$")
+	val = mylist[[ll]]
+	mv = grep(rg, allnames, value = T)
+	tmp = rep(list(val), length(mv))
+	names(tmp) = mv
+	newlist = c(newlist, tmp)
+    }
+    return(newlist)
+}
+
+expandDfRegex = function(mydf, allnames){
+    newlist = map_df(1:nrow(mydf),
+		     function(ii){
+			 val = mydf[ii, ]
+			 inputs = grep(paste0("^", val$inp, "$"),
+				       allnames,
+				       value = T)
+			 outputs = grep(paste0("^", val$out, "$"),
+					allnames,
+					value = T)
+			 expand.grid(inputs, outputs, stringsAsFactors=F) %>%
+			     mutate(color = val[[3]])
+		     })
+    return(newlist)
+}
