@@ -1575,27 +1575,29 @@ netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 3, 
 
 ## learn with true latent in there. no latent variables
 
-netResObj_nolat = NetRes$new(generated$data %>%
-                             mutate(vlat1=U_v83,
-                              vlat2=U_v145
-                              ), 
+tstdata=generated$data
+ii=which(colnames(tstdata)%in%latvars)
+for(jj in 1:length(ii)){
+  tstdata[[paste0("vlat",jj)]]=tstdata[,ii[jj]]
+}
+
+netResObj_nolat = NetRes$new(tstdata, 
                        true.graph = generated$graph, nIter = 3, nBoot=100, algorithm='tabu', algorithm.args = tabuArgs, mode=NULL)
 
 dev.new()
 plotIgraph(as.igraph(netResObj_nolat$ensemble[[1]][[2]]),nodesep=0.001,fill=list("vlat.*"='orange',".*PC.*"='yellow'))
 
 ## with blacklist
-blist = rbind(data.frame(from = colnames(generated$data), to = "vlat1"),
-              data.frame(from = colnames(generated$data), to = "vlat2")
+varsnou=grep("^v.*",colnames(generated$data),value=T)
+blist = rbind(data.frame(from = varsnou, to = "vlat1"),
+              data.frame(from = varsnou, to = "vlat2")
               )
 
 tabuArgs2 = list(start = NULL, whitelist = NULL, blacklist = blist, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE)
 
 
-netResObj_nolat = NetRes$new(generated$data %>%
-                       mutate(vlat1=U_v83,
-                              vlat2=U_v145
-                              ),
-                       true.graph = generated$graph, nIter = 3, nBoot=100, algorithm='tabu', algorithm.args = tabuArgs2, mode=NULL)
+netResObj_nolat = NetRes$new(tstdata,
+                       true.graph = generated$graph, nIter = 3, nBoot=100, algorithm='tabu', algorithm.args = tabuArgs2, mode=NULL,debug=F)
 
+plotIgraph(as.igraph(netResObj_nolat$ensemble[[3]][[3]]),nodesep=0.001,fill=list("vlat.*"='orange',".*PC.*"='yellow'))
 #+end_src

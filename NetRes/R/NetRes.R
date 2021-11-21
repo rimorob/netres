@@ -29,7 +29,10 @@ NetRes <- R6Class("NetRes",
                     #' no performance assessment of latent discovery will (or indeed can) be made, but whatever latent space is discovered will be duly reported
                     #' @return A NetRes object
                     initialize = function(dframe, true.graph = NULL, nIter, nBoot=50, algorithm='tabu', algorithm.args, 
-                                          lvPrefix = "^U\\_", mode=NULL) {
+                                          lvPrefix = "^U\\_", mode=NULL,
+                                          debug=FALSE) {
+                        if(debug)
+                            browser()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
                       self$train.data = dframe %>% select_if(!grepl(lvPrefix, names(.)))
                       self$true.graph = true.graph
@@ -39,8 +42,12 @@ NetRes <- R6Class("NetRes",
                       nCores = detectCores() - 1
                       cluster = makeCluster(nCores)
                       clusterEvalQ(cluster,library(bnlearn))
-                      for (ni in 1:nIter) {
-                        curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix)
+                        for (ni in 1:nIter) {
+                            if(debug){
+                                message("In interation ",ni)
+                                browser()
+                            }
+                            curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix)
                         self$ensemble[[ni]] = curRes$ensemble
                         self$latent.space[[ni]] = curRes$latent.space
                         if (is.null(mode) || mode != 'oracular') {
@@ -116,7 +123,11 @@ NetRes <- R6Class("NetRes",
                       
                       for (nlv in nonLatVars) {
                         for (lv in latVars) {
-                          blacklist = rbind(blacklist, c(nlv, lv))
+                            blacklist = rbind(blacklist,
+                                              data.frame(from=nlv,to=lv))
+                                        # need to convert to data.frame:
+                                        # - otherwise you lose column names
+                                        # - then you can't merge to provided 
                         }
                       }
                       if (nrow(blacklist) == 0) {
@@ -135,7 +146,8 @@ NetRes <- R6Class("NetRes",
                     runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_") {
                       dud = function(x) x
                       
-                      algorithm.args$blacklist = private$makeBlacklist(dframe, lvPrefix)
+                      algorithm.args$blacklist = rbind(algorithm.args$blacklist,
+                                                       private$makeBlacklist(dframe, lvPrefix))
                       ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = algorithm.args, cluster=cluster)
                       netWeights = private$calcBayesFactors(ens, dframe, cluster, algorithm.args)
                       ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)
