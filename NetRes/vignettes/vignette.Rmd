@@ -41,7 +41,7 @@ library(NetRes)
 library(bnlearn)
 
 ##demo script
-network = SFNetwork$new(numVertices=200)
+network = SFNetwork$new(numVertices=50)
 generated = network$generateData(numSamples=100)
 print(network)
 plot(network)

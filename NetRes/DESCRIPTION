@@ -5,7 +5,7 @@ Encoding: UTF-8
 Version: 1.0
 Date: 2021-07-24
 Author: Boris Hayete, Fred Gruber
-Maintainer: boris@borisland.com
+Maintainer: Boris Hayete <boris@borisland.com>
 Description: A package for inference of latent variables from Bayesian network's residuals
 License: What license is it under?
 RoxygenNote: 7.1.2

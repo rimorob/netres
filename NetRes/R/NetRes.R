@@ -17,6 +17,8 @@ NetRes <- R6Class("NetRes",
                     train.data = NULL,
                     #' @field latent.data The true data for the latent space (if provided)
                     latent.data = NULL,
+                    #' @field BIC The list of mean ensemble BICs per run - used as the stopping condition
+                    BIC = list(),
                     #' @field true.graph The true graph (if any)
                     true.graph = NULL,
                     #' @description Constructor that fits a NetRes object from a data fram
@@ -30,26 +32,40 @@ NetRes <- R6Class("NetRes",
                     #' @return A NetRes object
                     initialize = function(dframe, true.graph = NULL, nIter, nBoot=50, algorithm='tabu', algorithm.args, 
                                           lvPrefix = "^U\\_", mode=NULL,
-                                          debug=FALSE) {
-                        if(debug)
-                            browser()
+                                          weightedResiduals = FALSE, debug=FALSE) {
+                      if(debug)
+                        browser()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
                       self$train.data = dframe %>% select_if(!grepl(lvPrefix, names(.)))
                       self$true.graph = true.graph
                       require(parallel)
-                      train = self$train.data
+                      if (mode == 'oracular') {
+                        warning('!!!RUNNING IN ORACULAR MODE - USING TRUE LATENT VARIABLES FOR INFERENCE OF STRUCTURE!!!')
+                        train = cbind(self$train.data, self$latent.data)
+                      } else { #normal run
+                        train = self$train.data
+                      }
                       stopifnot(is.list(algorithm.args))
                       nCores = detectCores() - 1
                       cluster = makeCluster(nCores)
                       clusterEvalQ(cluster,library(bnlearn))
-                        for (ni in 1:nIter) {
-                            if(debug){
-                                message("In interation ",ni)
-                                browser()
-                            }
-                            curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix)
+                      for (ni in 1:nIter) {
+                        if(debug){
+                          message("In interation ",ni)
+                          browser()
+                        }
+                        curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix, weightedResiduals)
                         self$ensemble[[ni]] = curRes$ensemble
                         self$latent.space[[ni]] = curRes$latent.space
+                        self$BIC[[ni]] =  mean(parSapply(cluster, curRes$ensemble, function(net, data, algorithm.args) {
+                          BIC(net, data, score = algorithm.args$score, prior = algorithm.args$prior, log=F)
+                        }, train, algorithm.args))
+                        
+                        if (ni > 1 && self$BIC[[ni]] <= self$BIC[[ni-1]]) {
+                          print(as.numeric(self$BIC))
+                          warning('Stopping early due to convergence; should (but am not yet doing htis) decrement index and use the last-best results')
+                          ni = nIter
+                        }
                         if (is.null(mode) || mode != 'oracular') {
                           train = cbind(self$train.data, curRes$latent.space$v)
                         } else {
@@ -143,7 +159,8 @@ NetRes <- R6Class("NetRes",
                     # @param cluster The cluster object, as returned by makeCluster from package "parallel"
                     # @param lvPrefix The latent variable prefix (default = "U_"; use perl regexp)
                     # @return TBD
-                    runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_") {
+                    runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_", 
+                                                weightedResiduals=FALSE) {
                       dud = function(x) x
                       
                       algorithm.args$blacklist = rbind(algorithm.args$blacklist,
@@ -151,7 +168,7 @@ NetRes <- R6Class("NetRes",
                       ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = algorithm.args, cluster=cluster)
                       netWeights = private$calcBayesFactors(ens, dframe, cluster, algorithm.args)
                       ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)
-                      res = private$calculateResiduals(ens2, netWeights, cluster)
+                      res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
                       latvars = private$calculateLatVars(res, method='pca') 
                       return(list(ensemble=ens, latent.space = latvars))
                     },
@@ -230,7 +247,7 @@ NetRes <- R6Class("NetRes",
                                   lvPredictor = resPc))
                     },
                     # @description The private helper function to calculate residuals for a given ensemble
-                    calculateResiduals = function(ens, netWeights, cluster) {
+                    calculateResiduals = function(ens, netWeights, weightedResiduals, cluster) {
                       residuals = parLapply(cluster, ens, function(net) {
                         ##fit a single network using training data
                         fitted = bn.fit(net, self$train.data[, bnlearn::nodes(net)])
@@ -238,12 +255,17 @@ NetRes <- R6Class("NetRes",
 
                         return(as.data.frame(netRes))
                       })
-                      for (ri in 1:length(residuals)) {
-                        residuals[[ri]] = residuals[[ri]] * netWeights[ri]
+                      
+                      if (weightedResiduals) {
+                        for (ri in 1:length(residuals)) {
+                          residuals[[ri]] = residuals[[ri]] * netWeights[ri]
+                        }
+                        
+                        ##average the residuals across all networks (not clear if this is the best way, but likely it is)                      
+                        residuals = Reduce(`+`, residuals) / sum(netWeights)                      
+                      } else {
+                        residuals = Reduce(`+`, residuals) / length(netWeights)                                              
                       }
-
-                      ##average the residuals across all networks (not clear if this is the best way, but likely it is)                      
-                      residuals = Reduce(`+`, residuals) / sum(netWeights)                      
                       return(residuals)
                     },
                     # @description The private helper function to remove latent vars from the ensemble
