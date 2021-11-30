@@ -58,7 +58,7 @@ NetRes <- R6Class("NetRes",
                         self$ensemble[[ni]] = curRes$ensemble
                         self$latent.space[[ni]] = curRes$latent.space
                         self$BIC[[ni]] =  mean(parSapply(cluster, curRes$ensemble, function(net, data, algorithm.args) {
-                          BIC(net, data, score = algorithm.args$score, prior = algorithm.args$prior, log=F)
+                          score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, log=F)
                         }, train, algorithm.args))
                         
                         if (ni > 1 && self$BIC[[ni]] <= self$BIC[[ni-1]]) {
