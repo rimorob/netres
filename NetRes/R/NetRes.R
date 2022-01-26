@@ -32,7 +32,7 @@ NetRes <- R6Class("NetRes",
                     #' @return A NetRes object
                     initialize = function(dframe, true.graph = NULL, nIter, nBoot=50, algorithm='tabu', algorithm.args, 
                                           lvPrefix = "^U\\_", mode=NULL,
-                                          weightedResiduals = FALSE, debug=FALSE) {
+                                          weightedResiduals = FALSE, scale=FALSE, debug=FALSE) {
                       if(debug)
                         browser()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
@@ -54,7 +54,8 @@ NetRes <- R6Class("NetRes",
                           message("In interation ",ni)
                           browser()
                         }
-                        curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix, weightedResiduals)
+                        curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix, 
+                                                         weightedResiduals, scale=scale)
                         self$ensemble[[ni]] = curRes$ensemble
                         self$latent.space[[ni]] = curRes$latent.space
                         self$BIC[[ni]] =  mean(parSapply(cluster, curRes$ensemble, function(net, data, algorithm.args) {
@@ -160,7 +161,7 @@ NetRes <- R6Class("NetRes",
                     # @param lvPrefix The latent variable prefix (default = "U_"; use perl regexp)
                     # @return TBD
                     runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_", 
-                                                weightedResiduals=FALSE) {
+                                                weightedResiduals=FALSE, scale=FALSE) {
                       dud = function(x) x
                       
                       algorithm.args$blacklist = rbind(algorithm.args$blacklist,
@@ -169,7 +170,7 @@ NetRes <- R6Class("NetRes",
                       netWeights = private$calcBayesFactors(ens, dframe, cluster, algorithm.args)
                       ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)
                       res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
-                      latvars = private$calculateLatVars(res, method='pca') 
+                      latvars = private$calculateLatVars(res, method='pca', scale=scale) 
                       return(list(ensemble=ens, latent.space = latvars))
                     },
                     # @description calcBayesFactors Calculate bayes factors for every (unexcised) network in the ensemble
@@ -192,9 +193,9 @@ NetRes <- R6Class("NetRes",
                       return(scores)  
                     },
                     # @description The top-level function to calculate latent variables from residuals
-                    calculateLatVars = function(residuals, method='pca') {
+                    calculateLatVars = function(residuals, method='pca', scale=FALSE) {
                       if (method == 'pca') {
-                        latVars = private$calculateLatVarsPCA(residuals)  
+                        latVars = private$calculateLatVarsPCA(residuals, scale=scale)  
                       } else if (method == 'autoencoder') {
                         stop('Autoencoder is not ported to the new code version yet')  
                       }
@@ -224,7 +225,8 @@ NetRes <- R6Class("NetRes",
                     },
                     # @description Calculate latent variables using linear PCA
                     # residuals samples x vars matrix of residuals
-                    calculateLatVarsPCA = function(residuals) {
+                    calculateLatVarsPCA = function(residuals, scale=F) {
+                      print(paste('scale:', scale))
                       ##how many PCs are we dealing with?  Use Horn's parallel analysis to find out
                       resPpca = parallelPCA(
                         as.matrix(residuals),
@@ -232,6 +234,7 @@ NetRes <- R6Class("NetRes",
                         niters = 50,
                         threshold = 0.1,
                         transposed = TRUE, #variables in columns
+                        scale = scale,
                         ##BSPARAM = IrlbaParam(),
                         BPPARAM = BiocParallel::MulticoreParam()
                       )
@@ -240,7 +243,7 @@ NetRes <- R6Class("NetRes",
                         stop('Latent space not identified - aborting')
                       }
                       
-                      resPc = prcomp(residuals, rank=resPpca$n, scale=TRUE)
+                      resPc = prcomp(residuals, rank=resPpca$n, scale=scale)
 
                       return(list(nLatVars = resPpca$n, 
                                   latVars = resPc$x,

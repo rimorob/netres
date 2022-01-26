@@ -51,10 +51,17 @@ SFNetwork <- R6Class("SFNetwork",
                        generateData = function(numSamples = 1000,
                                                doPlot = FALSE,
                                                errDist = 'normal',
-                                               latIdx = c(2, 3)) {
+                                               latIdx = c(2, 3),
+                                               extraGaussianNoiseFraction=NULL) {
                          ##recompute the rDAG
                          rDAG = as.graphNEL(self$dag)
                          dataMat <- rmvDAG(numSamples, rDAG, errDist = errDist)
+                         if (!is.null(extraGaussianNoiseFraction)) { #then add some noise per variable
+                           dataMat = as.matrix(sapply(as.data.frame(dataMat), function(x) {
+                             x = x + rnorm(length(x), 0, extraGaussianNoiseFraction * sd(x))
+                             return(x)
+                           }))
+                         }
                          
                          if (!is.null(latIdx)) {
                            latent = self$vRank[latIdx]
