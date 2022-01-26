@@ -41,8 +41,8 @@ library(NetRes)
 library(bnlearn)
 
 ##demo script
-network = SFNetwork$new(numVertices=50)
-generated = network$generateData(numSamples=100)
+network = SFNetwork$new(numVertices=200)
+generated = network$generateData(numSamples=100, extraGaussianNoiseFraction=0.1)
 print(network)
 plot(network)
 bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
@@ -50,7 +50,7 @@ bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = g
 tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE)
 ##tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bic-g', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 
-netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 4, nBoot=100, algorithm='tabu', algorithm.args = tabuArgs, mode='not_oracular') 
+netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 4, nBoot=100, algorithm='tabu', algorithm.args = tabuArgs, mode='oracular', weightedResiduals=FALSE) 
 netResObj$assess()
 bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
