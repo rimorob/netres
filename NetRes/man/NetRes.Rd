@@ -22,6 +22,8 @@ NetRes NetRes class definition
 
 \item{\code{latent.data}}{The true data for the latent space (if provided)}
 
+\item{\code{BIC}}{The list of mean ensemble BICs per run - used as the stopping condition}
+
 \item{\code{true.graph}}{The true graph (if any)}
 }
 \if{html}{\out{</div>}}
@@ -49,7 +51,10 @@ Constructor that fits a NetRes object from a data fram
   algorithm = "tabu",
   algorithm.args,
   lvPrefix = "^U\\\\_",
-  mode = NULL
+  mode = NULL,
+  weightedResiduals = FALSE,
+  scale = FALSE,
+  debug = FALSE
 )}\if{html}{\out{</div>}}
 }
 

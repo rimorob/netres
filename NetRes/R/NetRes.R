@@ -4,7 +4,8 @@
 #' @importFrom parallel makeCluster stopCluster detectCores parLapply parSapply
 #' @importFrom BiocSingular IrlbaParam
 #' @importFrom corrplot corrplot
-#' 
+#' @importFrom paran paran
+#' @importFrom GA ga
 ##An R6 class for a generated scale-free network
 #' @export
 NetRes <- R6Class("NetRes", 
@@ -55,16 +56,16 @@ NetRes <- R6Class("NetRes",
                           browser()
                         }
                         curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix, 
-                                                         weightedResiduals, scale=scale)
+                                                         weightedResiduals, scale=scale, optimizeLatentSpace=ifelse(ni == 1, FALSE, TRUE))
                         self$ensemble[[ni]] = curRes$ensemble
-                        self$latent.space[[ni]] = curRes$latent.space
-                        self$BIC[[ni]] =  mean(parSapply(cluster, curRes$ensemble, function(net, data, algorithm.args) {
-                          score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, log=F)
-                        }, train, algorithm.args))
-                        
+                        self$latent.space[[ni]] = curRes$latent.space                        
+                        self$BIC[[ni]] = curRes$BIC #for PREVIOUS latent space - this one hasn't been evaluated yet - that's in the next iteration!
+
                         if (ni > 1 && self$BIC[[ni]] <= self$BIC[[ni-1]]) {
                           print(as.numeric(self$BIC))
-                          warning('Stopping early due to convergence; should (but am not yet doing htis) decrement index and use the last-best results')
+                          ##note that the latent space being tested is the one from the *previous* iteration (not the one being generated - that's a proposal for the next iteration)
+                          ##so, at convergence, remove the final latent space
+                          warning('Stopping early due to convergence')
                           ni = nIter
                         }
                         if (is.null(mode) || mode != 'oracular') {
@@ -161,18 +162,105 @@ NetRes <- R6Class("NetRes",
                     # @param lvPrefix The latent variable prefix (default = "U_"; use perl regexp)
                     # @return TBD
                     runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_", 
-                                                weightedResiduals=FALSE, scale=FALSE) {
+                                                weightedResiduals=FALSE, scale=FALSE, optimizeLatentSpace=FALSE) {
                       dud = function(x) x
                       
-                      algorithm.args$blacklist = rbind(algorithm.args$blacklist,
+                      new.algorithm.args = algorithm.args
+                      new.algorithm.args$blacklist = rbind(algorithm.args$blacklist,
                                                        private$makeBlacklist(dframe, lvPrefix))
-                      ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = algorithm.args, cluster=cluster)
+                      ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
+                      ensBIC =  mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
+                        score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, log=F)
+                      }, dframe, new.algorithm.args))
+                      
                       netWeights = private$calcBayesFactors(ens, dframe, cluster, algorithm.args)
                       ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)
                       res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
+
+                      ##paran(res)
                       latvars = private$calculateLatVars(res, method='pca', scale=scale) 
-                      return(list(ensemble=ens, latent.space = latvars))
+                      ##Note that the number of parameters being optimized is one less than rows 
+                      ##Otherwise, we'd be optimizing weights where the maximum lies on a manifold
+                      ##In other words, the first coefficient of each weight vector will be arbitrarily set to one
+                      latCoefs = array(data = 1, dim=c(ncol(latvars$v) - 1, ncol(latvars$v)))
+
+                      ##helper function to calcualte new lat vars given a linear combination of coefficients
+                      mappedLatVars = function(coefs, latVars) {
+                        n = (1 + sqrt(1 + 4 * length(coefs)))/2
+                        coefs = t(matrix(c(rep(1, n), coefs), n, n)) #restore the parameters' shape; first row is unity (i.e., reference)
+                        print(paste('Latent space transform: optimizing', n^2, 'parameters'))
+                        print(coefs)
+                        ##compute the new linear combination
+                        newLatVars = latVars %*% coefs
+
+                        dim(newLatVars) = dim(latVars)
+                        colnames(newLatVars) = colnames(latVars)
+
+                        return(newLatVars)
+                      }
+                      
+                      ##optimize latent variables to minimize the Bayes score
+                      ##do this by calculating a linear combination to optimize the ensemble BIC
+                      latVarLinComb = function(coefs, latVars) {
+                        newLatVars = mappedLatVars(coefs, latVars)
+
+                        ##drop the latent variables from the data frame
+                        latIdx = grep(lvPrefix, colnames(dframe))
+                        if (length(latIdx) > 0) {
+                          newDframe = dframe[, -latIdx]
+                        } else {
+                          newDframe = dframe
+                        }
+                        newDframe = cbind(newDframe, newLatVars)
+                        
+                        ##update the blacklist for new variable names
+                        new.algorithm.args = algorithm.args                        
+                        new.algorithm.args$blacklist = rbind(algorithm.args$blacklist,
+                                                             private$makeBlacklist(newDframe, lvPrefix)) 
+                        ##add the new latent space back
+                        newEns = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
+                        newBIC = mean(parSapply(cluster, newEns, function(net, data, algorithm.args) {
+                          score(net, data, type = new.algorithm.args$score, prior = new.algorithm.args$prior, log=F)
+                        }, newDframe, new.algorithm.args))
+                        print(Sys.time())
+                        print('debug:')
+                        print(coefs)
+                        print(newBIC)
+                        print('---')
+                        return(newBIC)
+                      }
+                      print('optimizing the basis vector of the latent space')
+                      if (0 && ncol(latCoefs) > 1) {
+                        if (0) { #no longer using optim
+                          ##fnscale==-1 sets the regime for maximization, as R's BIC is -2*BIC (larger values are better)
+                          optimRes = optim(par=latCoefs, fn=latVarLinComb, method='BFGS', 
+                                           control=list(REPORT = 1, fnscale=-1, trace=3, ndeps=rep(0.1, prod(dim(latCoefs)))),
+                                           latVars = latvars$v)
+                          ##print('DEBug')
+                          mappedLVs = mappedLatVars(optimRes$par, latvars$v)
+                          ensBIC = optimRes$value                          
+                        } else {
+                          print('asdf')
+                          browser()
+
+                          optimRes = ga(type = 'real-valued', fitness=latVarLinComb, latvars$v, 
+                                        lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
+                                        run = 5)
+                          mappedLVs = mappedLatVars(optimRes@solution, latvars$v)
+                          ensBIC = optimRes@fitnessValue                          
+                        }
+                        ##FIX THE BELOW - CURRENTLY OVERRIDING LATVARS$V AND UNABLE TO PREDICT CORRECTLY OOS, NEED TO PASS ON THE MAPPING BASIS
+                        ##FOR NOW, JUST RETURN THE CORRECT VECTOR OVER TRAINING DATA                          
+                        latvars$v = mappedLVs                        
+
+
+                      } 
+
+
+                      return(list(ensemble=ens, latent.space = latvars, BIC = ensBIC))
                     },
+                    
+                    ##
                     # @description calcBayesFactors Calculate bayes factors for every (unexcised) network in the ensemble
                     # Use same score and prior as used to infer the ensemble to calculate the bayes factors as well
                     # @param ens ensemble
@@ -226,13 +314,12 @@ NetRes <- R6Class("NetRes",
                     # @description Calculate latent variables using linear PCA
                     # residuals samples x vars matrix of residuals
                     calculateLatVarsPCA = function(residuals, scale=F) {
-                      print(paste('scale:', scale))
                       ##how many PCs are we dealing with?  Use Horn's parallel analysis to find out
                       resPpca = parallelPCA(
-                        as.matrix(residuals),
+                        as.matrix(residuals), #rows have to be variables, so transpose
                         max.rank = round(ncol(residuals)*0.1),
                         niters = 50,
-                        threshold = 0.1,
+                        threshold = 0.05/ncol(residuals), #bonferroni-corrected p-vaoue cut-off
                         transposed = TRUE, #variables in columns
                         scale = scale,
                         ##BSPARAM = IrlbaParam(),

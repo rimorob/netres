@@ -89,7 +89,8 @@ plots the DAG
   numSamples = 1000,
   doPlot = FALSE,
   errDist = "normal",
-  latIdx = c(2, 3)
+  latIdx = c(2, 3),
+  extraGaussianNoiseFraction = NULL
 )}\if{html}{\out{</div>}}
 }
 

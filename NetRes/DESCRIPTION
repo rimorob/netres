@@ -18,4 +18,5 @@ Imports:
   corrplot,
   igraph,
   parallel,
-  pcalg
+  pcalg,
+  paran
