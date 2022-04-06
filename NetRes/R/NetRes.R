@@ -230,7 +230,7 @@ NetRes <- R6Class("NetRes",
                         return(newBIC)
                       }
                       print('optimizing the basis vector of the latent space')
-                      if (0 && ncol(latCoefs) > 1) {
+                      if (ncol(latCoefs) > 1) {
                         if (0) { #no longer using optim
                           ##fnscale==-1 sets the regime for maximization, as R's BIC is -2*BIC (larger values are better)
                           optimRes = optim(par=latCoefs, fn=latVarLinComb, method='BFGS', 
