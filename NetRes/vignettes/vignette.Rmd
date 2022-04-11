@@ -27,11 +27,12 @@ tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge',
 
 netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 2, nBoot=100, algorithm='tabu', 
                        algorithm.args = tabuArgs, mode='foo') 
-##netResObj$assess() #true network has 0 edges which causes crashes
+ ##netResObj$assess() #true network has 0 edges which causes crashes
 ##after inference
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
 bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
 ##plot(netResObj)
+rm(netResObj)
 
 ```
 
@@ -42,16 +43,17 @@ library(bnlearn)
 
 ##demo script
 network = SFNetwork$new(numVertices=200)
-generated = network$generateData(numSamples=200, extraGaussianNoiseFraction=0.1)
+generated = network$generateData(numSamples=300, extraGaussianNoiseFraction=0.1)
 print(network)
 plot(network)
 bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
 
 algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE)
-stop()
-netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 4, nBoot=100, algorithm='hc', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE) 
+
+netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 4, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE) 
 netResObj$assess()
 bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
 ##plot(netResObj)
+rm(netResObj)
 ```

@@ -6,6 +6,7 @@
 #' @importFrom corrplot corrplot
 #' @importFrom paran paran
 #' @importFrom GA ga
+#' @importFrom GenSA GenSA
 ##An R6 class for a generated scale-free network
 #' @export
 NetRes <- R6Class("NetRes", 
@@ -48,7 +49,7 @@ NetRes <- R6Class("NetRes",
                       }
                       stopifnot(is.list(algorithm.args))
                       nCores = detectCores() - 1
-                      cluster = makeCluster(nCores)
+                      cluster = makeCluster(nCores, setup_strategy = "sequential")
                       clusterEvalQ(cluster,library(bnlearn))
                       for (ni in 1:nIter) {
                         if(debug){
@@ -89,7 +90,7 @@ NetRes <- R6Class("NetRes",
                       }
                       
                       nCores = detectCores() - 1
-                      cluster = makeCluster(nCores)
+                      cluster = makeCluster(nCores, setup_strategy = "sequential")
                       ##excise the latent space from the true graph
                       true.graph = private$exciseLatVarsFromEnsemble(list(true.graph), cluster, lvPrefix)[[1]]
                       
@@ -201,7 +202,8 @@ NetRes <- R6Class("NetRes",
                       
                       ##optimize latent variables to minimize the Bayes score
                       ##do this by calculating a linear combination to optimize the ensemble BIC
-                      latVarLinComb = function(coefs, latVars) {
+                      ##note that the sign of returned BIC is flipped for minimization by default
+                      latVarLinComb = function(coefs, latVars, maximize=TRUE) {
                         newLatVars = mappedLatVars(coefs, latVars)
 
                         ##drop the latent variables from the data frame
@@ -227,6 +229,7 @@ NetRes <- R6Class("NetRes",
                         print(coefs)
                         print(newBIC)
                         print('---')
+                        newBIC = ifelse(maximize, newBIC, -newBIC)
                         return(newBIC)
                       }
                       print('optimizing the basis vector of the latent space')
@@ -239,10 +242,18 @@ NetRes <- R6Class("NetRes",
                           ##print('DEBug')
                           mappedLVs = mappedLatVars(optimRes$par, latvars$v)
                           ensBIC = optimRes$value                          
-                        } else {
-                          print('asdf')
-                          browser()
+                        } else if (1) {
+                          optimRes = GenSA(par=NULL, fn=latVarLinComb, 
+                                           lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
+                                           control=list(verbose=T), 
+                                           latVars = latvars$v,
+                                           maximize = FALSE)
 
+                          print('DeBug')
+                          browser()
+                          mappedLVs = mappedLatVars(optimRes$par, latvars$v)                          
+                          ensBIC = optimRes$value
+                        } else {
                           optimRes = ga(type = 'real-valued', fitness=latVarLinComb, latvars$v, 
                                         lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
                                         run = 5)
