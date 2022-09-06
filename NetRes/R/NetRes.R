@@ -49,13 +49,15 @@ NetRes <- R6Class("NetRes",
                       }
                       stopifnot(is.list(algorithm.args))
                       nCores = detectCores() - 1
-                      cluster = makeCluster(nCores, setup_strategy = "sequential")
-                      clusterEvalQ(cluster,library(bnlearn))
                       for (ni in 1:nIter) {
                         if(debug){
                           message("In interation ",ni)
                           browser()
-                        }
+                        }                      
+                        ##cluster creation moved inside the loop in order to help clean up what seems like a memory leak in cluster creation
+                        cluster = makeCluster(nCores)
+                        clusterEvalQ(cluster, library(bnlearn))
+
                         curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix, 
                                                          weightedResiduals, scale=scale, optimizeLatentSpace=ifelse(ni == 1, FALSE, TRUE))
                         self$ensemble[[ni]] = curRes$ensemble
@@ -78,8 +80,9 @@ NetRes <- R6Class("NetRes",
                         corrplot(cor(cbind(self$latent.data, curRes$latent.space$v)), method='ellipse', order='AOE', diag=F)
                         print('pausing to admire the corrplot')
                         Sys.sleep(5)
+                        stopCluster(cluster)
                       }
-                      stopCluster(cluster)
+
                     },
                     #' @description assess Assess the inferred ensemble against the true graph
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
@@ -89,8 +92,8 @@ NetRes <- R6Class("NetRes",
                         stop('Cannot assess performance without the true graph')
                       }
                       
-                      nCores = detectCores() - 1
-                      cluster = makeCluster(nCores, setup_strategy = "sequential")
+                      nCores = detectCores() - 2
+                      cluster = makeCluster(nCores)
                       ##excise the latent space from the true graph
                       true.graph = private$exciseLatVarsFromEnsemble(list(true.graph), cluster, lvPrefix)[[1]]
                       
@@ -136,6 +139,8 @@ NetRes <- R6Class("NetRes",
                   private = list(
                     # @description A utility function to create a blacklist from a data frame so that no variable drives a latent variable
                     makeBlacklist = function(dframe, lvPrefix = "^U\\_") {
+                      print('BLACKLIST TURNED OFF!!!  fix!!!!')
+                      return(NULL) 
                       latVars = grep(lvPrefix, colnames(dframe), value=T)
                       nonLatVars = setdiff(colnames(dframe), latVars)
                       blacklist = data.frame(from=NULL, to=NULL)
@@ -179,7 +184,7 @@ NetRes <- R6Class("NetRes",
                       res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
 
                       ##paran(res)
-                      latvars = private$calculateLatVars(res, method='pca', scale=scale) 
+                      latvars = private$calculateLatVars(res, method='pca', scale=scale, algorithm.args=new.algorithm.args) 
                       ##Note that the number of parameters being optimized is one less than rows 
                       ##Otherwise, we'd be optimizing weights where the maximum lies on a manifold
                       ##In other words, the first coefficient of each weight vector will be arbitrarily set to one
@@ -230,10 +235,14 @@ NetRes <- R6Class("NetRes",
                         print(newBIC)
                         print('---')
                         newBIC = ifelse(maximize, newBIC, -newBIC)
+                        
+                        rm(newEns)
+                        gc()
                         return(newBIC)
                       }
                       print('optimizing the basis vector of the latent space')
                       if (ncol(latCoefs) > 1) {
+                        print("shouldn't be here")
                         if (0) { #no longer using optim
                           ##fnscale==-1 sets the regime for maximization, as R's BIC is -2*BIC (larger values are better)
                           optimRes = optim(par=latCoefs, fn=latVarLinComb, method='BFGS', 
@@ -242,7 +251,7 @@ NetRes <- R6Class("NetRes",
                           ##print('DEBug')
                           mappedLVs = mappedLatVars(optimRes$par, latvars$v)
                           ensBIC = optimRes$value                          
-                        } else if (1) {
+                        } else if (0) {
                           optimRes = GenSA(par=NULL, fn=latVarLinComb, 
                                            lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
                                            control=list(verbose=T), 
@@ -255,8 +264,9 @@ NetRes <- R6Class("NetRes",
                           ensBIC = optimRes$value
                         } else {
                           optimRes = ga(type = 'real-valued', fitness=latVarLinComb, latvars$v, 
-                                        lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
-                                        run = 5)
+                                        lower = rep(-10, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
+                                        run = 5, 
+                                        monitor=plot)
                           mappedLVs = mappedLatVars(optimRes@solution, latvars$v)
                           ensBIC = optimRes@fitnessValue                          
                         }
@@ -292,9 +302,9 @@ NetRes <- R6Class("NetRes",
                       return(scores)  
                     },
                     # @description The top-level function to calculate latent variables from residuals
-                    calculateLatVars = function(residuals, method='pca', scale=FALSE) {
+                    calculateLatVars = function(residuals, method='pca', scale=FALSE, algorithm.args=NULL) {
                       if (method == 'pca') {
-                        latVars = private$calculateLatVarsPCA(residuals, scale=scale)  
+                        latVars = private$calculateLatVarsPCA(residuals, scale=scale, algorithm.args=algorithm.args)  
                       } else if (method == 'autoencoder') {
                         stop('Autoencoder is not ported to the new code version yet')  
                       }
@@ -324,13 +334,20 @@ NetRes <- R6Class("NetRes",
                     },
                     # @description Calculate latent variables using linear PCA
                     # residuals samples x vars matrix of residuals
-                    calculateLatVarsPCA = function(residuals, scale=F) {
+                    calculateLatVarsPCA = function(residuals, scale=F, algorithm.args=NULL) {
+                      if (is.null(algorithm.args)) {
+                        maxRank = ncol(residuals) - 1
+                      } else {
+                        maxRank = algorithm.args$max.rank
+                      }
+                      maxRank = min(round(ncol(residuals)*0.1), maxRank)
+                      print(paste('Maximum latent space rank set to', maxRank))
                       ##how many PCs are we dealing with?  Use Horn's parallel analysis to find out
                       resPpca = parallelPCA(
                         as.matrix(residuals), #rows have to be variables, so transpose
-                        max.rank = round(ncol(residuals)*0.1),
+                        max.rank = maxRank,
                         niters = 50,
-                        threshold = 0.05/ncol(residuals), #bonferroni-corrected p-vaoue cut-off
+                        threshold = 0.05, #/ncol(residuals), #bonferroni-corrected p-vaoue cut-off
                         transposed = TRUE, #variables in columns
                         scale = scale,
                         ##BSPARAM = IrlbaParam(),
