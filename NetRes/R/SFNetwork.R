@@ -24,6 +24,8 @@ SFNetwork <- R6Class("SFNetwork",
                        initialize = function(numVertices = 20, topology='power', numNeighbors = 4, nParentOnly = 4) {
                          if (topology == 'power') {
                            res = private$makePowerDag(numVertices = numVertices, numNeighbors = numNeighbors, nParentOnly = nParentOnly)
+                         } else if (topology == 'twin.star') {
+                           res = private$makeTwinStarDag(numVertices = numVertices)                                                      
                          } else {
                            res = private$makeStarDag(numVertices = numVertices)                           
                          }
@@ -112,6 +114,52 @@ SFNetwork <- R6Class("SFNetwork",
                          self$vRank = names(sorted)
                          self$outDegree = outDegree
                        },
+                       makeTwinStarDag = function(numVertices = 20) {
+                         ##start with an empty DAG
+                         dag = empty.graph(paste('v', as.character(1:numVertices), sep=''))
+                         
+                         ##make the last vertex the center
+                         for (vi in 1:(numVertices-2)) {
+                           ##pick parents from either/both stars with equal probability
+                           toss = runif(1)
+                           to = paste('v', vi, sep='')      
+                           if (toss < 1/3) {
+                             from = paste('v', numVertices - 1, sep='')
+                           } else { #both for 1/3 < toss < 2/3 and toss > 2/3
+                             from = paste('v', numVertices, sep='')                             
+                           } 
+                           dag = set.arc(dag, from, to, check.cycles = TRUE, check.illegal = TRUE, debug = FALSE)                           
+                           if (toss > 2/3) { #set an additional edge
+                             from = paste('v', numVertices - 1, sep='')
+                             dag = set.arc(dag, from, to, check.cycles = TRUE, check.illegal = TRUE, debug = FALSE)                                                        
+                           }
+                         }
+                         
+                         ##and topologically sort it
+                         nOrder <- topo_sort(as.igraph(dag))
+                         
+                         aM = as(as.graphNEL(dag), 'matrix')
+                         aM = aM[nOrder, nOrder]
+                         rDAG = as(aM, 'graphNEL')
+                         dag = as.bn(rDAG)
+                         
+                         ##compute #s of direct children
+                         iGraph = as.igraph(dag)
+                         
+                         outDegree = ego_size(
+                           iGraph,
+                           order = 1,
+                           nodes = V(iGraph),
+                           mode = c("out"),
+                           mindist = 1
+                         )
+                         sorted = order(outDegree, decreasing = T)
+                         sorted = V(iGraph)[sorted]
+                         
+                         self$dag = dag
+                         self$vRank = names(sorted)
+                         self$outDegree = outDegree
+                       },                       
                        makePowerDag = function(numVertices = 20,  numNeighbors = 4, nParentOnly = 4) {
                          ## generate random DAG
                          rDAG <- randDAG(n = numVertices, method = 'power', d = numNeighbors)

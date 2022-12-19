@@ -15,6 +15,10 @@ NetRes <- R6Class("NetRes",
                     ensemble = NULL,
                     #' @field latent.space The list of latent spaces after a given iteration
                     latent.space = NULL,
+                    #' @field latent.space.transform The function to map PCs to the final basis vector
+                    latent.space.transform = NULL,
+                    #' @field latent.space.transform.coefs The transform that maps PCs to the final basis vector form s.t. the PCs are conditionally de-correlated given their descendants (i.e., the network is optimized)
+                    latent.space.transform.coefs = NULL,
                     #' @field train.data The initial training data
                     train.data = NULL,
                     #' @field latent.data The true data for the latent space (if provided)
@@ -51,7 +55,7 @@ NetRes <- R6Class("NetRes",
                       nCores = detectCores() - 1
                       for (ni in 1:nIter) {
                         if(debug){
-                          message("In interation ",ni)
+                          message("In interation ", ni)
                           browser()
                         }                      
                         ##cluster creation moved inside the loop in order to help clean up what seems like a memory leak in cluster creation
@@ -62,6 +66,8 @@ NetRes <- R6Class("NetRes",
                                                          weightedResiduals, scale=scale, optimizeLatentSpace=ifelse(ni == 1, FALSE, TRUE))
                         self$ensemble[[ni]] = curRes$ensemble
                         self$latent.space[[ni]] = curRes$latent.space                        
+                        self$latent.space.transform[[ni]] = curRes$latent.space.transform
+                        self$latent.space.transform.coefs[[ni]] = curRes$latent.space.transform.coefs
                         self$BIC[[ni]] = curRes$BIC #for PREVIOUS latent space - this one hasn't been evaluated yet - that's in the next iteration!
 
                         if (ni > 1 && self$BIC[[ni]] <= self$BIC[[ni-1]]) {
@@ -69,6 +75,7 @@ NetRes <- R6Class("NetRes",
                           ##note that the latent space being tested is the one from the *previous* iteration (not the one being generated - that's a proposal for the next iteration)
                           ##so, at convergence, remove the final latent space
                           warning('Stopping early due to convergence')
+                          browser('Debug')
                           ni = nIter
                         }
                         if (is.null(mode) || mode != 'oracular') {
@@ -185,6 +192,27 @@ NetRes <- R6Class("NetRes",
 
                       ##paran(res)
                       latvars = private$calculateLatVars(res, method='pca', scale=scale, algorithm.args=new.algorithm.args) 
+
+                      ##debugging step
+                      trueCoefs = NULL
+                      for (ci in 1:ncol(self$latent.data)) {
+                        curDf = cbind(data.frame(out = self$latent.data[, ci]), latvars$v)
+                        m = lm(out ~ ., curDf)
+                        coefs = as.numeric(coef(m)) 
+                        coefs = coefs[2:length(coefs)]
+                        if (is.null(trueCoefs)) {
+                          trueCoefs = coefs
+                          dim(trueCoefs) = c(1, length(coefs))
+                        } else {
+                          trueCoefs = rbind(trueCoefs, coefs)
+                        }
+                      }
+
+                      rownames(trueCoefs) = colnames(self$latent.data)
+                      colnames(trueCoefs) = colnames(latvars$v)
+                      print('True coefficients:')
+                      print(trueCoefs)
+                      
                       ##Note that the number of parameters being optimized is one less than rows 
                       ##Otherwise, we'd be optimizing weights where the maximum lies on a manifold
                       ##In other words, the first coefficient of each weight vector will be arbitrarily set to one
@@ -194,10 +222,8 @@ NetRes <- R6Class("NetRes",
                       mappedLatVars = function(coefs, latVars) {
                         n = (1 + sqrt(1 + 4 * length(coefs)))/2
                         coefs = t(matrix(c(rep(1, n), coefs), n, n)) #restore the parameters' shape; first row is unity (i.e., reference)
-                        print(paste('Latent space transform: optimizing', n^2, 'parameters'))
-                        print(coefs)
                         ##compute the new linear combination
-                        newLatVars = latVars %*% coefs
+                        newLatVars = scale(latVars %*% coefs)
 
                         dim(newLatVars) = dim(latVars)
                         colnames(newLatVars) = colnames(latVars)
@@ -208,7 +234,11 @@ NetRes <- R6Class("NetRes",
                       ##optimize latent variables to minimize the Bayes score
                       ##do this by calculating a linear combination to optimize the ensemble BIC
                       ##note that the sign of returned BIC is flipped for minimization by default
-                      latVarLinComb = function(coefs, latVars, maximize=TRUE) {
+                      ##also note that nBoot overrides the function default unless otherwise specified -
+                      ##this is done because optimization over a grid doesn't require oversampling and therefore
+                      ##we want to cash in on a speedup by using a smaller ensemble size
+                      latVarLinComb = function(coefs, latVars, maximize=TRUE, nBoot=detectCores() - 2) {
+                        print(paste('nBoot inside function:', nBoot))
                         newLatVars = mappedLatVars(coefs, latVars)
 
                         ##drop the latent variables from the data frame
@@ -233,52 +263,57 @@ NetRes <- R6Class("NetRes",
                         print('debug:')
                         print(coefs)
                         print(newBIC)
+                        print('correlation structure BEFORE optimization:')
+                        print(cor(cbind(self$latent.data, latVars)))
+                        print('correlation structure AFTER optimization:')                        
+                        print(cor(cbind(self$latent.data, newLatVars)))
                         print('---')
                         newBIC = ifelse(maximize, newBIC, -newBIC)
-                        
+
                         rm(newEns)
                         gc()
                         return(newBIC)
                       }
                       print('optimizing the basis vector of the latent space')
                       if (ncol(latCoefs) > 1) {
-                        print("shouldn't be here")
-                        if (0) { #no longer using optim
-                          ##fnscale==-1 sets the regime for maximization, as R's BIC is -2*BIC (larger values are better)
-                          optimRes = optim(par=latCoefs, fn=latVarLinComb, method='BFGS', 
-                                           control=list(REPORT = 1, fnscale=-1, trace=3, ndeps=rep(0.1, prod(dim(latCoefs)))),
-                                           latVars = latvars$v)
-                          ##print('DEBug')
-                          mappedLVs = mappedLatVars(optimRes$par, latvars$v)
-                          ensBIC = optimRes$value                          
-                        } else if (0) {
-                          optimRes = GenSA(par=NULL, fn=latVarLinComb, 
-                                           lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
-                                           control=list(verbose=T), 
-                                           latVars = latvars$v,
-                                           maximize = FALSE)
+                        startTime = Sys.time()
+                        optimRes = ga(type = 'real-valued', fitness=latVarLinComb, latvars$v, 
+                                      lower = rep(-10, length(as.numeric(latCoefs))),
+                                      upper = rep(10, length(as.numeric(latCoefs))),
+                                      run = 10, ##increase this eventually, or leave at default (maxiter)
+                                      monitor=plot,
+                                      popSize = 100 #and elitism defaults to 5 winners
+                        )
+                        print(Sys.time() - startTime)
+                        mappedLVs = mappedLatVars(optimRes@solution, latvars$v)
+                        ensBICoptimized = optimRes@fitnessValue                          
 
-                          print('DeBug')
-                          browser()
-                          mappedLVs = mappedLatVars(optimRes$par, latvars$v)                          
-                          ensBIC = optimRes$value
-                        } else {
-                          optimRes = ga(type = 'real-valued', fitness=latVarLinComb, latvars$v, 
-                                        lower = rep(-10, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
-                                        run = 5, 
-                                        monitor=plot)
-                          mappedLVs = mappedLatVars(optimRes@solution, latvars$v)
-                          ensBIC = optimRes@fitnessValue                          
-                        }
                         ##FIX THE BELOW - CURRENTLY OVERRIDING LATVARS$V AND UNABLE TO PREDICT CORRECTLY OOS, NEED TO PASS ON THE MAPPING BASIS
                         ##FOR NOW, JUST RETURN THE CORRECT VECTOR OVER TRAINING DATA                          
-                        latvars$v = mappedLVs                        
 
-
+                        print(cor(cbind(self$latent.data, mappedLVs)))
+                        print(cor(cbind(self$latent.data, latvars$v)))
+                        ##browser('see why optimization basically fails')
+                        latvars$v = mappedLVs                                
+                      } else if (0) {
+                        optimRes2 = GenSA(par=NULL, fn=latVarLinComb, 
+                                          lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
+                                          control=list(verbose=T), 
+                                          latVars = latvars$v,
+                                          maximize = FALSE)
+                        
+                        print('DeBug')
+                        browser()
+                        mappedLVs = mappedLatVars(optimRes$par, latvars$v)                          
+                        ensBIC = optimRes$value
                       } 
 
 
-                      return(list(ensemble=ens, latent.space = latvars, BIC = ensBIC))
+                      return(list(ensemble=ens, 
+                                  latent.space = latvars, 
+                                  ##latent.space.transform = mappedLatVars,
+                                  ##latent.space.transform.coefs = optimRes@solution,
+                                  BIC = ensBIC))
                     },
                     
                     ##
@@ -346,7 +381,7 @@ NetRes <- R6Class("NetRes",
                       resPpca = parallelPCA(
                         as.matrix(residuals), #rows have to be variables, so transpose
                         max.rank = maxRank,
-                        niters = 50,
+                        niters = 500,
                         threshold = 0.05, #/ncol(residuals), #bonferroni-corrected p-vaoue cut-off
                         transposed = TRUE, #variables in columns
                         scale = scale,
