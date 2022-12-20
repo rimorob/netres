@@ -237,7 +237,7 @@ NetRes <- R6Class("NetRes",
                       ##also note that nBoot overrides the function default unless otherwise specified -
                       ##this is done because optimization over a grid doesn't require oversampling and therefore
                       ##we want to cash in on a speedup by using a smaller ensemble size
-                      latVarLinComb = function(coefs, latVars, maximize=TRUE, nBoot=detectCores() - 2) {
+                      latVarLinComb = function(coefs, latVars, maximize=TRUE, nBoot=detectCores() - 2, returnEnsemble = FALSE) {
                         print(paste('nBoot inside function:', nBoot))
                         newLatVars = mappedLatVars(coefs, latVars)
 
@@ -272,7 +272,11 @@ NetRes <- R6Class("NetRes",
 
                         rm(newEns)
                         gc()
-                        return(newBIC)
+                        if (returnEnsemble) {
+                            return(list(BIC = newBIC, ens = newEns, mappedLVs = newLatVars))
+                        } else {
+                            return(newBIC)
+                        }
                       }
                       print('optimizing the basis vector of the latent space')
                       if (ncol(latCoefs) > 1) {
@@ -293,8 +297,11 @@ NetRes <- R6Class("NetRes",
 
                         print(cor(cbind(self$latent.data, mappedLVs)))
                         print(cor(cbind(self$latent.data, latvars$v)))
-                        ##browser('see why optimization basically fails')
-                        latvars$v = mappedLVs                                
+                        
+                        ##latvars$v = mappedLVs
+                        remappedRes = latVarLinComb(optimRes@solution, latvars$v, returnEnsemble = TRUE)
+                        latvars$v = remappedRes$mappedLVs
+                        browser()
                       } else if (0) {
                         optimRes2 = GenSA(par=NULL, fn=latVarLinComb, 
                                           lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
@@ -309,11 +316,11 @@ NetRes <- R6Class("NetRes",
                       } 
 
 
-                      return(list(ensemble=ens, 
+                      return(list(ensemble=remappedRes$newEns, 
                                   latent.space = latvars, 
                                   ##latent.space.transform = mappedLatVars,
                                   ##latent.space.transform.coefs = optimRes@solution,
-                                  BIC = ensBIC))
+                                  BIC = remappedRes$newBIC))
                     },
                     
                     ##
