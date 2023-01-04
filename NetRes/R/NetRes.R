@@ -270,8 +270,6 @@ NetRes <- R6Class("NetRes",
                         print('---')
                         newBIC = ifelse(maximize, newBIC, -newBIC)
 
-                        rm(newEns)
-                        gc()
                         if (returnEnsemble) {
                             return(list(BIC = newBIC, ens = newEns, mappedLVs = newLatVars))
                         } else {
@@ -301,7 +299,12 @@ NetRes <- R6Class("NetRes",
                         ##latvars$v = mappedLVs
                         remappedRes = latVarLinComb(optimRes@solution, latvars$v, returnEnsemble = TRUE)
                         latvars$v = remappedRes$mappedLVs
-                        browser()
+                        browser() 
+                        return(list(ensemble=remappedRes$newEns, 
+                                    latent.space = latvars, 
+                                    ##latent.space.transform = mappedLatVars,
+                                    ##latent.space.transform.coefs = optimRes@solution,
+                                    BIC = remappedRes$newBIC))                        
                       } else if (0) {
                         optimRes2 = GenSA(par=NULL, fn=latVarLinComb, 
                                           lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
@@ -316,11 +319,11 @@ NetRes <- R6Class("NetRes",
                       } 
 
 
-                      return(list(ensemble=remappedRes$newEns, 
+                      return(list(ensemble=ens,
                                   latent.space = latvars, 
                                   ##latent.space.transform = mappedLatVars,
                                   ##latent.space.transform.coefs = optimRes@solution,
-                                  BIC = remappedRes$newBIC))
+                                  BIC = ensBIC))
                     },
                     
                     ##
