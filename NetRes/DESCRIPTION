@@ -8,7 +8,7 @@ Author: Boris Hayete, Fred Gruber
 Maintainer: Boris Hayete <boris@borisland.com>
 Description: A package for inference of latent variables from Bayesian network's residuals
 License: What license is it under?
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
 Imports:
   PCAtools,
   R6,

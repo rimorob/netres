@@ -22,16 +22,16 @@ SFNetwork SFNetwork class definition
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-new}{\code{SFNetwork$new()}}
-\item \href{#method-print}{\code{SFNetwork$print()}}
-\item \href{#method-plot}{\code{SFNetwork$plot()}}
-\item \href{#method-generateData}{\code{SFNetwork$generateData()}}
-\item \href{#method-clone}{\code{SFNetwork$clone()}}
+\item \href{#method-SFNetwork-new}{\code{SFNetwork$new()}}
+\item \href{#method-SFNetwork-print}{\code{SFNetwork$print()}}
+\item \href{#method-SFNetwork-plot}{\code{SFNetwork$plot()}}
+\item \href{#method-SFNetwork-generateData}{\code{SFNetwork$generateData()}}
+\item \href{#method-SFNetwork-clone}{\code{SFNetwork$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-SFNetwork-new"></a>}}
+\if{latex}{\out{\hypertarget{method-SFNetwork-new}{}}}
 \subsection{Method \code{new()}}{
 Generate a DAG using Barabasi's game and generate matching data
 \subsection{Usage}{
@@ -39,7 +39,8 @@ Generate a DAG using Barabasi's game and generate matching data
   numVertices = 20,
   topology = "power",
   numNeighbors = 4,
-  nParentOnly = 4
+  nParentOnly = 4,
+  addOneEdge = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -53,6 +54,8 @@ Generate a DAG using Barabasi's game and generate matching data
 \item{\code{numNeighbors}}{number of neighbors of each vertex, on average (i.e., node denisty, default=4)}
 
 \item{\code{nParentOnly}}{how many nodes to make parent-only hubs by removing their high order but low out-degree parents (default=4)}
+
+\item{\code{addOneEdge}}{whether to add a single edge not involving a latent variable to star or twin-star topologies (helps with AUC calculation; default=TRUE)}
 }
 \if{html}{\out{</div>}}
 }
@@ -61,8 +64,8 @@ A `SFNetwork` object
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-print"></a>}}
-\if{latex}{\out{\hypertarget{method-print}{}}}
+\if{html}{\out{<a id="method-SFNetwork-print"></a>}}
+\if{latex}{\out{\hypertarget{method-SFNetwork-print}{}}}
 \subsection{Method \code{print()}}{
 prints the details of the DAG
 \subsection{Usage}{
@@ -71,8 +74,8 @@ prints the details of the DAG
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-plot"></a>}}
-\if{latex}{\out{\hypertarget{method-plot}{}}}
+\if{html}{\out{<a id="method-SFNetwork-plot"></a>}}
+\if{latex}{\out{\hypertarget{method-SFNetwork-plot}{}}}
 \subsection{Method \code{plot()}}{
 plots the DAG
 \subsection{Usage}{
@@ -81,8 +84,8 @@ plots the DAG
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-generateData"></a>}}
-\if{latex}{\out{\hypertarget{method-generateData}{}}}
+\if{html}{\out{<a id="method-SFNetwork-generateData"></a>}}
+\if{latex}{\out{\hypertarget{method-SFNetwork-generateData}{}}}
 \subsection{Method \code{generateData()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SFNetwork$generateData(
@@ -109,8 +112,8 @@ plots the DAG
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-SFNetwork-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-SFNetwork-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

@@ -18,6 +18,10 @@ NetRes NetRes class definition
 
 \item{\code{latent.space}}{The list of latent spaces after a given iteration}
 
+\item{\code{latent.space.transform}}{The function to map PCs to the final basis vector}
+
+\item{\code{latent.space.transform.coefs}}{The transform that maps PCs to the final basis vector form s.t. the PCs are conditionally de-correlated given their descendants (i.e., the network is optimized)}
+
 \item{\code{train.data}}{The initial training data}
 
 \item{\code{latent.data}}{The true data for the latent space (if provided)}
@@ -31,15 +35,15 @@ NetRes NetRes class definition
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-new}{\code{NetRes$new()}}
-\item \href{#method-assess}{\code{NetRes$assess()}}
-\item \href{#method-plot}{\code{NetRes$plot()}}
-\item \href{#method-clone}{\code{NetRes$clone()}}
+\item \href{#method-NetRes-new}{\code{NetRes$new()}}
+\item \href{#method-NetRes-assess}{\code{NetRes$assess()}}
+\item \href{#method-NetRes-plot}{\code{NetRes$plot()}}
+\item \href{#method-NetRes-clone}{\code{NetRes$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-NetRes-new"></a>}}
+\if{latex}{\out{\hypertarget{method-NetRes-new}{}}}
 \subsection{Method \code{new()}}{
 Constructor that fits a NetRes object from a data fram
 \subsection{Usage}{
@@ -54,7 +58,8 @@ Constructor that fits a NetRes object from a data fram
   mode = NULL,
   weightedResiduals = FALSE,
   scale = FALSE,
-  debug = FALSE
+  debug = FALSE,
+  latentSpaceParentOnly = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -73,6 +78,8 @@ Constructor that fits a NetRes object from a data fram
 
 \item{\code{lvPrefix}}{Prefix of variables to be treated as latent (if any).  If not present, defautls to "U\\_".  If no latent vars found, 
 no performance assessment of latent discovery will (or indeed can) be made, but whatever latent space is discovered will be duly reported}
+
+\item{\code{latentSpaceParentOnly}}{If true (default), latent space variables can only be parents, never children                    #'}
 }
 \if{html}{\out{</div>}}
 }
@@ -81,8 +88,8 @@ A NetRes object
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-assess"></a>}}
-\if{latex}{\out{\hypertarget{method-assess}{}}}
+\if{html}{\out{<a id="method-NetRes-assess"></a>}}
+\if{latex}{\out{\hypertarget{method-NetRes-assess}{}}}
 \subsection{Method \code{assess()}}{
 assess Assess the inferred ensemble against the true graph
 \subsection{Usage}{
@@ -100,8 +107,8 @@ assess Assess the inferred ensemble against the true graph
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-plot"></a>}}
-\if{latex}{\out{\hypertarget{method-plot}{}}}
+\if{html}{\out{<a id="method-NetRes-plot"></a>}}
+\if{latex}{\out{\hypertarget{method-NetRes-plot}{}}}
 \subsection{Method \code{plot()}}{
 plot The function to plot (some) networks in the ensemble
 \subsection{Usage}{
@@ -119,8 +126,8 @@ plot The function to plot (some) networks in the ensemble
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-NetRes-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-NetRes-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

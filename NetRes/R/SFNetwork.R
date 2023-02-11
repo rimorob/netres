@@ -20,14 +20,15 @@ SFNetwork <- R6Class("SFNetwork",
                        #' @param topology power/star
                        #' @param numNeighbors number of neighbors of each vertex, on average (i.e., node denisty, default=4)
                        #' @param nParentOnly how many nodes to make parent-only hubs by removing their high order but low out-degree parents (default=4)
+                       #' @param addOneEdge whether to add a single edge not involving a latent variable to star or twin-star topologies (helps with AUC calculation; default=TRUE)
                        #' @return A `SFNetwork` object
-                       initialize = function(numVertices = 20, topology='power', numNeighbors = 4, nParentOnly = 4) {
+                       initialize = function(numVertices = 20, topology='power', numNeighbors = 4, nParentOnly = 4, addOneEdge=TRUE) {
                          if (topology == 'power') {
                            res = private$makePowerDag(numVertices = numVertices, numNeighbors = numNeighbors, nParentOnly = nParentOnly)
                          } else if (topology == 'twin.star') {
                            res = private$makeTwinStarDag(numVertices = numVertices)                                                      
                          } else {
-                           res = private$makeStarDag(numVertices = numVertices)                           
+                           res = private$makeStarDag(numVertices = numVertices, addOneEdge = addOneEdge)                           
                          }
                          return(res)
                        },
@@ -78,7 +79,7 @@ SFNetwork <- R6Class("SFNetwork",
                      ), 
                      private = list(
                        ##used for debugging                       
-                       makeStarDag = function(numVertices = 20) {
+                       makeStarDag = function(numVertices = 20, addOneEdge = TRUE) {
                          ##start with an empty DAG
                          dag = empty.graph(paste('v', as.character(1:numVertices), sep=''))
                          
@@ -87,6 +88,10 @@ SFNetwork <- R6Class("SFNetwork",
                            from = paste('v', numVertices, sep='')
                            to = paste('v', vi, sep='')                           
                            dag = set.arc(dag, from, to, check.cycles = TRUE, check.illegal = TRUE, debug = FALSE)
+                         }
+                         if (addOneEdge) { #add a "hack" - an edge from vertex 1 to vertex 2 - so that the assess() function in NetRes doesn't crash
+                           dag = set.arc(dag, from='v1', 
+                                         to = 'v2' , check.cycles = TRUE, check.illegal = TRUE, debug = FALSE)
                          }
                          
                          ##and topologically sort it
@@ -114,7 +119,7 @@ SFNetwork <- R6Class("SFNetwork",
                          self$vRank = names(sorted)
                          self$outDegree = outDegree
                        },
-                       makeTwinStarDag = function(numVertices = 20) {
+                       makeTwinStarDag = function(numVertices = 20, addOneEdge = TRUE) {
                          ##start with an empty DAG
                          dag = empty.graph(paste('v', as.character(1:numVertices), sep=''))
                          
@@ -133,6 +138,10 @@ SFNetwork <- R6Class("SFNetwork",
                              from = paste('v', numVertices - 1, sep='')
                              dag = set.arc(dag, from, to, check.cycles = TRUE, check.illegal = TRUE, debug = FALSE)                                                        
                            }
+                         }
+                         if (addOneEdge) { #add a "hack" - an edge from vertex 1 to vertex 2 - so that the assess() function in NetRes doesn't crash
+                           dag = set.arc(dag, from='v1', 
+                                         to = 'v2' , check.cycles = TRUE, check.illegal = TRUE, debug = FALSE)
                          }
                          
                          ##and topologically sort it

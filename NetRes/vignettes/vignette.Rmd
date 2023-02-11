@@ -12,11 +12,19 @@ vignette: >
 Example 1 - star topology network generation and inference
 
 ```{r setup, include = TRUE}
+pdf('Example1.pdf')
+set.seed(42)
+con <- file("test.log")
+sink(con, append=TRUE)
+sink(con, append=TRUE, type="message")
+
 library(NetRes)
 library(bnlearn)
 
+##FIX THIS USE CASE - IT RETURNS THE WRONG ENSEMBLES!!!
+
 ##demo script
-network = SFNetwork$new(numVertices=50, topology='star')
+network = SFNetwork$new(numVertices=50, topology='star', addOneEdge = TRUE)
 generated = network$generateData(numSamples = 100, latIdx = 1)
 print(network)
 plot(network)
@@ -25,13 +33,16 @@ bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = g
 tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 ##tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 
-netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 2, nBoot=100, algorithm='tabu', 
+netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 5, nBoot=100, algorithm='tabu', 
                        algorithm.args = tabuArgs, mode='foo') 
- ##netResObj$assess() #true network has 0 edges which causes crashes
+netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
 ##after inference
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
 bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
 ##plot(netResObj)
+sink()
+sink(type='message')
+dev.off()
 rm(netResObj)
 
 ```
@@ -51,8 +62,8 @@ library(NetRes)
 library(bnlearn)
 
 ##demo script
-network = SFNetwork$new(numVertices=100, topology='twin.star')
-generated = network$generateData(numSamples = 500, latIdx = c(1, 2))
+network = SFNetwork$new(numVertices=400, topology='twin.star')
+generated = network$generateData(numSamples = 300, latIdx = c(1, 2)) #used to be 500
 print(network)
 plot(network)
 bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
@@ -62,13 +73,13 @@ tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge',
 
 netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 5, nBoot=100, algorithm='tabu', 
                        algorithm.args = tabuArgs, mode='foo') 
- ##netResObj$assess() #true network has 0 edges which causes crashes
+netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
 ##after inference
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
 bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
 save.image(file='example2.RData')
-##plot(netResObj)
-rm(netResObj)
+plot(netResObj)
+##rm(netResObj)
 sink()
 sink(type='message')
 dev.off()
@@ -78,6 +89,12 @@ dev.off()
 
 Example 3 - scale-free network generation and inference
 ```{r, include=TRUE}
+pdf('Example3.pdf')
+set.seed(42)
+con <- file("test.log")
+sink(con, append=TRUE)
+sink(con, append=TRUE, type="message")
+
 library(NetRes)
 library(bnlearn)
 
@@ -93,8 +110,13 @@ algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', 
 netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 4, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE) 
 save.image(file='PostOptim.RData')
 netResObj$assess()
-bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
+bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
+
 ##plot(netResObj)
-rm(netResObj)
+##rm(netResObj)
+
+sink()
+sink(type='message')
+dev.off()
 ```

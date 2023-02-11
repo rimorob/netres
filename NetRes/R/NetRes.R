@@ -1,7 +1,8 @@
 #' @title NetRes NetRes class definition
 #' @import R6 dplyr PCAtools
 #' @importFrom bnlearn as.bn as.igraph parents drop.arc as.graphNEL bn.boot nodes remove.node bn.fit
-#' @importFrom parallel makeCluster stopCluster detectCores parLapply parSapply
+#' @importFrom parallel makeCluster stopCluster detectCores parLapply parSapply 
+#' @importFrom doParallel registerDoParallel
 #' @importFrom BiocSingular IrlbaParam
 #' @importFrom corrplot corrplot
 #' @importFrom paran paran
@@ -35,10 +36,12 @@ NetRes <- R6Class("NetRes",
                     #' @param algorithm.args Arguments to the algorithm (must be a list)
                     #' @param lvPrefix Prefix of variables to be treated as latent (if any).  If not present, defautls to "U\\_".  If no latent vars found, 
                     #' no performance assessment of latent discovery will (or indeed can) be made, but whatever latent space is discovered will be duly reported
+                    #' @param latentSpaceParentOnly If true (default), latent space variables can only be parents, never children                    #' 
                     #' @return A NetRes object
                     initialize = function(dframe, true.graph = NULL, nIter, nBoot=50, algorithm='tabu', algorithm.args, 
                                           lvPrefix = "^U\\_", mode=NULL,
-                                          weightedResiduals = FALSE, scale=FALSE, debug=FALSE) {
+                                          weightedResiduals = FALSE, scale=FALSE, debug=FALSE,
+                                          latentSpaceParentOnly = TRUE) {
                       if(debug)
                         browser()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
@@ -53,6 +56,7 @@ NetRes <- R6Class("NetRes",
                       }
                       stopifnot(is.list(algorithm.args))
                       nCores = detectCores() - 1
+                      
                       for (ni in 1:nIter) {
                         if(debug){
                           message("In interation ", ni)
@@ -60,14 +64,18 @@ NetRes <- R6Class("NetRes",
                         }                      
                         ##cluster creation moved inside the loop in order to help clean up what seems like a memory leak in cluster creation
                         cluster = makeCluster(nCores)
+                        registerDoParallel(cluster)
+                        setDefaultCluster(cl=cluster)
                         clusterEvalQ(cluster, library(bnlearn))
 
                         curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix, 
-                                                         weightedResiduals, scale=scale, optimizeLatentSpace=ifelse(ni == 1, FALSE, TRUE))
+                                                         weightedResiduals, scale=scale, optimizeLatentSpace=ifelse(ni == 1, FALSE, TRUE),
+                                                         latentSpaceParentOnly=latentSpaceParentOnly)
                         self$ensemble[[ni]] = curRes$ensemble
                         self$latent.space[[ni]] = curRes$latent.space                        
-                        self$latent.space.transform[[ni]] = curRes$latent.space.transform
-                        self$latent.space.transform.coefs[[ni]] = curRes$latent.space.transform.coefs
+                        ##self$latent.space.transform[[ni]] = curRes$latent.space.transform
+                        ##self$latent.space.transform.coefs[[ni]] = curRes$latent.space.transform.coefs
+                        print(paste('ni:', ni))
                         self$BIC[[ni]] = curRes$BIC #for PREVIOUS latent space - this one hasn't been evaluated yet - that's in the next iteration!
 
                         if (ni > 1 && self$BIC[[ni]] <= self$BIC[[ni-1]]) {
@@ -75,9 +83,13 @@ NetRes <- R6Class("NetRes",
                           ##note that the latent space being tested is the one from the *previous* iteration (not the one being generated - that's a proposal for the next iteration)
                           ##so, at convergence, remove the final latent space
                           warning('Stopping early due to convergence')
-                          browser('Debug')
                           ni = nIter
                         }
+
+                        if (ni == 1) { #then skip to the next iteration
+                          next
+                        }                        
+                        
                         if (is.null(mode) || mode != 'oracular') {
                           train = cbind(self$train.data, curRes$latent.space$v)
                         } else {
@@ -88,6 +100,9 @@ NetRes <- R6Class("NetRes",
                         print('pausing to admire the corrplot')
                         Sys.sleep(5)
                         stopCluster(cluster)
+                      }
+                      if (ni == nIter) {
+                        print('Maximum number of iterations reached - stopping')
                       }
 
                     },
@@ -101,24 +116,26 @@ NetRes <- R6Class("NetRes",
                       
                       nCores = detectCores() - 2
                       cluster = makeCluster(nCores)
+                      registerDoParallel(cluster)                      
                       ##excise the latent space from the true graph
                       true.graph = private$exciseLatVarsFromEnsemble(list(true.graph), cluster, lvPrefix)[[1]]
                       
                       aucs = c()
                       prAucs = c()
                       ##test performance at every iteration
-                      for (ni in 1:length(self$ensemble)) {
+                      for (ni in 1:length(self$ensemble)) { 
+                        print(paste('step', ni))
                         curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
-                        curStrength = custom.strength(curEnsemble, bnlearn::nodes(true.graph))  
+                        curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))  
                         pred = as.prediction(curStrength, true.graph)
                         perf = ROCR::performance(pred, "tpr", "fpr")
                         auc = round(ROCR::performance(pred, "auc")@y.values[[1]], 2)
                         plot(perf, main = paste("AUC:", auc), colorize=TRUE)
                         aucpr = round(ROCR::performance(pred, "aucpr")@y.values[[1]], 2)                        
                         perf = ROCR::performance(pred, "prec", "sens")
-                        plot(perf, main = paste("PR-AUC:", aucpr), colorize=TRUE)     
-                        aucs[ni] = auc
-                        prAucs[ni] = aucpr
+                        plot(perf, main = paste("PR-AUC:", aucpr), colorize=TRUE)    
+                        aucs[[ni]] = auc
+                        prAucs[[ni]] = aucpr
                       }
                       plot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')
                       plot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC')                      
@@ -146,8 +163,6 @@ NetRes <- R6Class("NetRes",
                   private = list(
                     # @description A utility function to create a blacklist from a data frame so that no variable drives a latent variable
                     makeBlacklist = function(dframe, lvPrefix = "^U\\_") {
-                      print('BLACKLIST TURNED OFF!!!  fix!!!!')
-                      return(NULL) 
                       latVars = grep(lvPrefix, colnames(dframe), value=T)
                       nonLatVars = setdiff(colnames(dframe), latVars)
                       blacklist = data.frame(from=NULL, to=NULL)
@@ -173,9 +188,10 @@ NetRes <- R6Class("NetRes",
                     # @param algorithm.args The list of arguments to the algorithm, as in bnlearn
                     # @param cluster The cluster object, as returned by makeCluster from package "parallel"
                     # @param lvPrefix The latent variable prefix (default = "U_"; use perl regexp)
+                    # @param latentSpaceParentOnly If true (default), latent space variables can only be parents, never children
                     # @return TBD
                     runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_", 
-                                                weightedResiduals=FALSE, scale=FALSE, optimizeLatentSpace=FALSE) {
+                                                weightedResiduals=FALSE, scale=FALSE, optimizeLatentSpace=FALSE, latentSpaceParentOnly=TRUE) {
                       dud = function(x) x
                       
                       new.algorithm.args = algorithm.args
@@ -185,6 +201,12 @@ NetRes <- R6Class("NetRes",
                       ensBIC =  mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
                         score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, log=F)
                       }, dframe, new.algorithm.args))
+                      
+                      if (!optimizeLatentSpace) { #then return the ensemble-specific BIC (w/o latent space learning)
+                        return(list(ensemble=ens,
+                                    latent.space = NULL,
+                                    BIC = ensBIC))
+                      }
                       
                       netWeights = private$calcBayesFactors(ens, dframe, cluster, algorithm.args)
                       ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)
@@ -237,7 +259,8 @@ NetRes <- R6Class("NetRes",
                       ##also note that nBoot overrides the function default unless otherwise specified -
                       ##this is done because optimization over a grid doesn't require oversampling and therefore
                       ##we want to cash in on a speedup by using a smaller ensemble size
-                      latVarLinComb = function(coefs, latVars, maximize=TRUE, nBoot=detectCores() - 2, returnEnsemble = FALSE) {
+                      latVarLinComb = function(coefs, latVars, algorithm, algorithm.args, lvPrefix, dframe, cluster,
+                                               maximize=TRUE, nBoot=detectCores() - 2, returnEnsemble = FALSE) {
                         print(paste('nBoot inside function:', nBoot))
                         newLatVars = mappedLatVars(coefs, latVars)
 
@@ -249,27 +272,29 @@ NetRes <- R6Class("NetRes",
                           newDframe = dframe
                         }
                         newDframe = cbind(newDframe, newLatVars)
-                        
+
                         ##update the blacklist for new variable names
                         new.algorithm.args = algorithm.args                        
                         new.algorithm.args$blacklist = rbind(algorithm.args$blacklist,
                                                              private$makeBlacklist(newDframe, lvPrefix)) 
                         ##add the new latent space back
-                        newEns = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
-                        newBIC = mean(parSapply(cluster, newEns, function(net, data, algorithm.args) {
-                          score(net, data, type = new.algorithm.args$score, prior = new.algorithm.args$prior, log=F)
-                        }, newDframe, new.algorithm.args))
-                        print(Sys.time())
-                        print('debug:')
-                        print(coefs)
-                        print(newBIC)
-                        print('correlation structure BEFORE optimization:')
-                        print(cor(cbind(self$latent.data, latVars)))
-                        print('correlation structure AFTER optimization:')                        
-                        print(cor(cbind(self$latent.data, newLatVars)))
-                        print('---')
-                        newBIC = ifelse(maximize, newBIC, -newBIC)
+                        if (returnEnsemble) { # then run a bootstrap with the new lat vars
+                          ##newEns = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
+                          newEns = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
+                          
+                          ##newBIC = mean(parSapply(cluster, newEns, function(net, data, algorithm.args) {
+                          newBIC = mean(sapply(newEns, function(net, data, algorithm.args) {
+                            score(net, data, type = new.algorithm.args$score, prior = new.algorithm.args$prior)
+                          }, newDframe, new.algorithm.args))
+                        } else { #calculate a single network to be used as part of GA optimization
+                          ##learn the network structure once rather than via a bootstrap
+                          net = do.call(algorithm, c(list(x = newDframe), new.algorithm.args))
+                          newBIC = score(net, newDframe, type = new.algorithm.args$score, prior = new.algorithm.args$prior)
+                          newEns = list(net)
+                        }
 
+                        newBIC = ifelse(maximize, newBIC, -newBIC)
+                        
                         if (returnEnsemble) {
                             return(list(BIC = newBIC, ens = newEns, mappedLVs = newLatVars))
                         } else {
@@ -279,12 +304,19 @@ NetRes <- R6Class("NetRes",
                       print('optimizing the basis vector of the latent space')
                       if (ncol(latCoefs) > 1) {
                         startTime = Sys.time()
-                        optimRes = ga(type = 'real-valued', fitness=latVarLinComb, latvars$v, 
+                        optimRes = ga(type = 'real-valued', fitness=latVarLinComb, latVars = latvars$v, 
+                                      algorithm = algorithm,
+                                      algorithm.args = algorithm.args,
+                                      lvPrefix = lvPrefix,
+                                      dframe = dframe,
+                                      cluster = cluster,
+                                      nBoot = 1, #"fast" regime
                                       lower = rep(-10, length(as.numeric(latCoefs))),
                                       upper = rep(10, length(as.numeric(latCoefs))),
                                       run = 10, ##increase this eventually, or leave at default (maxiter)
                                       monitor=plot,
-                                      popSize = 100 #and elitism defaults to 5 winners
+                                      parallel = cluster,
+                                      popSize = 50 #and elitism defaults to 5 winners
                         )
                         print(Sys.time() - startTime)
                         mappedLVs = mappedLatVars(optimRes@solution, latvars$v)
@@ -297,14 +329,30 @@ NetRes <- R6Class("NetRes",
                         print(cor(cbind(self$latent.data, latvars$v)))
                         
                         ##latvars$v = mappedLVs
-                        remappedRes = latVarLinComb(optimRes@solution, latvars$v, returnEnsemble = TRUE)
+                        remappedRes = latVarLinComb(optimRes@solution, latvars$v, algorithm = algorithm,
+                                                    algorithm.args = algorithm.args,
+                                                    lvPrefix = lvPrefix,
+                                                    dframe = dframe,
+                                                    cluster = cluster,
+                                                    nBoot = nBoot, #for recalculating the ensemble
+                                                    returnEnsemble = TRUE)
                         latvars$v = remappedRes$mappedLVs
-                        browser() 
-                        return(list(ensemble=remappedRes$newEns, 
+
+                        print(Sys.time())
+                        print('debug:')
+                        print(coefs)
+                        print(remappedRes$newBIC)
+                        print('correlation structure BEFORE optimization:')
+                        print(cor(cbind(self$latent.data, latvars$v)))
+                        print('correlation structure AFTER optimization:')                        
+                        print(cor(cbind(self$latent.data, remappedRes$mappedLVs)))
+                        print('---')
+                        
+                        return(list(ensemble=remappedRes$ens, 
                                     latent.space = latvars, 
                                     ##latent.space.transform = mappedLatVars,
                                     ##latent.space.transform.coefs = optimRes@solution,
-                                    BIC = remappedRes$newBIC))                        
+                                    BIC = remappedRes$BIC))                        
                       } else if (0) {
                         optimRes2 = GenSA(par=NULL, fn=latVarLinComb, 
                                           lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
@@ -319,7 +367,7 @@ NetRes <- R6Class("NetRes",
                       } 
 
 
-                      return(list(ensemble=ens,
+                      return(list(ensemble=ens2,
                                   latent.space = latvars, 
                                   ##latent.space.transform = mappedLatVars,
                                   ##latent.space.transform.coefs = optimRes@solution,
@@ -441,7 +489,7 @@ NetRes <- R6Class("NetRes",
                           vars = bnlearn::nodes(net)
                           latVars = grep(lvPrefix, vars, perl=TRUE, value=TRUE)
                           for (lv in latVars) {
-                            net = remove.node(net, lv)
+                            net = bnlearn::remove.node(net, lv)
                           }
                           return(net)
                         })
