@@ -24,7 +24,7 @@ library(bnlearn)
 ##FIX THIS USE CASE - IT RETURNS THE WRONG ENSEMBLES!!!
 
 ##demo script
-network = SFNetwork$new(numVertices=50, topology='star', addOneEdge = TRUE)
+network = SFNetwork$new(numVertices=50, topology='star', addOneEdge = FALSE)
 generated = network$generateData(numSamples = 100, latIdx = 1)
 print(network)
 plot(network)
@@ -33,13 +33,14 @@ bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = g
 tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 ##tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 
-netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 5, nBoot=100, algorithm='tabu', 
-                       algorithm.args = tabuArgs, mode='foo') 
-netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
+netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', 
+                       algorithm.args = tabuArgs, mode='foo', latentSpaceMethod='sparsepca') 
+##netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
 ##after inference
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
 bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
 ##plot(netResObj)
+##    score(net, data, type = algorithm.args$score, prior = algorithm.args$prior)
 sink()
 sink(type='message')
 dev.off()
@@ -62,7 +63,7 @@ library(NetRes)
 library(bnlearn)
 
 ##demo script
-network = SFNetwork$new(numVertices=400, topology='twin.star')
+network = SFNetwork$new(numVertices=200, topology='twin.star', addOneEdge=FALSE)
 generated = network$generateData(numSamples = 300, latIdx = c(1, 2)) #used to be 500
 print(network)
 plot(network)
@@ -71,9 +72,10 @@ bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = g
 tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 ##tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 
-netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 5, nBoot=100, algorithm='tabu', 
-                       algorithm.args = tabuArgs, mode='foo') 
-netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
+netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', 
+                       algorithm.args = tabuArgs, mode='foo',
+                       latentSpaceMethod='sparsepca') 
+##netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
 ##after inference
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
 bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
@@ -99,15 +101,15 @@ library(NetRes)
 library(bnlearn)
 
 ##demo script
-network = SFNetwork$new(numVertices=200)
-generated = network$generateData(numSamples=300, extraGaussianNoiseFraction=0.1)
+network = SFNetwork$new(numVertices=300, numNeighbors = 8)
+generated = network$generateData(numSamples=1000, latIdx = c(1, 2))
 print(network)
 plot(network)
 bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
 
-algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=2)
+algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
 
-netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 4, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE) 
+netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 20, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='sparsepca') 
 save.image(file='PostOptim.RData')
 netResObj$assess()
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')

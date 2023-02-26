@@ -32,7 +32,7 @@ NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scal
   } else if (method == 'autoencoder') {
     stop('Autoencoder is not ported to the new code version yet')  
   }
-  
+
   ##The methods above return a common output list with three fields; format it as a common R6 object
   LatentResult = R6Class('LatentResult',
                          public=list(
@@ -72,7 +72,10 @@ NetRes$set("private", "calculateLatVarsPCA", function(residuals, resPpca, scale=
 NetRes$set("private", "calculateLatVarsSparsePCA", function(residuals, resPpca, scale=F, algorithm.args=NULL) {
   ##resPc = prcomp(residuals, rank=resPpca$n, scale=scale)
   resPc = rspca(residuals, k=resPpca$n, scale=scale)
-  
+
+  scores = resPc$scores
+  colnames(scores) = paste('PC', 1:ncol(scores), sep='')
+  resPc$scores = scores
   return(list(nLatVars = resPpca$n, 
               latVars = resPc$scores,
               lvPredictor = resPc))

@@ -93,7 +93,10 @@ plots the DAG
   doPlot = FALSE,
   errDist = "normal",
   latIdx = c(2, 3),
-  extraGaussianNoiseFraction = NULL
+  rescaleNoiseBy = function(mu = 1, sigma = 0.15, alpha = -5) {
+    
+    return(rskew_normal(1, mu, sigma, alpha))
+ }
 )}\if{html}{\out{</div>}}
 }
 
@@ -107,6 +110,8 @@ plots the DAG
 \item{\code{errDist}}{error distribution of data generated for the network, as in rmvDAG}
 
 \item{\code{latIdx}}{indices of hubs (in decreasing order) to make latent; by default 2nd and 3rd largest.  These will be prefixed with "U_" (unobserved).  If none, set to NULL}
+
+\item{\code{rescaleNoiseBy}}{If a positive number, scales sd from default parameter for all variables by a constant; default behavior is scale everything through a left-skewed gaussian to generate several proxy variables for latent space; if NULL, no rescaling}
 }
 \if{html}{\out{</div>}}
 }

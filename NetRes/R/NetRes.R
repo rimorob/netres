@@ -8,6 +8,8 @@
 #' @importFrom paran paran
 #' @importFrom GA ga
 #' @importFrom GenSA GenSA
+#' @import sparsepca
+#' 
 ##An R6 class for a generated scale-free network
 #' @export
 NetRes <- R6Class("NetRes", 
@@ -41,7 +43,8 @@ NetRes <- R6Class("NetRes",
                     initialize = function(dframe, true.graph = NULL, nIter, nBoot=50, algorithm='tabu', algorithm.args, 
                                           lvPrefix = "^U\\_", mode=NULL,
                                           weightedResiduals = FALSE, scale=FALSE, debug=FALSE,
-                                          latentSpaceParentOnly = TRUE) {
+                                          latentSpaceParentOnly = TRUE,
+                                          latentSpaceMethod = 'pca') {
                       if(debug)
                         browser()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
@@ -70,20 +73,19 @@ NetRes <- R6Class("NetRes",
 
                         curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix, 
                                                          weightedResiduals, scale=scale, optimizeLatentSpace=ifelse(ni == 1, FALSE, TRUE),
-                                                         latentSpaceParentOnly=latentSpaceParentOnly)
+                                                         latentSpaceParentOnly=latentSpaceParentOnly,
+                                                         latentSpaceMethod = latentSpaceMethod)
                         self$ensemble[[ni]] = curRes$ensemble
                         self$latent.space[[ni]] = curRes$latent.space                        
                         ##self$latent.space.transform[[ni]] = curRes$latent.space.transform
                         ##self$latent.space.transform.coefs[[ni]] = curRes$latent.space.transform.coefs
                         print(paste('ni:', ni))
                         self$BIC[[ni]] = curRes$BIC #for PREVIOUS latent space - this one hasn't been evaluated yet - that's in the next iteration!
-
+                        print(paste('BIC history:', as.numeric(self$BIC)))
+                        
                         if (ni > 1 && self$BIC[[ni]] <= self$BIC[[ni-1]]) {
-                          print(as.numeric(self$BIC))
-                          ##note that the latent space being tested is the one from the *previous* iteration (not the one being generated - that's a proposal for the next iteration)
-                          ##so, at convergence, remove the final latent space
                           warning('Stopping early due to convergence')
-                          ni = nIter
+                          break  
                         }
 
                         if (ni == 1) { #then skip to the next iteration
@@ -191,16 +193,28 @@ NetRes <- R6Class("NetRes",
                     # @param latentSpaceParentOnly If true (default), latent space variables can only be parents, never children
                     # @return TBD
                     runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_", 
-                                                weightedResiduals=FALSE, scale=FALSE, optimizeLatentSpace=FALSE, latentSpaceParentOnly=TRUE) {
+                                                weightedResiduals=FALSE, scale=FALSE, optimizeLatentSpace=FALSE, 
+                                                latentSpaceParentOnly=TRUE, latentSpaceMethod = 'pca') {
                       dud = function(x) x
                       
                       new.algorithm.args = algorithm.args
                       new.algorithm.args$blacklist = rbind(algorithm.args$blacklist,
                                                        private$makeBlacklist(dframe, lvPrefix))
                       ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
-                      ensBIC =  mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
-                        score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, log=F)
+                      ##ensBIC =  mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
+                      ##  score(net, data, type = algorithm.args$score, prior = algorithm.args$prior)
+                      ##}, dframe, new.algorithm.args))
+                      ensBIC = mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
+                        ##note: latent space is regularized during Horn's PFA separately and is excluded from score computation
+                        scores = score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, by.node=TRUE)
+                        idx = grep(lvPrefix, names(scores))
+                        if (length(idx) > 0) {
+                          return(sum(scores[-idx]))
+                        } else {
+                          return(sum(scores))
+                        }
                       }, dframe, new.algorithm.args))
+                      
                       
                       if (!optimizeLatentSpace) { #then return the ensemble-specific BIC (w/o latent space learning)
                         return(list(ensemble=ens,
@@ -213,7 +227,7 @@ NetRes <- R6Class("NetRes",
                       res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
 
                       ##paran(res)
-                      latvars = private$calculateLatVars(res, method='pca', scale=scale, algorithm.args=new.algorithm.args) 
+                      latvars = private$calculateLatVars(res, method=latentSpaceMethod, scale=scale, algorithm.args=new.algorithm.args) 
 
                       ##debugging step
                       trueCoefs = NULL
@@ -265,12 +279,7 @@ NetRes <- R6Class("NetRes",
                         newLatVars = mappedLatVars(coefs, latVars)
 
                         ##drop the latent variables from the data frame
-                        latIdx = grep(lvPrefix, colnames(dframe))
-                        if (length(latIdx) > 0) {
-                          newDframe = dframe[, -latIdx]
-                        } else {
-                          newDframe = dframe
-                        }
+                        newDframe = private$exciseLatVarsFromDataFrame(dframe, lvPrefix = '^U\\_')
                         newDframe = cbind(newDframe, newLatVars)
 
                         ##update the blacklist for new variable names
@@ -282,14 +291,34 @@ NetRes <- R6Class("NetRes",
                           ##newEns = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
                           newEns = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
                           
-                          ##newBIC = mean(parSapply(cluster, newEns, function(net, data, algorithm.args) {
-                          newBIC = mean(sapply(newEns, function(net, data, algorithm.args) {
-                            score(net, data, type = new.algorithm.args$score, prior = new.algorithm.args$prior)
+                          ##newBIC = mean(sapply(newEns, function(net, data, algorithm.args) {
+                          ##  score(net, data, type = new.algorithm.args$score, prior = new.algorithm.args$prior)
+                          ##}, newDframe, new.algorithm.args))
+                          newBIC = mean(parSapply(cluster, newEns, function(net, data, algorithm.args) {
+                            ##note: latent space is regularized during Horn's PFA separately and is excluded from score computation
+                            scores = score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, by.node=TRUE)
+                            idx = grep(lvPrefix, names(scores))
+                            if (length(idx) > 0) {
+                              return(sum(scores[-idx]))
+                            } else {
+                              return(sum(scores))
+                            }
                           }, newDframe, new.algorithm.args))
+                          
                         } else { #calculate a single network to be used as part of GA optimization
                           ##learn the network structure once rather than via a bootstrap
                           net = do.call(algorithm, c(list(x = newDframe), new.algorithm.args))
-                          newBIC = score(net, newDframe, type = new.algorithm.args$score, prior = new.algorithm.args$prior)
+                          ##newBIC = score(net, newDframe, type = new.algorithm.args$score, prior = new.algorithm.args$prior)
+                            ##note: latent space is regularized during Horn's PFA separately and is excluded from score computation
+                          newBIC = {
+                            scores = score(net, newDframe, type = algorithm.args$score, prior = algorithm.args$prior, by.node=TRUE)
+                            idx = grep(lvPrefix, names(scores))
+                            if (length(idx) > 0) {
+                              sum(scores[-idx])
+                            } else {
+                              sum(scores)
+                            }}
+
                           newEns = list(net)
                         }
 
@@ -301,8 +330,9 @@ NetRes <- R6Class("NetRes",
                             return(newBIC)
                         }
                       }
-                      print('optimizing the basis vector of the latent space')
+
                       if (ncol(latCoefs) > 1) {
+                        print('optimizing the basis vector of the latent space')                        
                         startTime = Sys.time()
                         optimRes = ga(type = 'real-valued', fitness=latVarLinComb, latVars = latvars$v, 
                                       algorithm = algorithm,
@@ -316,7 +346,8 @@ NetRes <- R6Class("NetRes",
                                       run = 10, ##increase this eventually, or leave at default (maxiter)
                                       monitor=plot,
                                       parallel = cluster,
-                                      popSize = 50 #and elitism defaults to 5 winners
+                                      optim = FALSE, #use optim for local optimization
+                                      popSize = 500 #and elitism defaults to 5 winners
                         )
                         print(Sys.time() - startTime)
                         mappedLVs = mappedLatVars(optimRes@solution, latvars$v)
@@ -325,9 +356,6 @@ NetRes <- R6Class("NetRes",
                         ##FIX THE BELOW - CURRENTLY OVERRIDING LATVARS$V AND UNABLE TO PREDICT CORRECTLY OOS, NEED TO PASS ON THE MAPPING BASIS
                         ##FOR NOW, JUST RETURN THE CORRECT VECTOR OVER TRAINING DATA                          
 
-                        print(cor(cbind(self$latent.data, mappedLVs)))
-                        print(cor(cbind(self$latent.data, latvars$v)))
-                        
                         ##latvars$v = mappedLVs
                         remappedRes = latVarLinComb(optimRes@solution, latvars$v, algorithm = algorithm,
                                                     algorithm.args = algorithm.args,
@@ -336,7 +364,6 @@ NetRes <- R6Class("NetRes",
                                                     cluster = cluster,
                                                     nBoot = nBoot, #for recalculating the ensemble
                                                     returnEnsemble = TRUE)
-                        latvars$v = remappedRes$mappedLVs
 
                         print(Sys.time())
                         print('debug:')
@@ -348,30 +375,36 @@ NetRes <- R6Class("NetRes",
                         print(cor(cbind(self$latent.data, remappedRes$mappedLVs)))
                         print('---')
                         
-                        return(list(ensemble=remappedRes$ens, 
-                                    latent.space = latvars, 
-                                    ##latent.space.transform = mappedLatVars,
-                                    ##latent.space.transform.coefs = optimRes@solution,
-                                    BIC = remappedRes$BIC))                        
-                      } else if (0) {
-                        optimRes2 = GenSA(par=NULL, fn=latVarLinComb, 
-                                          lower = rep(0.1, length(as.numeric(latCoefs))), upper = rep(10, length(as.numeric(latCoefs))),
-                                          control=list(verbose=T), 
-                                          latVars = latvars$v,
-                                          maximize = FALSE)
-                        
-                        print('DeBug')
-                        browser()
-                        mappedLVs = mappedLatVars(optimRes$par, latvars$v)                          
-                        ensBIC = optimRes$value
-                      } 
-
-
-                      return(list(ensemble=ens2,
+                        latvars$v = remappedRes$mappedLVs #hack for now - eventually don't overwrite the original latent space basis
+                        ens = remappedRes$ens
+                        ensBIC = remappedRes$BIC
+                      } else { #recalculate the network with the identified latent space
+                        newDframe = private$exciseLatVarsFromDataFrame(dframe, lvPrefix = '^U\\_')
+                        newDframe = cbind(newDframe, latvars$v)                        
+                        new.algorithm.args = algorithm.args                        
+                        new.algorithm.args$blacklist = rbind(algorithm.args$blacklist,
+                                                             private$makeBlacklist(newDframe, lvPrefix))                         
+                        ens = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
+                        #ensBIC =  mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
+                        #  score(net, data, type = algorithm.args$score, prior = algorithm.args$prior)
+                        #}, newDframe, new.algorithm.args))
+                        ensBIC = mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
+                            ##note: latent space is regularized during Horn's PFA separately and is excluded from score computation
+                            scores = score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, by.node=TRUE)
+                            idx = grep(lvPrefix, names(scores))
+                            if (length(idx) > 0) {
+                                return(sum(scores[-idx]))
+                            } else {
+                                return(sum(scores))
+                            }
+                        }, newDframe, new.algorithm.args))
+                      }
+                      
+                      return(list(ensemble=ens,
                                   latent.space = latvars, 
                                   ##latent.space.transform = mappedLatVars,
                                   ##latent.space.transform.coefs = optimRes@solution,
-                                  BIC = ensBIC))
+                                  BIC = ensBIC))                      
                     },
                     
                     ##
@@ -394,69 +427,7 @@ NetRes <- R6Class("NetRes",
                       scores = scores/sum(scores)
                       return(scores)  
                     },
-                    # @description The top-level function to calculate latent variables from residuals
-                    calculateLatVars = function(residuals, method='pca', scale=FALSE, algorithm.args=NULL) {
-                      if (method == 'pca') {
-                        latVars = private$calculateLatVarsPCA(residuals, scale=scale, algorithm.args=algorithm.args)  
-                      } else if (method == 'autoencoder') {
-                        stop('Autoencoder is not ported to the new code version yet')  
-                      }
 
-                      ##The methods above return a common output list with three fields; format it as a common R6 object
-                      LatentResult = R6Class('LatentResult',
-                                             public=list(
-                                               n = NULL,
-                                               v = NULL,
-                                               generator = NULL,
-                                               initialize = function(lvList) {
-                                                 self$n = lvList$nLatVars
-                                                 self$v = lvList$latVars
-                                                 colnames(self$v) = paste('U_', colnames(self$v), sep='')
-                                                 self$generator = lvList$lvPredictor
-                                               },
-                                               predict = function(newdata = NULL) {
-                                                 if (is.null(newdata)) {
-                                                   return(predict(self$generator))
-                                                 }
-                                                 return(predict(self$generator, newdata=newdata))
-                                               }
-                                             )
-                      )
-                      latRes = LatentResult$new(latVars)
-                      return(latRes)
-                    },
-                    # @description Calculate latent variables using linear PCA
-                    # residuals samples x vars matrix of residuals
-                    calculateLatVarsPCA = function(residuals, scale=F, algorithm.args=NULL) {
-                      if (is.null(algorithm.args)) {
-                        maxRank = ncol(residuals) - 1
-                      } else {
-                        maxRank = algorithm.args$max.rank
-                      }
-                      maxRank = min(round(ncol(residuals)*0.1), maxRank)
-                      print(paste('Maximum latent space rank set to', maxRank))
-                      ##how many PCs are we dealing with?  Use Horn's parallel analysis to find out
-                      resPpca = parallelPCA(
-                        as.matrix(residuals), #rows have to be variables, so transpose
-                        max.rank = maxRank,
-                        niters = 500,
-                        threshold = 0.05, #/ncol(residuals), #bonferroni-corrected p-vaoue cut-off
-                        transposed = TRUE, #variables in columns
-                        scale = scale,
-                        ##BSPARAM = IrlbaParam(),
-                        BPPARAM = BiocParallel::MulticoreParam()
-                      )
-                      
-                      if (resPpca$n == 0) {
-                        stop('Latent space not identified - aborting')
-                      }
-                      
-                      resPc = prcomp(residuals, rank=resPpca$n, scale=scale)
-
-                      return(list(nLatVars = resPpca$n, 
-                                  latVars = resPc$x,
-                                  lvPredictor = resPc))
-                    },
                     # @description The private helper function to calculate residuals for a given ensemble
                     calculateResiduals = function(ens, netWeights, weightedResiduals, cluster) {
                       residuals = parLapply(cluster, ens, function(net) {
@@ -494,6 +465,19 @@ NetRes <- R6Class("NetRes",
                           return(net)
                         })
                       return(ens)
+                    },
+                    # @description The private helper function to remove latent vars from a data frame
+                    # @param dframe data frame
+                    # @param lvPrefix The latent variable prefix (default = 'U_'; use perl regexp)
+                    # @return The data frame with the latent vars excised 
+                    exciseLatVarsFromDataFrame = function(dframe, lvPrefix = '^U\\_') {                    
+                      latIdx = grep(lvPrefix, colnames(dframe))
+                      if (length(latIdx) > 0) {
+                        newDframe = dframe[, -latIdx]
+                      } else {
+                        newDframe = dframe
+                      }
+                      return(newDframe)
                     }
                   )
 )

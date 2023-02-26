@@ -20,3 +20,7 @@ Imports:
   parallel,
   pcalg,
   paran
+Collate: 
+    'NetRes.R'
+    'LatSpace.R'
+    'SFNetwork.R'

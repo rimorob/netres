@@ -3,6 +3,7 @@
 #' @importFrom pcalg randDAG rmvDAG
 #' @importFrom igraph topo_sort ego_size V
 #' @importFrom bnlearn as.bn as.igraph parents drop.arc as.graphNEL graphviz.plot
+#' @importFrom brms rskew_normal
 
 ##An R6 class for generating a scale-free network and some associated data
 #' @export
@@ -26,7 +27,7 @@ SFNetwork <- R6Class("SFNetwork",
                          if (topology == 'power') {
                            res = private$makePowerDag(numVertices = numVertices, numNeighbors = numNeighbors, nParentOnly = nParentOnly)
                          } else if (topology == 'twin.star') {
-                           res = private$makeTwinStarDag(numVertices = numVertices)                                                      
+                           res = private$makeTwinStarDag(numVertices = numVertices, addOneEdge = addOneEdge)                                                      
                          } else {
                            res = private$makeStarDag(numVertices = numVertices, addOneEdge = addOneEdge)                           
                          }
@@ -51,28 +52,36 @@ SFNetwork <- R6Class("SFNetwork",
                        #' @param numSamples number of samples in the generated data frame (default = 1000)
                        #' @param errDist error distribution of data generated for the network, as in rmvDAG
                        #' @param latIdx indices of hubs (in decreasing order) to make latent; by default 2nd and 3rd largest.  These will be prefixed with "U_" (unobserved).  If none, set to NULL
+                       #' @param rescaleNoiseBy If a positive number, scales sd from default parameter for all variables by a constant; default behavior is scale everything through a left-skewed gaussian to generate several proxy variables for latent space; if NULL, no rescaling
                        generateData = function(numSamples = 1000,
                                                doPlot = FALSE,
                                                errDist = 'normal',
                                                latIdx = c(2, 3),
-                                               extraGaussianNoiseFraction=NULL) {
+                                               rescaleNoiseBy=function(mu=1, sigma=0.15, alpha=-5) {
+                                                 return(rskew_normal(1, mu, sigma, alpha))
+                                               }) {
                          ##recompute the rDAG
                          rDAG = as.graphNEL(self$dag)
                          dataMat <- rmvDAG(numSamples, rDAG, errDist = errDist)
-                         if (!is.null(extraGaussianNoiseFraction)) { #then add some noise per variable
-                           dataMat = as.matrix(sapply(as.data.frame(dataMat), function(x) {
-                             x = x + rnorm(length(x), 0, extraGaussianNoiseFraction * sd(x))
-                             return(x)
-                           }))
-                         }
                          
                          if (!is.null(latIdx)) {
                            latent = self$vRank[latIdx]
                            colIdx = match(latent, colnames(dataMat))
                            colnames(dataMat)[colIdx] = paste('U_', colnames(dataMat)[colIdx], sep = '')
-                           graph::nodes(rDAG) = colnames(dataMat)
                          }
-                         
+                         graph::nodes(rDAG) = colnames(dataMat)                                                  
+
+                         if (!is.null(rescaleNoiseBy)) { #then add some noise per variable
+                           scales = c()
+                           for (ci in 1:ncol(dataMat)) {
+                             scaleFactor = ifelse(ci %in% latIdx, 
+                                                  0.1, #add little noise to latent space
+                                                  max(0.1, rescaleNoiseBy()) #keep scale factor positive
+                             )
+                             scales[ci] = scaleFactor
+                             dataMat[, ci] = dataMat[, ci] + rnorm(nrow(dataMat), 0, scaleFactor * sd(dataMat[, ci]))
+                           }
+                         }
                          
                          return(list(data = as.data.frame(dataMat), graph = as.bn(rDAG)))
                        }
