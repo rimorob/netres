@@ -27,10 +27,14 @@ NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scal
   
   if (method == 'pca') {
     latVars = private$calculateLatVarsPCA(residuals, resPpca = resPpca, scale=scale, algorithm.args=algorithm.args)  
-  } else if (method == 'sparsepca') {
+  } else if (method == 'sparse.pca') {
     latVars = private$calculateLatVarsSparsePCA(residuals, resPpca = resPpca, scale=scale, algorithm.args=algorithm.args)  
+  } else if (method == 'robust.sparse.pca') {
+    latVars = private$calculateLatVarsRobustSparsePCA(residuals, resPpca = resPpca, scale=scale, algorithm.args=algorithm.args)  
   } else if (method == 'autoencoder') {
     stop('Autoencoder is not ported to the new code version yet')  
+  } else {
+    stop(paste('Method', method, 'for latent space analysis has not been implemented yet'))
   }
 
   ##The methods above return a common output list with three fields; format it as a common R6 object
@@ -67,7 +71,7 @@ NetRes$set("private", "calculateLatVarsPCA", function(residuals, resPpca, scale=
               lvPredictor = resPc))
 })
 
-# @description Calculate latent variables using linear PCA
+# @description Calculate latent variables using sparse PCA
 # residuals samples x vars matrix of residuals
 NetRes$set("private", "calculateLatVarsSparsePCA", function(residuals, resPpca, scale=F, algorithm.args=NULL) {
   ##resPc = prcomp(residuals, rank=resPpca$n, scale=scale)
@@ -80,3 +84,18 @@ NetRes$set("private", "calculateLatVarsSparsePCA", function(residuals, resPpca, 
               latVars = resPc$scores,
               lvPredictor = resPc))
 })
+
+# @description Calculate latent variables using sparse, robust PCA
+# residuals samples x vars matrix of residuals
+NetRes$set("private", "calculateLatVarsRobustSparsePCA", function(residuals, resPpca, scale=F, algorithm.args=NULL) {
+  ##resPc = prcomp(residuals, rank=resPpca$n, scale=scale)
+  resPc = robspca(residuals, k=resPpca$n, scale=scale)
+  
+  scores = resPc$scores
+  colnames(scores) = paste('PC', 1:ncol(scores), sep='')
+  resPc$scores = scores
+  return(list(nLatVars = resPpca$n, 
+              latVars = resPc$scores,
+              lvPredictor = resPc))
+})
+

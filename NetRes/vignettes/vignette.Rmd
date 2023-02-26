@@ -109,7 +109,7 @@ bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = g
 
 algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
 
-netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 20, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='sparsepca') 
+netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 20, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='robust.sparse.pca') 
 save.image(file='PostOptim.RData')
 netResObj$assess()
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
