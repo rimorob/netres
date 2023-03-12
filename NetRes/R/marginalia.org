@@ -14,7 +14,17 @@
 :END:
 here is where the performance of the estimated networks is calculated with respect to the true network.
 
-My questions is:
-- are  we comparing adjacenty matrix
-- edge list
+Currently using bnlearn::as.prediction to estimate the performance.
+this give incorrect result in general.
 
+
+** runOneIteration
+:PROPERTIES:
+:org-remark-beg: 12643
+:org-remark-end: 12658
+:org-remark-id: a14f0ca5
+:org-remark-label: nil
+:org-remark-link: [[file:NetRes.R::195]]
+:END:
+
+here is where bnlearn is run 

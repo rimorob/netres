@@ -1601,3 +1601,32 @@ netResObj_nolat = NetRes$new(tstdata,
 
 plotIgraph(as.igraph(netResObj_nolat$ensemble[[3]][[3]]),nodesep=0.001,fill=list("vlat.*"='orange',".*PC.*"='yellow'))
 #+end_src
+* Version [2023-03-11 Sat]
+:PROPERTIES:
+:header-args:R: :session *Rnet*
+:END:
+
+#+begin_src R
+library(tidyverse)
+library(igraph)
+library(bnlearn)
+source("/Users/fred/Documents/projects/gnsutils/gnsutils/R/networks.R")
+devtools::load_all("./NetRes")
+
+insurancenet=readRDS("/Users/fred/Documents/gitRepos/general-functions/org/bnlearn/insurance.rds")
+
+insurance_ig=as.igraph(insurancenet)
+
+
+insurance_ig=addConfounderIgraph(insurance_ig,prob=0.8,ucoef=2)
+ppPlotIgraph(insurance_ig,nodesep=0.01)
+
+insurance_simc=igraph2simcausal(insurance_ig)
+
+insurance_simc_set=set.DAG(insurance_simc)
+data_insurance=sim(insurance_simc_set,n=400)
+
+algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
+
+netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 20, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='sparsepca') 
+#+end_src
