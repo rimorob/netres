@@ -28,3 +28,13 @@ this give incorrect result in general.
 :END:
 
 here is where bnlearn is run 
+
+** initialize
+:PROPERTIES:
+:org-remark-beg: 2874
+:org-remark-end: 2884
+:org-remark-id: 82bd7afb
+:org-remark-label: nil
+:org-remark-link: [[file:NetRes.R::43]]
+:END:
+this is the constructor
