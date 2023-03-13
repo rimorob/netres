@@ -60,7 +60,8 @@ Constructor that fits a NetRes object from a data fram
   scale = FALSE,
   debug = FALSE,
   latentSpaceParentOnly = TRUE,
-  latentSpaceMethod = "pca"
+  latentSpaceMethod = "pca",
+  optimizeLatentSpace = FALSE
 )}\if{html}{\out{</div>}}
 }
 

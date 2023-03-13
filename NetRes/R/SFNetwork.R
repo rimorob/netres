@@ -180,7 +180,8 @@ SFNetwork <- R6Class("SFNetwork",
                        },                       
                        makePowerDag = function(numVertices = 20,  numNeighbors = 4, nParentOnly = 4) {
                          ## generate random DAG
-                         rDAG <- randDAG(n = numVertices, method = 'power', d = numNeighbors)
+                         ##rDAG <- randDAG(n = numVertices, method = 'power', d = numNeighbors)
+                         rDAG <- randDAG(n = numVertices, method = 'barabasi', d = numNeighbors)
                          
                          ##iGraph = as.igraph(as.bn(rDAG))
                          

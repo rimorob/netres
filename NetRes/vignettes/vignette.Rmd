@@ -12,16 +12,14 @@ vignette: >
 Example 1 - star topology network generation and inference
 
 ```{r setup, include = TRUE}
-pdf('Example1.pdf')
+##pdf('Example1.pdf')
 set.seed(42)
-con <- file("test.log")
-sink(con, append=TRUE)
-sink(con, append=TRUE, type="message")
+##con <- file("test.log")
+##sink(con, append=TRUE)
+##sink(con, append=TRUE, type="message")
 
 library(NetRes)
 library(bnlearn)
-
-##FIX THIS USE CASE - IT RETURNS THE WRONG ENSEMBLES!!!
 
 ##demo script
 network = SFNetwork$new(numVertices=50, topology='star', addOneEdge = FALSE)
@@ -34,17 +32,17 @@ tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge',
 ##tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 
 netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', 
-                       algorithm.args = tabuArgs, mode='foo', latentSpaceMethod='sparsepca') 
+                       algorithm.args = tabuArgs, mode='foo', latentSpaceMethod='sparse.pca') 
 ##netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
 ##after inference
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
 bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
 ##plot(netResObj)
 ##    score(net, data, type = algorithm.args$score, prior = algorithm.args$prior)
-sink()
-sink(type='message')
-dev.off()
-rm(netResObj)
+##sink()
+##sink(type='message')
+##dev.off()
+##rm(netResObj)
 
 ```
 
@@ -53,11 +51,12 @@ rm(netResObj)
 Example 2 - twin-star topology network generation and inference
 
 ```{r setup, include = TRUE}
-pdf('Example2.pdf')
+##pdf('Example2.pdf')
 set.seed(42)
-con <- file("test.log")
-sink(con, append=TRUE)
-sink(con, append=TRUE, type="message")
+
+##con <- file("test.log")
+##sink(con, append=TRUE)
+##sink(con, append=TRUE, type="message")
 
 library(NetRes)
 library(bnlearn)
@@ -74,7 +73,7 @@ tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge',
 
 netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', 
                        algorithm.args = tabuArgs, mode='foo',
-                       latentSpaceMethod='sparsepca') 
+                       latentSpaceMethod='sparse.pca') 
 ##netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
 ##after inference
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
@@ -82,38 +81,43 @@ bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = l
 save.image(file='example2.RData')
 plot(netResObj)
 ##rm(netResObj)
-sink()
-sink(type='message')
-dev.off()
+##sink()
+##sink(type='message')
+##dev.off()
 
 ```
 
-
-Example 3 - scale-free network generation and inference
+Example 3 - a tiny example of scale-free network generation and inference
 ```{r, include=TRUE}
 pdf('Example3.pdf')
-set.seed(42)
 con <- file("test.log")
 sink(con, append=TRUE)
 sink(con, append=TRUE, type="message")
 
+set.seed(42)
+
+print('Example 3')
 library(NetRes)
 library(bnlearn)
 
 ##demo script
-network = SFNetwork$new(numVertices=300, numNeighbors = 8)
-generated = network$generateData(numSamples=1000, latIdx = c(1, 2))
+network = SFNetwork$new(numVertices=500, numNeighbors = 3)
+generated = network$generateData(numSamples=100, latIdx = c(1, 2, 3), rescaleNoiseBy=NULL)
 print(network)
-plot(network)
 bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
 
-algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
+##algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
+algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
 
-netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 20, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='robust.sparse.pca') 
-save.image(file='PostOptim.RData')
+netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='sparse.pca', optimizeLatentSpace=FALSE) 
+
 netResObj$assess()
+nIter = length(netResObj$ensemble)
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
-bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
+bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[nIter]][[1]]), value=T), col = "tomato", fill = "orange"))
+
+##ENSURE THAT ALL LATENT VARIABLES ARE SCALED PROPORTIONALLY RATHER THAN ALL TO 1 (IF THAT'S THE RIGHT THING - CHECK!!!!).  THIS WOULD BE AT THE END OF THE GA ITERATION.  NEXT THING, TRY ALLOWING GREATER MARGIN FOR VARIABLES WITH COEFFICIENTS NOT SET TO 1.
+##Add F1 measure to assess
 
 ##plot(netResObj)
 ##rm(netResObj)
@@ -121,4 +125,5 @@ bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = l
 sink()
 sink(type='message')
 dev.off()
+
 ```

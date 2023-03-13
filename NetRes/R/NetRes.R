@@ -44,7 +44,8 @@ NetRes <- R6Class("NetRes",
                                           lvPrefix = "^U\\_", mode=NULL,
                                           weightedResiduals = FALSE, scale=FALSE, debug=FALSE,
                                           latentSpaceParentOnly = TRUE,
-                                          latentSpaceMethod = 'pca') {
+                                          latentSpaceMethod = 'pca',
+                                          optimizeLatentSpace=FALSE) {
                       if(debug)
                         browser()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
@@ -72,7 +73,8 @@ NetRes <- R6Class("NetRes",
                         clusterEvalQ(cluster, library(bnlearn))
 
                         curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix, 
-                                                         weightedResiduals, scale=scale, optimizeLatentSpace=ifelse(ni == 1, FALSE, TRUE),
+                                                         weightedResiduals, scale=scale, optimizeLatentSpace=optimizeLatentSpace,
+                                                         learnLatentSpace = ifelse(ni == 1, FALSE, TRUE),
                                                          latentSpaceParentOnly=latentSpaceParentOnly,
                                                          latentSpaceMethod = latentSpaceMethod)
                         self$ensemble[[ni]] = curRes$ensemble
@@ -124,6 +126,7 @@ NetRes <- R6Class("NetRes",
                       
                       aucs = c()
                       prAucs = c()
+                      f1maxes = c()
                       ##test performance at every iteration
                       for (ni in 1:length(self$ensemble)) { 
                         print(paste('step', ni))
@@ -131,16 +134,21 @@ NetRes <- R6Class("NetRes",
                         curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))  
                         pred = as.prediction(curStrength, true.graph)
                         perf = ROCR::performance(pred, "tpr", "fpr")
-                        auc = round(ROCR::performance(pred, "auc")@y.values[[1]], 2)
+                        auc = round(ROCR::performance(pred, "auc")@y.values[[1]], 3)
                         plot(perf, main = paste("AUC:", auc), colorize=TRUE)
-                        aucpr = round(ROCR::performance(pred, "aucpr")@y.values[[1]], 2)                        
+                        aucpr = round(ROCR::performance(pred, "aucpr")@y.values[[1]], 3)                        
                         perf = ROCR::performance(pred, "prec", "sens")
                         plot(perf, main = paste("PR-AUC:", aucpr), colorize=TRUE)    
+                        perf = ROCR::performance(pred, 'f')
+                        plot(perf, main = paste('F1-AUC', mean(perf@y.values[[1]][-1])))
+                        f1max = round(max(perf@y.values[[1]][-1]), 3)
                         aucs[[ni]] = auc
                         prAucs[[ni]] = aucpr
+                        f1maxes[[ni]] = f1max
                       }
                       plot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')
                       plot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC')                      
+                      plot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')
                       stopCluster(cluster)
                     },
                     #' @description plot The function to plot (some) networks in the ensemble
@@ -191,9 +199,12 @@ NetRes <- R6Class("NetRes",
                     # @param cluster The cluster object, as returned by makeCluster from package "parallel"
                     # @param lvPrefix The latent variable prefix (default = "U_"; use perl regexp)
                     # @param latentSpaceParentOnly If true (default), latent space variables can only be parents, never children
+                    # @param learnLatentSpace If true (default), learn latent space, else return an ensemble without inferring latent space
+                    # @param optimizeLatentSpace If false (default), return first-pass estimate of the latent space without conditional BIC-based optimization (which is very slow)
                     # @return TBD
                     runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_", 
-                                                weightedResiduals=FALSE, scale=FALSE, optimizeLatentSpace=FALSE, 
+                                                weightedResiduals=FALSE, scale=FALSE, learnLatentSpace = TRUE,
+                                                optimizeLatentSpace=FALSE, 
                                                 latentSpaceParentOnly=TRUE, latentSpaceMethod = 'pca') {
                       dud = function(x) x
                       
@@ -215,15 +226,14 @@ NetRes <- R6Class("NetRes",
                         }
                       }, dframe, new.algorithm.args))
                       
-                      
-                      if (!optimizeLatentSpace) { #then return the ensemble-specific BIC (w/o latent space learning)
-                        return(list(ensemble=ens,
+                      netWeights = private$calcBayesFactors(ens, dframe, cluster, algorithm.args)
+                      ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)                      
+                      if (!learnLatentSpace) { #then return the ensemble-specific BIC (w/o latent space learning)
+                        return(list(ensemble=ens2,
                                     latent.space = NULL,
                                     BIC = ensBIC))
                       }
                       
-                      netWeights = private$calcBayesFactors(ens, dframe, cluster, algorithm.args)
-                      ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)
                       res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
 
                       ##paran(res)
@@ -329,9 +339,9 @@ NetRes <- R6Class("NetRes",
                         } else {
                             return(newBIC)
                         }
-                      }
+                     } 
 
-                      if (ncol(latCoefs) > 1) {
+                      if (ncol(latCoefs) > 1 && optimizeLatentSpace) { 
                         print('optimizing the basis vector of the latent space')                        
                         startTime = Sys.time()
                         optimRes = ga(type = 'real-valued', fitness=latVarLinComb, latVars = latvars$v, 
@@ -341,8 +351,8 @@ NetRes <- R6Class("NetRes",
                                       dframe = dframe,
                                       cluster = cluster,
                                       nBoot = 1, #"fast" regime
-                                      lower = rep(-10, length(as.numeric(latCoefs))),
-                                      upper = rep(10, length(as.numeric(latCoefs))),
+                                      lower = rep(-100, length(as.numeric(latCoefs))),
+                                      upper = rep(100, length(as.numeric(latCoefs))),
                                       run = 10, ##increase this eventually, or leave at default (maxiter)
                                       monitor=plot,
                                       parallel = cluster,
