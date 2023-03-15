@@ -31,6 +31,8 @@ NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scal
     latVars = private$calculateLatVarsSparsePCA(residuals, resPpca = resPpca, scale=scale, algorithm.args=algorithm.args)  
   } else if (method == 'robust.sparse.pca') {
     latVars = private$calculateLatVarsRobustSparsePCA(residuals, resPpca = resPpca, scale=scale, algorithm.args=algorithm.args)  
+  } else if (method == 'NNMF') {
+    latVars = private$calculateLatVarsNNMF(residuals, resPpca = resPpca, scale=scale, algorithm.args=algorithm.args)      
   } else if (method == 'autoencoder') {
     stop('Autoencoder is not ported to the new code version yet')  
   } else {
@@ -99,3 +101,20 @@ NetRes$set("private", "calculateLatVarsRobustSparsePCA", function(residuals, res
               lvPredictor = resPc))
 })
 
+# @description Calculate latent variables using NNMF
+# residuals samples x vars matrix of residuals
+NetRes$set("private", "calculateLatVarsNNMF", function(residuals, resPpca, scale=F, algorithm.args=NULL) {
+  ##no native scaling in NNMF, so scale the residuals matrix if needed
+  if (scale) {
+    residuals = scale(residuals)
+  }
+  resPc <- nnmf(as.matrix(residuals), k=resPpca$n)
+  
+  scores = resPc$W #left matrix is rows by eigenspace
+  ##call these PCs for compatibilty
+  colnames(scores) = paste('PC', 1:ncol(scores), sep='')
+  resPc$W = scores
+  return(list(nLatVars = resPpca$n, 
+              latVars = resPc$W,
+              lvPredictor = resPc))
+})
