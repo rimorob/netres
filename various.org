@@ -1611,7 +1611,8 @@ library(conflicted)
 library(tidyverse)
 library(igraph)
 library(bnlearn)
-source("~/gitRepos/gnsutils/gnsutils/R/networks.R")
+##source("~/gitRepos/gnsutils/gnsutils/R/networks.R")
+source("~/Documents/projects/gnsutils/gnsutils/R/networks.R")
 ##library(brms)
 rskew_normal=brms::rskew_normal
 
@@ -1619,7 +1620,8 @@ devtools::load_all("./NetRes")
 
 
 
-insurancenet=readRDS("~/gitRepos/general-functions/org/bnlearn/insurance.rds")
+##insurancenet=readRDS("~/gitRepos/general-functions/org/bnlearn/insurance.rds")
+insurancenet=readRDS("~/Documents/gitRepos/general-functions/org/bnlearn/insurance.rds")
 
 conflicts_prefer(bnlearn::as.igraph)
 insurance_ig=as.igraph(insurancenet)
@@ -1704,10 +1706,24 @@ auc.pr(compa_lat)
 
 ##
 
-netResObj = NetRes$new(data_insurance %>%
-                     select(-ID), true.graph = true.graph, nIter = 20, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='pca',lvPrefix="U") 
+netResObj = NetRes$new(
+                     data_insurance %>%
+                     select(-ID),
+                     true.graph = true.graph,
+                     nIter = 2,
+                     nBoot=30,
+                     algorithm='tabu',
+                     algorithm.args = algArgs,
+                     mode='normal',
+                     weightedResiduals=FALSE,
+                     scale=TRUE,
+                     latentSpaceMethod='pca',
+                     lvPrefix="U",
+                     nCores=4,
+                     BPPARAM=BiocParallel::SerialParam(),
+                     debug=F) 
 
-netResObj$assess()
+netResObj$assess(nCores=4,lvPrefix="U")
 #+end_src
 ** Questions
 - How does the performance compare to simply calculating the PCA on the data and taking the first PC as latent variable and forget about iterations
