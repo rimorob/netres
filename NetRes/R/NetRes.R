@@ -145,27 +145,31 @@ NetRes <- R6Class("NetRes",
                           print(paste('step', ni))
                           browser()
                           curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
-                        curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))
-                          curStrength=curStrength %>%
+                          curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))
+                          curStrengthdf=curStrength %>%
                               as.data.frame() %>%
                               mutate(freq=strength*direction)
-                          perf=network_performance(true.graph.ig,curStrength)
-                          
+                          perf=network_performance(true.graph.ig,curStrengthdf)
+                          sscurves = precrec::evalmod(scores = attributes(perf)$edges$Prob, labels = attributes(perf)$edges$True,mode='basic')
+                          aucpr=prcAUC(attributes(perf)$edges$True,attributes(perf)$edges$Prob)
+                          auc=rocAUC(attributes(perf)$edges$True,attributes(perf)$edges$Prob)
+                          pred=ROCR::prediction(attributes(perf)$edges$Prob,
+                                                attributes(perf)$edges$True)
                         ##pred = as.prediction(curStrength, true.graph)
                         ##perf = ROCR::performance(pred, "tpr", "fpr")
-                          ##auc = round(ROCR::performance(pred, "auc")@y.values[[1]], 3)
-                          auc=minet::auc.roc(perf)
+                         ##auc_bnl = round(ROCR::performance(pred, "auc")@y.values[[1]], 3)
+                          ##auc=minet::auc.roc(perf)
                           ##plot(perf, main = paste("AUC:", auc), colorize=TRUE)
-                          aucpr=minet::auc.pr(perf)
-                        ##aucpr = round(ROCR::performance(pred, "aucpr")@y.values[[1]], 3)                        
-                        perf = ROCR::performance(pred, "prec", "sens")
-                        plot(perf, main = paste("PR-AUC:", aucpr), colorize=TRUE)    
-                        perf = ROCR::performance(pred, 'f')
-                        plot(perf, main = paste('F1-AUC', mean(perf@y.values[[1]][-1])))
-                        f1max = round(max(perf@y.values[[1]][-1]), 3)
+                          ##aucpr=minet::auc.pr(perf)
+                        aucpr_bnl = round(ROCR::performance(pred, "aucpr")@y.values[[1]], 3)                        
+                        ##perf = ROCR::performance(pred, "prec", "sens")
+                        ##plot(perf, main = paste("PR-AUC:", aucpr), colorize=TRUE)    
+                        ##perf = ROCR::performance(pred, 'f')
+                        ##plot(perf, main = paste('F1-AUC', mean(perf@y.values[[1]][-1])))
+                        ##f1max = round(max(perf@y.values[[1]][-1]), 3)
                         aucs[[ni]] = auc
                         prAucs[[ni]] = aucpr
-                        f1maxes[[ni]] = f1max
+                        f1maxes[[ni]] = calculate.f1()
                       }
                       plot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')
                       plot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC')                      
@@ -724,9 +728,17 @@ network_performance = function(true_igraph, edges){
     ##get edgelist
     true_edges=reshape2::melt(true_adj)  %>%
         filter(Var1!=Var2) ## remove self edges
+    est_edges=reshape2::melt(est_adj)  %>%
+        filter(Var1!=Var2) ## remove self edges
+    comb_edges=full_join(true_edges %>%
+                        rename(True=value),
+                         est_edges %>%
+                       rename(Prob=value),
+                         by=c("Var1","Var2"))
     prc_random=sum(true_edges$value)/length(true_edges$value)
     compa=minet::validate(est_adj,true_adj)
     attributes(compa)$auc_pr_random=prc_random
+    attributes(compa)$edges=comb_edges
     return(compa)
 }
 
@@ -760,3 +772,45 @@ network_performance = function(true_igraph, edges){
       plot_annotation(title=paste0("Network Inference Performance. ", title))
     allplot & theme_light()
   }
+
+
+calculate.f1 <- function(predicted,actual) {
+      suppressPackageStartupMessages(library("caret"))
+      iinna = which(!is.na(actual))
+      predicted = predicted[iinna]
+      actual = actual[iinna]
+    cm <- confusionMatrix(data=predicted,reference = actual, positive = "1")
+    cm$byClass[['F1']]
+  }
+
+
+ prcAUC = function(ytrue, yprob){
+       if(class(ytrue)=='factor')
+	     ytrue <- as.numeric(as.vector(ytrue))
+       if(class(yprob) == "character" && yprob == "random")
+	     return(sum(ytrue) / length(ytrue))
+       if(length(unique(ytrue)) == 1){
+	   warning("label had only 1 level")
+	   return(NA)
+       }
+       iinna = which(!is.na(ytrue))
+       yprob = yprob[iinna]
+       ytrue = ytrue[iinna]
+       ##library(precrec)
+       sscurves = precrec::evalmod(scores = yprob, labels = ytrue)
+       filter(precrec::auc(sscurves), curvetypes == 'PRC')$aucs
+ }
+
+ rocAUC = function(ytrue, yprob){
+       if(class(ytrue)=='factor')
+	     ytrue <- as.numeric(as.vector(ytrue))
+       if(class(yprob) == "character" && yprob == "random")
+	     return(0.5)
+       if(length(unique(ytrue)) == 1){
+	   warning("label had only 1 level")
+	   return(NA)
+	   }
+       ##library(precrec)
+       sscurves = precrec::evalmod(scores = yprob, labels = ytrue)
+       filter(precrec::auc(sscurves), curvetypes == 'ROC')$aucs
+     }

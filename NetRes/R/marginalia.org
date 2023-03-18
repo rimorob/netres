@@ -27,9 +27,9 @@ this is the constructor
 
 **             # @
 :PROPERTIES:
-:org-remark-beg: 13736
-:org-remark-end: 13751
+:org-remark-beg: 14230
+:org-remark-end: 14245
 :org-remark-id: a14f0ca5
 :org-remark-label: nil
-:org-remark-link: [[file:NetRes.R::217]]
+:org-remark-link: [[file:NetRes.R::221]]
 :END:

@@ -1611,8 +1611,8 @@ library(conflicted)
 library(tidyverse)
 library(igraph)
 library(bnlearn)
-##source("~/gitRepos/gnsutils/gnsutils/R/networks.R")
-source("~/Documents/projects/gnsutils/gnsutils/R/networks.R")
+source("~/gitRepos/gnsutils/gnsutils/R/networks.R")
+##source("~/Documents/projects/gnsutils/gnsutils/R/networks.R")
 ##library(brms)
 rskew_normal=brms::rskew_normal
 
@@ -1620,8 +1620,8 @@ devtools::load_all("./NetRes")
 
 
 
-##insurancenet=readRDS("~/gitRepos/general-functions/org/bnlearn/insurance.rds")
-insurancenet=readRDS("~/Documents/gitRepos/general-functions/org/bnlearn/insurance.rds")
+insurancenet=readRDS("~/gitRepos/general-functions/org/bnlearn/insurance.rds")
+##insurancenet=readRDS("~/Documents/gitRepos/general-functions/org/bnlearn/insurance.rds")
 
 conflicts_prefer(bnlearn::as.igraph)
 insurance_ig=as.igraph(insurancenet)
@@ -1632,6 +1632,7 @@ ppPlotIgraph(insurance_ig,nodesep=0.01)
 insurance_simc=igraph2simcausal(insurance_ig)
 insurance_simc_set=set.DAG(insurance_simc)
 data_insurance=sim(insurance_simc_set,n=1000)
+true.graph=bnlearn::as.bn(insurance_ig)
 
 algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
 
@@ -1650,7 +1651,7 @@ edges=bnlearn::custom.strength(ens,colnames(data_insurance %>%
                                       select(-ID)))
 
 
-true.graph=bnlearn::as.bn(insurance_ig)
+
 ##colnames(true.graph$arcs) =c("from","to")
 
 pred = bnlearn::as.prediction(edges, true.graph)
@@ -1720,7 +1721,7 @@ netResObj = NetRes$new(
                      latentSpaceMethod='pca',
                      lvPrefix="U",
                      nCores=4,
-                     BPPARAM=BiocParallel::SerialParam(),
+                     #BPPARAM=BiocParallel::SerialParam(),
                      debug=F) 
 
 netResObj$assess(nCores=4,lvPrefix="U")
@@ -1730,3 +1731,13 @@ netResObj$assess(nCores=4,lvPrefix="U")
   - what about using the PA to determine the number of PC to use
 - what is the effect of getting the wrong number of PC in the estimate
 - what if there are no latent confounders. how does the algorithm behave?
+
+** Meetings
+
+*** [2023-03-18 Sat]
+notion?
+
+
+
+lift curves.
+
