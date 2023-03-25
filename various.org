@@ -1601,3 +1601,143 @@ netResObj_nolat = NetRes$new(tstdata,
 
 plotIgraph(as.igraph(netResObj_nolat$ensemble[[3]][[3]]),nodesep=0.001,fill=list("vlat.*"='orange',".*PC.*"='yellow'))
 #+end_src
+* Version [2023-03-11 Sat]
+:PROPERTIES:
+:header-args:R: :session *Rnet*
+:END:
+
+#+begin_src R
+library(conflicted)
+library(tidyverse)
+library(igraph)
+library(bnlearn)
+source("~/gitRepos/gnsutils/gnsutils/R/networks.R")
+##source("~/Documents/projects/gnsutils/gnsutils/R/networks.R")
+##library(brms)
+rskew_normal=brms::rskew_normal
+
+devtools::load_all("./NetRes")
+
+
+
+insurancenet=readRDS("~/gitRepos/general-functions/org/bnlearn/insurance.rds")
+##insurancenet=readRDS("~/Documents/gitRepos/general-functions/org/bnlearn/insurance.rds")
+
+conflicts_prefer(bnlearn::as.igraph)
+insurance_ig=as.igraph(insurancenet)
+
+insurance_ig=addConfounderIgraph(insurance_ig,prob=0.8,ucoef=4)
+ppPlotIgraph(insurance_ig,nodesep=0.01)
+
+insurance_simc=igraph2simcausal(insurance_ig)
+insurance_simc_set=set.DAG(insurance_simc)
+data_insurance=sim(insurance_simc_set,n=1000)
+true.graph=bnlearn::as.bn(insurance_ig)
+
+algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
+
+nCores = detectCores()-8
+
+cluster = makeCluster(nCores)
+registerDoParallel(cluster)  
+dud = function(x) x
+
+ens = bn.boot(data_insurance %>%
+            select(-ID), statistic = dud, R=30, algorithm = "tabu", algorithm.args = algArgs, cluster=cluster)
+
+stopCluster(cluster)
+
+edges=bnlearn::custom.strength(ens,colnames(data_insurance %>%
+                                      select(-ID)))
+
+
+
+##colnames(true.graph$arcs) =c("from","to")
+
+pred = bnlearn::as.prediction(edges, true.graph)
+
+perf = ROCR::performance(pred, "tpr", "fpr")
+(auc = round(ROCR::performance(pred, "auc")@y.values[[1]], 2))
+plot(perf, main = paste("AUC:", auc), colorize=TRUE)
+(aucpr = round(ROCR::performance(pred, "aucpr")@y.values[[1]], 2))
+
+
+## with minet
+true_adj=igraph::get.adjacency(insurance_ig) %>% as.matrix
+
+est_adj=edges %>% mutate(pred=strength*direction) %>% select(from,to,pred) %>%
+  igraph::graph_from_data_frame() %>% 
+  igraph::get.adjacency(attr="pred") %>%
+  as.matrix()
+est_adj=est_adj[colnames(true_adj),colnames(true_adj)]
+
+library(minet)
+compa=validate(est_adj,true_adj)
+auc.roc(compa)
+auc.pr(compa)
+
+## with latent variable
+cluster = makeCluster(nCores)
+registerDoParallel(cluster)  
+dud = function(x) x
+
+ens_lat = bn.boot(data_insurance %>%
+            select(-ID,-U), statistic = dud, R=30, algorithm = "tabu", algorithm.args = algArgs, cluster=cluster)
+
+stopCluster(cluster)
+
+edges_lat=bnlearn::custom.strength(ens_lat,colnames(data_insurance %>%
+                                      select(-ID,-U)))
+
+
+## with minet
+true_adj_removeu=igraph::get.adjacency(delete_vertices(insurance_ig,"U")) %>% as.matrix
+est_adj_lat=edges_lat %>% mutate(pred=strength*direction) %>% select(from,to,pred) %>%
+  igraph::graph_from_data_frame() %>% 
+  igraph::get.adjacency(attr="pred") %>%
+  as.matrix()
+
+est_adj_lat=est_adj_lat[colnames(true_adj_removeu),colnames(true_adj_removeu)]
+
+library(minet)
+compa_lat=validate(est_adj_lat,true_adj_removeu)
+auc.roc(compa_lat)
+auc.pr(compa_lat)
+
+
+##
+
+netResObj = NetRes$new(
+                     data_insurance %>%
+                     select(-ID),
+                     true.graph = true.graph,
+                     nIter = 2,
+                     nBoot=30,
+                     algorithm='tabu',
+                     algorithm.args = algArgs,
+                     mode='normal',
+                     weightedResiduals=FALSE,
+                     scale=TRUE,
+                     latentSpaceMethod='pca',
+                     lvPrefix="U",
+                     nCores=4,
+                     #BPPARAM=BiocParallel::SerialParam(),
+                     debug=F) 
+
+netResObj$assess(nCores=4,lvPrefix="U")
+#+end_src
+** Questions
+- How does the performance compare to simply calculating the PCA on the data and taking the first PC as latent variable and forget about iterations
+  - what about using the PA to determine the number of PC to use
+- what is the effect of getting the wrong number of PC in the estimate
+- what if there are no latent confounders. how does the algorithm behave?
+
+** Meetings
+
+*** [2023-03-18 Sat]
+notion?
+
+
+
+lift curves.
+

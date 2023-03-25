@@ -1,7 +1,7 @@
 #' @include NetRes.R
 
 # @description The top-level function to calculate latent variables from residuals
-NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scale=FALSE, algorithm.args=NULL) {
+NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scale=FALSE, algorithm.args=NULL,BPPARAM = BiocParallel::MulticoreParam()) {
   if (is.null(algorithm.args)) {
     maxRank = ncol(residuals) - 1
   } else {
@@ -17,10 +17,10 @@ NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scal
     threshold = 0.05/ncol(residuals), #bonferroni-corrected p-vaoue cut-off
     transposed = TRUE, #variables in columns
     scale = scale,
+    BPPARAM = BPPARAM
     ##BSPARAM = IrlbaParam(),
-    BPPARAM = BiocParallel::MulticoreParam()
+    ##BPPARAM = BiocParallel::MulticoreParam()
   )
-  
   if (resPpca$n == 0) {
     stop('Latent space not identified - aborting')
   }  

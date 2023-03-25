@@ -46,7 +46,9 @@ NetRes <- R6Class("NetRes",
                                           weightedResiduals = FALSE, scale=FALSE, debug=FALSE,
                                           latentSpaceParentOnly = TRUE,
                                           latentSpaceMethod = 'pca',
-                                          optimizeLatentSpace=FALSE) {
+                                          optimizeLatentSpace=FALSE,
+                                          nCores=NULL,
+                                          BPPARAM=BiocParallel::MulticoreParam()) {
                       if(debug)
                         browser()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
@@ -60,8 +62,11 @@ NetRes <- R6Class("NetRes",
                         train = self$train.data
                       }
                       stopifnot(is.list(algorithm.args))
-                      nCores = detectCores() - 1
-                      
+                      if(is.null(nCores)){
+                          nCores = detectCores() - 1
+                      }else{
+                          nCores=min(detectCores()-1,nCores)
+                      }
                       for (ni in 1:nIter) {
                         if(debug){
                           message("In interation ", ni)
@@ -77,7 +82,11 @@ NetRes <- R6Class("NetRes",
                                                          weightedResiduals, scale=scale, optimizeLatentSpace=optimizeLatentSpace,
                                                          learnLatentSpace = ifelse(ni == 1, FALSE, TRUE),
                                                          latentSpaceParentOnly=latentSpaceParentOnly,
-                                                         latentSpaceMethod = latentSpaceMethod)
+                                                         latentSpaceMethod = latentSpaceMethod,debug=debug,BPPARAM=BPPARAM)
+                        if(debug){
+                          message("After runOneIteration ")
+                          browser()
+                        }                      
                         self$ensemble[[ni]] = curRes$ensemble
                         self$latent.space[[ni]] = curRes$latent.space                        
                         ##self$latent.space.transform[[ni]] = curRes$latent.space.transform
@@ -114,42 +123,60 @@ NetRes <- R6Class("NetRes",
                     #' @description assess Assess the inferred ensemble against the true graph
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
                     #' @param lvPrefix The latent variable-identifying regular expression, as elsewhere; defaults to "^U\\_"
-                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_") {
+                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_",nCores=NULL,return_roc=FALSE,save_to_pdf=NULL,ci=FALSE) {
+                        require(patchwork)
                       if (is.null(true.graph)) {
                         stop('Cannot assess performance without the true graph')
                       }
-                      
-                      nCores = detectCores() - 2
+                      if(is.null(nCores)){
+                          nCores = detectCores() - 2
+                      }else{
+                          nCores=min(detectCores()-2,nCores)
+                      }
                       cluster = makeCluster(nCores)
                       registerDoParallel(cluster)                      
                       ##excise the latent space from the true graph
                       true.graph = private$exciseLatVarsFromEnsemble(list(true.graph), cluster, lvPrefix)[[1]]
-                      
+                      true.graph.ig=as.igraph(true.graph)
                       aucs = c()
                       prAucs = c()
                       f1maxes = c()
+                      allplots=list()
                       ##test performance at every iteration
                       for (ni in 1:length(self$ensemble)) { 
-                        print(paste('step', ni))
-                        curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
-                        curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))  
-                        pred = as.prediction(curStrength, true.graph)
-                        perf = ROCR::performance(pred, "tpr", "fpr")
-                        auc = round(ROCR::performance(pred, "auc")@y.values[[1]], 3)
-                        plot(perf, main = paste("AUC:", auc), colorize=TRUE)
-                        aucpr = round(ROCR::performance(pred, "aucpr")@y.values[[1]], 3)                        
-                        perf = ROCR::performance(pred, "prec", "sens")
-                        plot(perf, main = paste("PR-AUC:", aucpr), colorize=TRUE)    
-                        perf = ROCR::performance(pred, 'f')
-                        plot(perf, main = paste('F1-AUC', mean(perf@y.values[[1]][-1])))
-                        f1max = round(max(perf@y.values[[1]][-1]), 3)
-                        aucs[[ni]] = auc
-                        prAucs[[ni]] = aucpr
-                        f1maxes[[ni]] = f1max
+                          print(paste('step', ni))
+                          curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
+                          curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))
+                          curStrengthdf=curStrength %>%
+                              as.data.frame() %>%
+                              mutate(freq=strength*direction)
+                          perf=network_performance(true.graph.ig,curStrengthdf,ci=ci )
+                          auc=filter(attributes(perf)$aucs,curvetypes=="ROC")$AUC
+                          aucpr=filter(attributes(perf)$aucs,curvetypes=="PRC")$AUC
+                          aucs[ni] = auc
+                          prAucs[ni] = aucpr
+                          allmes=attributes(perf)$other %>% as.data.frame()
+                          f1maxes[ni] = pracma::interp1(
+                                                    filter(allmes,type=='fscore')$x,
+                                                    filter(allmes,type=='fscore')$y,0.5,method='linear')
+                          allplots[[ni]]=perf+plot_annotation(title=sprintf("Iteration %d",ni))
                       }
-                      plot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')
-                      plot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC')                      
-                      plot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')
+                      ggp1=qplot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')+geom_line()+theme_light()
+                      ggp2=qplot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC') +geom_line()+theme_light()                 
+                      ggp3=qplot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')+geom_line()+theme_light()
+                        ggpcomb=ggp1/ggp2/ggp3
+                        if(!is.null(save_to_pdf)){
+                            pdf(save_to_pdf)
+                            print(ggpcomb)
+                            for(ni in 1:length(allplots)){
+                                print(allplots[[ni]])
+                            }
+                            dev.off()
+                        }else if(return_roc){
+                            allplots
+                        }else{
+                            print(ggpcomb)
+                        }
                       stopCluster(cluster)
                     },
                     #' @description plot The function to plot (some) networks in the ensemble
@@ -201,12 +228,14 @@ NetRes <- R6Class("NetRes",
                     # @param lvPrefix The latent variable prefix (default = "U_"; use perl regexp)
                     # @param latentSpaceParentOnly If true (default), latent space variables can only be parents, never children
                     # @param learnLatentSpace If true (default), learn latent space, else return an ensemble without inferring latent space
-                    # @param optimizeLatentSpace If false (default), return first-pass estimate of the latent space without conditional BIC-based optimization (which is very slow)
+                    # @param optimizeLatentSpace If false (default), return first-ass estimate of the latent space without conditional BIC-based optimization (which is very slow)
                     # @return TBD
                     runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_", 
                                                 weightedResiduals=FALSE, scale=FALSE, learnLatentSpace = TRUE,
                                                 optimizeLatentSpace=FALSE, 
-                                                latentSpaceParentOnly=TRUE, latentSpaceMethod = 'pca') {
+                                                latentSpaceParentOnly=TRUE, latentSpaceMethod = 'pca',
+                                                BPPARAM=BiocParallel::MulticoreParam(),
+                                                debug=FALSE) {
                       dud = function(x) x
                       
                       new.algorithm.args = algorithm.args
@@ -234,11 +263,14 @@ NetRes <- R6Class("NetRes",
                                     latent.space = NULL,
                                     BIC = ensBIC))
                       }
-                      
-                      res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
 
+                      res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
+                      if(debug){
+                          message("before latent variables estimation")
+                          browser()                          
+                      }
                       ##paran(res)
-                      latvars = private$calculateLatVars(res, method=latentSpaceMethod, scale=scale, algorithm.args=new.algorithm.args) 
+                      latvars = private$calculateLatVars(res, method=latentSpaceMethod, scale=scale, algorithm.args=new.algorithm.args,BPPARAM=BPPARAM) 
 
                       ##debugging step
                       trueCoefs = NULL
@@ -673,3 +705,158 @@ expandDfRegex = function(mydf, allnames){
 		     })
     return(newlist)
 }
+
+
+
+
+
+
+##' @description
+##' Given a true graph in igraph format and a estimated edge frequency create a data.frame with performance metrics
+##'
+##' @details
+##' This function convert true and estimated network to adjacency matrixed and use the minet package and validate function to generate data.frame with four columns named  thrsh, tp, fp, fn  estimated at different threhsolds.
+##' You can then use function in minet to estimate roc auc pr auc etc. See ?minet::vis.res
+##' @title network_performance: estimate
+##' @param true_igraph 
+##' @param edges 
+##' @return data.frame generated by validate function in minet package. 
+##' @author Fred Gruber
+network_performance = function(true_igraph, edges,Nboot=200,ci=FALSE,seed=123){
+    require(minet)
+    checkmate::assertClass(true_igraph, 'igraph')
+    checkmate::assertDataFrame(edges)
+    ## convert edges to igraph object
+    est_ig=igraph::graph_from_data_frame(edges)
+    ## get adjacency matrix
+    true_adj=igraph::get.adjacency(true_igraph) %>% as.matrix
+    est_adj= est_ig %>% igraph::get.adjacency(attr="freq") %>% as.matrix()
+    ## make sure nodes are ordered the same way
+    est_adj=est_adj[colnames(true_adj),colnames(true_adj)]
+    ##get edgelist with ALL edges
+    true_edges=reshape2::melt(true_adj)  %>%
+        filter(Var1!=Var2) ## remove self edges
+    est_edges=reshape2::melt(est_adj)  %>%
+        filter(Var1!=Var2) ## remove self edges
+    comb_edges=full_join(true_edges %>%
+                        rename(True=value),
+                         est_edges %>%
+                       rename(Prob=value),
+                       by=c("Var1","Var2"))
+    trueval=comb_edges$True
+    scores=comb_edges$Prob
+    pred <- prediction(comb_edges$Prob, comb_edges$True)
+    perf= performance(pred, "lift", "rpp")
+    RPP=perf@x.values[[1]]
+    lift=perf@y.values[[1]]
+    ggp_lift=qplot(RPP,lift,geom='line')+theme_light()+xlab(perf@x.name)+ylab(perf@y.name)+ggtitle("Lift Graph")
+    if(ci){
+        set.seed(seed)
+        resampled_scores <- replicate(Nboot, sample(scores, replace=TRUE))
+        set.seed(seed)
+        resampled_labels <- replicate(Nboot, sample(trueval, replace=TRUE))
+        cidat <- mmdata(resampled_scores, resampled_labels,
+                        modnames=rep("boot_", Nboot), dsids=1:Nboot)
+    }else{
+        cidat=mmdata(scores, trueval)
+    }
+    ## get AUC
+    sscurves_auc <- precrec::evalmod(cidat)
+    aucs=auc(sscurves_auc) %>%
+        group_by(curvetypes) %>%
+        summarise(AUC=mean(aucs))
+    auc_roc=filter(aucs,curvetypes=="ROC")$AUC
+    auc_prc=filter(aucs,curvetypes=="PRC")$AUC
+    ## get other metrics
+    sscurves_bas <- precrec::evalmod(cidat,mode='basic')
+    ## generate plots
+    prc_random=sum(true_edges$value)/length(true_edges$value)
+    ggp_fm=autoplot(sscurves_bas,"fscore")
+    ggp_prc=autoplot(sscurves_auc,"PRC")+
+        ggtitle(sprintf("PR Curve. AUC = %0.2g.\nRandom: %0.2g",
+                       signif(auc_prc,2),prc_random))
+    ggp_roc=autoplot(sscurves_auc,"ROC")+
+        ggtitle(sprintf("ROC. AUC = %0.2g.\nRandom: %0.2g",
+                       signif(auc_roc,2),0.5))
+    final_ggp=(ggp_prc/ggp_roc)|(ggp_fm/ggp_lift)+plot_layout(width=1)
+    attributes(final_ggp)$auc_pr_random=prc_random
+    attributes(final_ggp)$edges=comb_edges
+    attributes(final_ggp)$other=sscurves_bas
+    attributes(final_ggp)$aucs=aucs
+    return(final_ggp)
+}
+
+
+  plot_auc = function(perf, title=""){
+    rocgg = minet::rates(perf) %>%
+      ggplot(aes(x=fpr, y=tpr)) +
+      geom_line() +
+      geom_abline(intercept=0,
+		  slope=1,
+		  colour='red',
+		  linetype="dashed",
+		  alpha=0.5)+ xlab("FP Rate") + ylab("TP Rate") +
+      ggtitle(sprintf("ROC AUC=%0.2g",
+		      minet::auc.roc(perf)
+		      ))
+    prgg = minet::pr(perf) %>%
+      ggplot(aes(x=r, y=p)) +
+      geom_point()+
+      geom_hline(yintercept=attributes(perf)$auc_pr_random,
+		  colour='red',
+		  linetype="dashed",
+		 alpha=0.5)+
+      xlab("Recall (TP Rate)") + ylab("Precision") +
+      ggtitle(sprintf("PR AUC=%0.2g (%0.2g)",
+		      minet::auc.pr(perf),
+		      attributes(perf)$auc_pr_random
+		      ))
+    require(patchwork)
+    allplot = (rocgg / prgg) +
+      plot_annotation(title=paste0("Network Inference Performance. ", title))
+    allplot & theme_light()
+  }
+
+
+calculate.f1 <- function(predicted,actual) {
+      suppressPackageStartupMessages(library("caret"))
+      iinna = which(!is.na(actual))
+      predicted = predicted[iinna]
+      actual = actual[iinna]
+    cm <- confusionMatrix(data=predicted,reference = actual, positive = "1")
+    cm$byClass[['F1']]
+  }
+
+
+ prcAUC = function(ytrue, yprob){
+       if(class(ytrue)=='factor')
+	     ytrue <- as.numeric(as.vector(ytrue))
+       if(class(yprob) == "character" && yprob == "random")
+	     return(sum(ytrue) / length(ytrue))
+       if(length(unique(ytrue)) == 1){
+	   warning("label had only 1 level")
+	   return(NA)
+       }
+       iinna = which(!is.na(ytrue))
+       yprob = yprob[iinna]
+       ytrue = ytrue[iinna]
+       ##library(precrec)
+       sscurves = precrec::evalmod(scores = yprob, labels = ytrue)
+       filter(precrec::auc(sscurves), curvetypes == 'PRC')$aucs
+ }
+
+ rocAUC = function(ytrue, yprob){
+       if(class(ytrue)=='factor')
+	     ytrue <- as.numeric(as.vector(ytrue))
+       if(class(yprob) == "character" && yprob == "random")
+	     return(0.5)
+       if(length(unique(ytrue)) == 1){
+	   warning("label had only 1 level")
+	   return(NA)
+	   }
+       ##library(precrec)
+       sscurves = precrec::evalmod(scores = yprob, labels = ytrue)
+       filter(precrec::auc(sscurves), curvetypes == 'ROC')$aucs
+     }
+
+
