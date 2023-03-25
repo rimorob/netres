@@ -123,7 +123,8 @@ NetRes <- R6Class("NetRes",
                     #' @description assess Assess the inferred ensemble against the true graph
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
                     #' @param lvPrefix The latent variable-identifying regular expression, as elsewhere; defaults to "^U\\_"
-                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_",nCores=NULL,return_roc=FALSE) {
+                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_",nCores=NULL,return_roc=FALSE,save_to_pdf=NULL,ci=FALSE) {
+                        require(patchwork)
                       if (is.null(true.graph)) {
                         stop('Cannot assess performance without the true graph')
                       }
@@ -149,25 +150,33 @@ NetRes <- R6Class("NetRes",
                           curStrengthdf=curStrength %>%
                               as.data.frame() %>%
                               mutate(freq=strength*direction)
-                          perf=network_performance(true.graph.ig,curStrengthdf)
+                          perf=network_performance(true.graph.ig,curStrengthdf,ci=ci )
                           auc=filter(attributes(perf)$aucs,curvetypes=="ROC")$AUC
                           aucpr=filter(attributes(perf)$aucs,curvetypes=="PRC")$AUC
                           aucs[ni] = auc
                           prAucs[ni] = aucpr
                           allmes=attributes(perf)$other %>% as.data.frame()
                           f1maxes[ni] = pracma::interp1(
-                                                      filter(allmes,type=='fscore')$x,
-                                                      filter(allmes,type=='fscore')$y,0.5,method='linear')
-                          allplots[[ni]]=perf
+                                                    filter(allmes,type=='fscore')$x,
+                                                    filter(allmes,type=='fscore')$y,0.5,method='linear')
+                          allplots[[ni]]=perf+plot_annotation(title=sprintf("Iteration %d",ni))
                       }
-                      if(return_roc){
-                          allplots
-                      }else{
-                          ggp1=qplot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')+geom_line()+theme_light()
-                          ggp2=qplot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC') +geom_line()+theme_light()                 
-                          ggp3=qplot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')+geom_line()+theme_light()
-                          ggp1/ggp2/ggp3
-                      }
+                      ggp1=qplot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')+geom_line()+theme_light()
+                      ggp2=qplot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC') +geom_line()+theme_light()                 
+                      ggp3=qplot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')+geom_line()+theme_light()
+                        ggpcomb=ggp1/ggp2/ggp3
+                        if(!is.null(save_to_pdf)){
+                            pdf(save_to_pdf)
+                            print(ggpcomb)
+                            for(ni in 1:length(allplots)){
+                                print(allplots[[ni]])
+                            }
+                            dev.off()
+                        }else if(return_roc){
+                            allplots
+                        }else{
+                            print(ggpcomb)
+                        }
                       stopCluster(cluster)
                     },
                     #' @description plot The function to plot (some) networks in the ensemble
@@ -849,3 +858,5 @@ calculate.f1 <- function(predicted,actual) {
        sscurves = precrec::evalmod(scores = yprob, labels = ytrue)
        filter(precrec::auc(sscurves), curvetypes == 'ROC')$aucs
      }
+
+
