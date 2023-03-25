@@ -123,7 +123,7 @@ NetRes <- R6Class("NetRes",
                     #' @description assess Assess the inferred ensemble against the true graph
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
                     #' @param lvPrefix The latent variable-identifying regular expression, as elsewhere; defaults to "^U\\_"
-                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_",nCores=NULL) {
+                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_",nCores=NULL,return_roc=FALSE) {
                       if (is.null(true.graph)) {
                         stop('Cannot assess performance without the true graph')
                       }
@@ -140,40 +140,34 @@ NetRes <- R6Class("NetRes",
                       aucs = c()
                       prAucs = c()
                       f1maxes = c()
+                      allplots=list()
                       ##test performance at every iteration
                       for (ni in 1:length(self$ensemble)) { 
                           print(paste('step', ni))
-                          browser()
                           curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
                           curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))
                           curStrengthdf=curStrength %>%
                               as.data.frame() %>%
                               mutate(freq=strength*direction)
                           perf=network_performance(true.graph.ig,curStrengthdf)
-                          sscurves = precrec::evalmod(scores = attributes(perf)$edges$Prob, labels = attributes(perf)$edges$True,mode='basic')
-                          aucpr=prcAUC(attributes(perf)$edges$True,attributes(perf)$edges$Prob)
-                          auc=rocAUC(attributes(perf)$edges$True,attributes(perf)$edges$Prob)
-                          pred=ROCR::prediction(attributes(perf)$edges$Prob,
-                                                attributes(perf)$edges$True)
-                        ##pred = as.prediction(curStrength, true.graph)
-                        ##perf = ROCR::performance(pred, "tpr", "fpr")
-                         ##auc_bnl = round(ROCR::performance(pred, "auc")@y.values[[1]], 3)
-                          ##auc=minet::auc.roc(perf)
-                          ##plot(perf, main = paste("AUC:", auc), colorize=TRUE)
-                          ##aucpr=minet::auc.pr(perf)
-                        aucpr_bnl = round(ROCR::performance(pred, "aucpr")@y.values[[1]], 3)                        
-                        ##perf = ROCR::performance(pred, "prec", "sens")
-                        ##plot(perf, main = paste("PR-AUC:", aucpr), colorize=TRUE)    
-                        ##perf = ROCR::performance(pred, 'f')
-                        ##plot(perf, main = paste('F1-AUC', mean(perf@y.values[[1]][-1])))
-                        ##f1max = round(max(perf@y.values[[1]][-1]), 3)
-                        aucs[[ni]] = auc
-                        prAucs[[ni]] = aucpr
-                        f1maxes[[ni]] = calculate.f1()
+                          auc=filter(attributes(perf)$aucs,curvetypes=="ROC")$AUC
+                          aucpr=filter(attributes(perf)$aucs,curvetypes=="PRC")$AUC
+                          aucs[ni] = auc
+                          prAucs[ni] = aucpr
+                          allmes=attributes(perf)$other %>% as.data.frame()
+                          f1maxes[ni] = pracma::interp1(
+                                                      filter(allmes,type=='fscore')$x,
+                                                      filter(allmes,type=='fscore')$y,0.5,method='linear')
+                          allplots[[ni]]=perf
                       }
-                      plot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')
-                      plot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC')                      
-                      plot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')
+                      if(return_roc){
+                          allplots
+                      }else{
+                          ggp1=qplot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')+geom_line()+theme_light()
+                          ggp2=qplot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC') +geom_line()+theme_light()                 
+                          ggp3=qplot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')+geom_line()+theme_light()
+                          ggp1/ggp2/ggp3
+                      }
                       stopCluster(cluster)
                     },
                     #' @description plot The function to plot (some) networks in the ensemble
@@ -225,7 +219,7 @@ NetRes <- R6Class("NetRes",
                     # @param lvPrefix The latent variable prefix (default = "U_"; use perl regexp)
                     # @param latentSpaceParentOnly If true (default), latent space variables can only be parents, never children
                     # @param learnLatentSpace If true (default), learn latent space, else return an ensemble without inferring latent space
-                    # @param optimizeLatentSpace If false (default), return first-pass estimate of the latent space without conditional BIC-based optimization (which is very slow)
+                    # @param optimizeLatentSpace If false (default), return first-ass estimate of the latent space without conditional BIC-based optimization (which is very slow)
                     # @return TBD
                     runOneIteration  = function(dframe, nBoot, algorithm, algorithm.args, cluster, lvPrefix = "^U\\_", 
                                                 weightedResiduals=FALSE, scale=FALSE, learnLatentSpace = TRUE,
@@ -703,6 +697,11 @@ expandDfRegex = function(mydf, allnames){
     return(newlist)
 }
 
+
+
+
+
+
 ##' @description
 ##' Given a true graph in igraph format and a estimated edge frequency create a data.frame with performance metrics
 ##'
@@ -714,18 +713,18 @@ expandDfRegex = function(mydf, allnames){
 ##' @param edges 
 ##' @return data.frame generated by validate function in minet package. 
 ##' @author Fred Gruber
-network_performance = function(true_igraph, edges){
+network_performance = function(true_igraph, edges,Nboot=200,ci=FALSE,seed=123){
     require(minet)
     checkmate::assertClass(true_igraph, 'igraph')
     checkmate::assertDataFrame(edges)
+    ## convert edges to igraph object
     est_ig=igraph::graph_from_data_frame(edges)
-    est_adj= est_ig %>% igraph::get.adjacency(attr="freq") %>% as.matrix()
-
+    ## get adjacency matrix
     true_adj=igraph::get.adjacency(true_igraph) %>% as.matrix
+    est_adj= est_ig %>% igraph::get.adjacency(attr="freq") %>% as.matrix()
     ## make sure nodes are ordered the same way
-    ## need to complete tis
     est_adj=est_adj[colnames(true_adj),colnames(true_adj)]
-    ##get edgelist
+    ##get edgelist with ALL edges
     true_edges=reshape2::melt(true_adj)  %>%
         filter(Var1!=Var2) ## remove self edges
     est_edges=reshape2::melt(est_adj)  %>%
@@ -734,12 +733,48 @@ network_performance = function(true_igraph, edges){
                         rename(True=value),
                          est_edges %>%
                        rename(Prob=value),
-                         by=c("Var1","Var2"))
+                       by=c("Var1","Var2"))
+    trueval=comb_edges$True
+    scores=comb_edges$Prob
+    pred <- prediction(comb_edges$Prob, comb_edges$True)
+    perf= performance(pred, "lift", "rpp")
+    RPP=perf@x.values[[1]]
+    lift=perf@y.values[[1]]
+    ggp_lift=qplot(RPP,lift,geom='line')+theme_light()+xlab(perf@x.name)+ylab(perf@y.name)+ggtitle("Lift Graph")
+    if(ci){
+        set.seed(seed)
+        resampled_scores <- replicate(Nboot, sample(scores, replace=TRUE))
+        set.seed(seed)
+        resampled_labels <- replicate(Nboot, sample(trueval, replace=TRUE))
+        cidat <- mmdata(resampled_scores, resampled_labels,
+                        modnames=rep("boot_", Nboot), dsids=1:Nboot)
+    }else{
+        cidat=mmdata(scores, trueval)
+    }
+    ## get AUC
+    sscurves_auc <- precrec::evalmod(cidat)
+    aucs=auc(sscurves_auc) %>%
+        group_by(curvetypes) %>%
+        summarise(AUC=mean(aucs))
+    auc_roc=filter(aucs,curvetypes=="ROC")$AUC
+    auc_prc=filter(aucs,curvetypes=="PRC")$AUC
+    ## get other metrics
+    sscurves_bas <- precrec::evalmod(cidat,mode='basic')
+    ## generate plots
     prc_random=sum(true_edges$value)/length(true_edges$value)
-    compa=minet::validate(est_adj,true_adj)
-    attributes(compa)$auc_pr_random=prc_random
-    attributes(compa)$edges=comb_edges
-    return(compa)
+    ggp_fm=autoplot(sscurves_bas,"fscore")
+    ggp_prc=autoplot(sscurves_auc,"PRC")+
+        ggtitle(sprintf("PR Curve. AUC = %0.2g.\nRandom: %0.2g",
+                       signif(auc_prc,2),prc_random))
+    ggp_roc=autoplot(sscurves_auc,"ROC")+
+        ggtitle(sprintf("ROC. AUC = %0.2g.\nRandom: %0.2g",
+                       signif(auc_roc,2),0.5))
+    final_ggp=(ggp_prc/ggp_roc)|(ggp_fm/ggp_lift)+plot_layout(width=1)
+    attributes(final_ggp)$auc_pr_random=prc_random
+    attributes(final_ggp)$edges=comb_edges
+    attributes(final_ggp)$other=sscurves_bas
+    attributes(final_ggp)$aucs=aucs
+    return(final_ggp)
 }
 
 
