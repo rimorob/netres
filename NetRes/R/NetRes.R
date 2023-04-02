@@ -12,6 +12,7 @@
 #' @importFrom NNLM nnmf
 #' @importFrom torch nn_module torch_tensor nn_linear nn_relu nn_sequential torch_exp torch_randn optim_adam nn_bce_loss
 #' @importFrom rlang ns_env
+#' @importFrom minet rates auc.roc auc.pr pr
 
 ##An R6 class for a generated scale-free network
 #' @export
@@ -154,7 +155,7 @@ NetRes <- R6Class("NetRes",
                           curStrengthdf=curStrength %>%
                               as.data.frame() %>%
                               mutate(freq=strength*direction)
-                          perf=network_performance(true.graph.ig,curStrengthdf,ci=ci )
+                          perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci )
                           auc=filter(attributes(perf)$aucs,curvetypes=="ROC")$AUC
                           aucpr=filter(attributes(perf)$aucs,curvetypes=="PRC")$AUC
                           aucs[ni] = auc
@@ -245,12 +246,14 @@ NetRes <- R6Class("NetRes",
                       new.algorithm.args = algorithm.args
                       new.algorithm.args$blacklist = rbind(algorithm.args$blacklist,
                                                        private$makeBlacklist(dframe, lvPrefix))
-                      print('asdf')
+
+                      ##This part seems to be slow, at least on small networks.  Parallelizes to only a couple of cores at a time
+                      ##It would be nice to figure out why
                       ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
                       ##ensBIC =  mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
                       ##  score(net, data, type = algorithm.args$score, prior = algorithm.args$prior)
                       ##}, dframe, new.algorithm.args))
-                      print('m,.;')
+
                       ensBIC = mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
                         ##note: latent space is regularized during Horn's PFA separately and is excluded from score computation
                         scores = score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, by.node=TRUE)
@@ -261,9 +264,9 @@ NetRes <- R6Class("NetRes",
                           return(sum(scores))
                         }
                       }, dframe, new.algorithm.args))
-                      print('azxcf')
+
                       netWeights = private$calcBayesFactors(ens, dframe, cluster, algorithm.args)
-                      print('jkl;')
+
                       ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)                      
                       if (!learnLatentSpace) { #then return the ensemble-specific BIC (w/o latent space learning)
                         return(list(ensemble=ens2,
@@ -271,9 +274,7 @@ NetRes <- R6Class("NetRes",
                                     BIC = ensBIC))
                       }
 
-                      print('qewr')
                       res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
-                      print('uip')
 
                       ##paran(res)
                       latvars = private$calculateLatVars(res, method=latentSpaceMethod, scale=scale, algorithm.args=new.algorithm.args,BPPARAM=BPPARAM) 
@@ -303,87 +304,10 @@ NetRes <- R6Class("NetRes",
                       ##In other words, the first coefficient of each weight vector will be arbitrarily set to one
                       latCoefs = array(data = 1, dim=c(ncol(latvars$v) - 1, ncol(latvars$v)))
 
-                      ##helper function to calcualte new lat vars given a linear combination of coefficients
-                      mappedLatVars = function(coefs, latVars) {
-                        n = (1 + sqrt(1 + 4 * length(coefs)))/2
-                        coefs = t(matrix(c(rep(1, n), coefs), n, n)) #restore the parameters' shape; first row is unity (i.e., reference)
-                        ##compute the new linear combination
-                        newLatVars = scale(latVars %*% coefs)
-
-                        dim(newLatVars) = dim(latVars)
-                        colnames(newLatVars) = colnames(latVars)
-
-                        return(newLatVars)
-                      }
-                      
-                      ##optimize latent variables to minimize the Bayes score
-                      ##do this by calculating a linear combination to optimize the ensemble BIC
-                      ##note that the sign of returned BIC is flipped for minimization by default
-                      ##also note that nBoot overrides the function default unless otherwise specified -
-                      ##this is done because optimization over a grid doesn't require oversampling and therefore
-                      ##we want to cash in on a speedup by using a smaller ensemble size
-                      latVarLinComb = function(coefs, latVars, algorithm, algorithm.args, lvPrefix, dframe, cluster,
-                                               maximize=TRUE, nBoot=detectCores() - 2, returnEnsemble = FALSE) {
-                        print(paste('nBoot inside function:', nBoot))
-                        newLatVars = mappedLatVars(coefs, latVars)
-
-                        ##drop the latent variables from the data frame
-                        newDframe = private$exciseLatVarsFromDataFrame(dframe, lvPrefix = '^U\\_')
-                        newDframe = cbind(newDframe, newLatVars)
-
-                        ##update the blacklist for new variable names
-                        new.algorithm.args = algorithm.args                        
-                        new.algorithm.args$blacklist = rbind(algorithm.args$blacklist,
-                                                             private$makeBlacklist(newDframe, lvPrefix)) 
-                        ##add the new latent space back
-                        if (returnEnsemble) { # then run a bootstrap with the new lat vars
-                          ##newEns = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
-                          newEns = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
-                          
-                          ##newBIC = mean(sapply(newEns, function(net, data, algorithm.args) {
-                          ##  score(net, data, type = new.algorithm.args$score, prior = new.algorithm.args$prior)
-                          ##}, newDframe, new.algorithm.args))
-                          newBIC = mean(parSapply(cluster, newEns, function(net, data, algorithm.args) {
-                            ##note: latent space is regularized during Horn's PFA separately and is excluded from score computation
-                            scores = score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, by.node=TRUE)
-                            idx = grep(lvPrefix, names(scores))
-                            if (length(idx) > 0) {
-                              return(sum(scores[-idx]))
-                            } else {
-                              return(sum(scores))
-                            }
-                          }, newDframe, new.algorithm.args))
-                          
-                        } else { #calculate a single network to be used as part of GA optimization
-                          ##learn the network structure once rather than via a bootstrap
-                          net = do.call(algorithm, c(list(x = newDframe), new.algorithm.args))
-                          ##newBIC = score(net, newDframe, type = new.algorithm.args$score, prior = new.algorithm.args$prior)
-                            ##note: latent space is regularized during Horn's PFA separately and is excluded from score computation
-                          newBIC = {
-                            scores = score(net, newDframe, type = algorithm.args$score, prior = algorithm.args$prior, by.node=TRUE)
-                            idx = grep(lvPrefix, names(scores))
-                            if (length(idx) > 0) {
-                              sum(scores[-idx])
-                            } else {
-                              sum(scores)
-                            }}
-
-                          newEns = list(net)
-                        }
-
-                        newBIC = ifelse(maximize, newBIC, -newBIC)
-                        
-                        if (returnEnsemble) {
-                            return(list(BIC = newBIC, ens = newEns, mappedLVs = newLatVars))
-                        } else {
-                            return(newBIC)
-                        }
-                     } 
-
                       if (ncol(latCoefs) > 1 && optimizeLatentSpace) { 
                         print('optimizing the basis vector of the latent space')                        
                         startTime = Sys.time()
-                        optimRes = ga(type = 'real-valued', fitness=latVarLinComb, latVars = latvars$v, 
+                        optimRes = ga(type = 'real-valued', fitness=private$latVarLinComb, latVars = latvars$v, 
                                       algorithm = algorithm,
                                       algorithm.args = algorithm.args,
                                       lvPrefix = lvPrefix,
@@ -406,13 +330,13 @@ NetRes <- R6Class("NetRes",
                         ##FOR NOW, JUST RETURN THE CORRECT VECTOR OVER TRAINING DATA                          
 
                         ##latvars$v = mappedLVs
-                        remappedRes = latVarLinComb(optimRes@solution, latvars$v, algorithm = algorithm,
-                                                    algorithm.args = algorithm.args,
-                                                    lvPrefix = lvPrefix,
-                                                    dframe = dframe,
-                                                    cluster = cluster,
-                                                    nBoot = nBoot, #for recalculating the ensemble
-                                                    returnEnsemble = TRUE)
+                        remappedRes = private$latVarLinComb(optimRes@solution, latvars$v, algorithm = algorithm,
+                                                            algorithm.args = algorithm.args,
+                                                            lvPrefix = lvPrefix,
+                                                            dframe = dframe,
+                                                            cluster = cluster,
+                                                            nBoot = nBoot, #for recalculating the ensemble
+                                                            returnEnsemble = TRUE)
 
                         print(Sys.time())
                         print('debug:')
@@ -530,339 +454,4 @@ NetRes <- R6Class("NetRes",
                     }
                   )
 )
-
-plotIgraph = function(g,
-                      edgelabels=F,
-                      edgeweights = FALSE,
-                      edgelabelsFilter = 0,
-                      edgelabelsFilter_useabs = TRUE,
-                      lwdmin = 0.5,
-                      lwdmax = 3,
-                      damping = 0.2,
-                      overlap = F,
-                      splines = TRUE,
-                      nodesep = 1,
-                      pad = .5,
-                      sep = 1,
-                      ranksep = 0.05,
-                      start = 123,
-                      layoutType = 'dot',
-                      saveToFile = F,
-                      filename = 'net.pdf',
-                      width = 1000 / 100,
-                      height = 1000 / 100,
-                      other_pdf_options = list(),
-                      nodeThickness = 1,
-                      nodeThickness_important = 2,
-                      fill = NULL,
-                      edge_color = NULL,
-                      edge_labels = NULL,
-                      label_pad = 2
-                      ){
-    allnodes = names(igraph::V(g))
-    if(!is.null(fill)){
-	fill = expandListRegex(fill, allnodes)
-    }
-    if(!is.null(edge_color)){
-	edge_color = expandDfRegex(edge_color, allnodes)
-    }
-    ##library(Rgraphviz)
-    node_width = NULL
-    node_height = NULL
-    node_fixedSize = FALSE
-    gr = igraph:::as_graphnel(g)
-    eAttrs <- list()
-					#w <- w[setdiff(seq(along=w), removedEdges(gr))]
-    if(length(igraph::get.edge.attribute(g)) == 0){
-        edgelabels = FALSE
-        edgeweights = FALSE
-    }
-    if(edgeweights | edgelabels){
-        w = signif(igraph::get.edge.attribute(g)[[1]], 2)
-        names(w) = sub("\\|", "~", attributes(igraph::E(g))$vnames)
-        ##names(w) <- edgeNames(gr, recipEdges="distinct")
-        ##names(eAttrs$lwd) = edgeNames(gr, recipEdges="distinct")
-    }
-    if(edgelabels){
-        if(!is.null(edge_labels)){
-            edgs = paste(edge_labels[[1]], edge_labels[[2]], sep = '~')
-            alledges = graph::edgeNames(gr)
-            alledgeslab= rep("", length(alledges))
-            names(alledgeslab) = alledges
-            alledgeslab[edgs] = as.character(edge_labels[[3]])
-            namesw = names(alledgeslab)
-            alledgeslab = paste0(paste0(rep(" ",label_pad),collapse=""),alledgeslab)
-            names(alledgeslab) = namesw
-            eAttrs$label = alledgeslab
-            
-        }else{
-            if(edgelabelsFilter_useabs)
-                iiw = which(abs(w) > edgelabelsFilter)
-            else
-                iiw = which(w > edgelabelsFilter)
-            eAttrs$label = rep("", length(w))
-            names(eAttrs$label) = names(w)
-            wval = w[iiw]
-            wval = paste0(paste0(rep(" ",label_pad),collapse=""),wval)
-            eAttrs$label[names(w[iiw])] = wval
-        }
-    }
-    if(edgeweights){
-        wn = as.numeric(w)
-        eAttrs$lwd <- (lwdmax - lwdmin) * (wn - min(wn)) / (max(wn) - min(wn)) + lwdmin
-        names(eAttrs$lwd) = sub("\\|", "~", attributes(igraph::E(g))$vnames)
-    }
-    eAttrs$direction = rep("forward", length(graph::edgeNames(gr, recipEdges="distinct")))
-    names(eAttrs$direction) = graph::edgeNames(gr, recipEdges="distinct")
-    ## edge colors
-    if(!is.null(edge_color)){
-        alledges = graph::edgeNames(gr)
-        alledgescol = rep("black", length(alledges))
-        names(alledgescol) = alledges
-        edgs = paste(edge_color[[1]], edge_color[[2]], sep = '~')
-        alledgescol[edgs] = as.character(edge_color[[3]])
-        eAttrs$color = alledgescol
-    }
-    attrs = list(node = list(shape = "ellipse",
-                             fixedsize = node_fixedSize,
-                             width = node_width,
-                             height = node_height,
-                             lwd = nodeThickness,
-                             color = 'black'
-                             ),
-                 edge=list(
-                           direction = 'forward',
-                           concentrate = F
-                           ),
-                 graph = list(damping = damping,
-                              nodesep = nodesep,
-                              pad = pad,
-                              ranksep = ranksep,
-                              splines = splines,
-                              start = start,
-                              dim = 2,
-                              sep = sep,
-                              concentrate = FALSE,
-                              overlap = overlap))
-    nAttrs = list()
-    gr = Rgraphviz::layoutGraph(gr, layoutType = layoutType,
-                                attrs = attrs,
-                                nodeAttrs=nAttrs,
-                                edgeAttrs=eAttrs,
-                                recipEdges="distinct"
-                                )
-    ## add filler
-    nAttrs$fill = fill
-    ## add node edge width
-    if(!is.null(node_width)){
-        nAttrs$width = node_width
-        ## graph::nodeRenderInfo(gr) = list(
-        ##     width = node_width)
-    }
-    if(!is.null(node_height)){
-        nAttrs$height = node_height
-        ## graph::nodeRenderInfo(gr) = list(
-        ##     height = node_height)
-    }
-    nAttrs$fixedSize = node_fixedSize
-    graph::nodeRenderInfo(gr) = nAttrs
-    ##graph::nodeRenderInfo(gr) =list(fixedSize = node_fixedSize)
-    graph::edgeRenderInfo(gr) = eAttrs
-    if(saveToFile){
-        other_pdf_options = c(other_pdf_options,
-                              file = filename,
-                              width = width,
-                              height = height)
-        do.call(pdf, args = other_pdf_options)
-					#pdf(filename, width = width, height = height)
-        Rgraphviz::renderGraph(gr)
-        dev.off()
-    }else
-        Rgraphviz::renderGraph(gr)
-}
-
-
-expandListRegex = function(mylist, allnames){
-    newlist = list()
-    for(ll in 1:length(mylist)){
-	rg = names(mylist)[ll]
-	rg = paste0("^", rg, "$")
-	val = mylist[[ll]]
-	mv = grep(rg, allnames, value = T)
-	tmp = rep(list(val), length(mv))
-	names(tmp) = mv
-	newlist = c(newlist, tmp)
-    }
-    return(newlist)
-}
-
-expandDfRegex = function(mydf, allnames){
-    newlist = map_df(1:nrow(mydf),
-		     function(ii){
-			 val = mydf[ii, ]
-			 inputs = grep(paste0("^", val$inp, "$"),
-				       allnames,
-				       value = T)
-			 outputs = grep(paste0("^", val$out, "$"),
-					allnames,
-					value = T)
-			 expand.grid(inputs, outputs, stringsAsFactors=F) %>%
-			     mutate(color = val[[3]])
-		     })
-    return(newlist)
-}
-
-
-
-
-
-
-##' @description
-##' Given a true graph in igraph format and a estimated edge frequency create a data.frame with performance metrics
-##'
-##' @details
-##' This function convert true and estimated network to adjacency matrixed and use the minet package and validate function to generate data.frame with four columns named  thrsh, tp, fp, fn  estimated at different threhsolds.
-##' You can then use function in minet to estimate roc auc pr auc etc. See ?minet::vis.res
-##' @title network_performance: estimate
-##' @param true_igraph 
-##' @param edges 
-##' @return data.frame generated by validate function in minet package. 
-##' @author Fred Gruber
-network_performance = function(true_igraph, edges,Nboot=200,ci=FALSE,seed=123){
-    require(minet)
-    checkmate::assertClass(true_igraph, 'igraph')
-    checkmate::assertDataFrame(edges)
-    ## convert edges to igraph object
-    est_ig=igraph::graph_from_data_frame(edges)
-    ## get adjacency matrix
-    true_adj=igraph::get.adjacency(true_igraph) %>% as.matrix
-    est_adj= est_ig %>% igraph::get.adjacency(attr="freq") %>% as.matrix()
-    ## make sure nodes are ordered the same way
-    est_adj=est_adj[colnames(true_adj),colnames(true_adj)]
-    ##get edgelist with ALL edges
-    true_edges=reshape2::melt(true_adj)  %>%
-        filter(Var1!=Var2) ## remove self edges
-    est_edges=reshape2::melt(est_adj)  %>%
-        filter(Var1!=Var2) ## remove self edges
-    comb_edges=full_join(true_edges %>%
-                        rename(True=value),
-                         est_edges %>%
-                       rename(Prob=value),
-                       by=c("Var1","Var2"))
-    trueval=comb_edges$True
-    scores=comb_edges$Prob
-    pred <- prediction(comb_edges$Prob, comb_edges$True)
-    perf= performance(pred, "lift", "rpp")
-    RPP=perf@x.values[[1]]
-    lift=perf@y.values[[1]]
-    ggp_lift=qplot(RPP,lift,geom='line')+theme_light()+xlab(perf@x.name)+ylab(perf@y.name)+ggtitle("Lift Graph")
-    if(ci){
-        set.seed(seed)
-        resampled_scores <- replicate(Nboot, sample(scores, replace=TRUE))
-        set.seed(seed)
-        resampled_labels <- replicate(Nboot, sample(trueval, replace=TRUE))
-        cidat <- mmdata(resampled_scores, resampled_labels,
-                        modnames=rep("boot_", Nboot), dsids=1:Nboot)
-    }else{
-        cidat=mmdata(scores, trueval)
-    }
-    ## get AUC
-    sscurves_auc <- precrec::evalmod(cidat)
-    aucs=auc(sscurves_auc) %>%
-        group_by(curvetypes) %>%
-        summarise(AUC=mean(aucs))
-    auc_roc=filter(aucs,curvetypes=="ROC")$AUC
-    auc_prc=filter(aucs,curvetypes=="PRC")$AUC
-    ## get other metrics
-    sscurves_bas <- precrec::evalmod(cidat,mode='basic')
-    ## generate plots
-    prc_random=sum(true_edges$value)/length(true_edges$value)
-    ggp_fm=autoplot(sscurves_bas,"fscore")
-    ggp_prc=autoplot(sscurves_auc,"PRC")+
-        ggtitle(sprintf("PR Curve. AUC = %0.2g.\nRandom: %0.2g",
-                       signif(auc_prc,2),prc_random))
-    ggp_roc=autoplot(sscurves_auc,"ROC")+
-        ggtitle(sprintf("ROC. AUC = %0.2g.\nRandom: %0.2g",
-                       signif(auc_roc,2),0.5))
-    final_ggp=(ggp_prc/ggp_roc)|(ggp_fm/ggp_lift)+plot_layout(width=1)
-    attributes(final_ggp)$auc_pr_random=prc_random
-    attributes(final_ggp)$edges=comb_edges
-    attributes(final_ggp)$other=sscurves_bas
-    attributes(final_ggp)$aucs=aucs
-    return(final_ggp)
-}
-
-
-  plot_auc = function(perf, title=""){
-    rocgg = minet::rates(perf) %>%
-      ggplot(aes(x=fpr, y=tpr)) +
-      geom_line() +
-      geom_abline(intercept=0,
-		  slope=1,
-		  colour='red',
-		  linetype="dashed",
-		  alpha=0.5)+ xlab("FP Rate") + ylab("TP Rate") +
-      ggtitle(sprintf("ROC AUC=%0.2g",
-		      minet::auc.roc(perf)
-		      ))
-    prgg = minet::pr(perf) %>%
-      ggplot(aes(x=r, y=p)) +
-      geom_point()+
-      geom_hline(yintercept=attributes(perf)$auc_pr_random,
-		  colour='red',
-		  linetype="dashed",
-		 alpha=0.5)+
-      xlab("Recall (TP Rate)") + ylab("Precision") +
-      ggtitle(sprintf("PR AUC=%0.2g (%0.2g)",
-		      minet::auc.pr(perf),
-		      attributes(perf)$auc_pr_random
-		      ))
-    require(patchwork)
-    allplot = (rocgg / prgg) +
-      plot_annotation(title=paste0("Network Inference Performance. ", title))
-    allplot & theme_light()
-  }
-
-
-calculate.f1 <- function(predicted,actual) {
-      suppressPackageStartupMessages(library("caret"))
-      iinna = which(!is.na(actual))
-      predicted = predicted[iinna]
-      actual = actual[iinna]
-    cm <- confusionMatrix(data=predicted,reference = actual, positive = "1")
-    cm$byClass[['F1']]
-  }
-
-
- prcAUC = function(ytrue, yprob){
-       if(class(ytrue)=='factor')
-	     ytrue <- as.numeric(as.vector(ytrue))
-       if(class(yprob) == "character" && yprob == "random")
-	     return(sum(ytrue) / length(ytrue))
-       if(length(unique(ytrue)) == 1){
-	   warning("label had only 1 level")
-	   return(NA)
-       }
-       iinna = which(!is.na(ytrue))
-       yprob = yprob[iinna]
-       ytrue = ytrue[iinna]
-       ##library(precrec)
-       sscurves = precrec::evalmod(scores = yprob, labels = ytrue)
-       filter(precrec::auc(sscurves), curvetypes == 'PRC')$aucs
- }
-
- rocAUC = function(ytrue, yprob){
-       if(class(ytrue)=='factor')
-	     ytrue <- as.numeric(as.vector(ytrue))
-       if(class(yprob) == "character" && yprob == "random")
-	     return(0.5)
-       if(length(unique(ytrue)) == 1){
-	   warning("label had only 1 level")
-	   return(NA)
-	   }
-       ##library(precrec)
-       sscurves = precrec::evalmod(scores = yprob, labels = ytrue)
-       filter(precrec::auc(sscurves), curvetypes == 'ROC')$aucs
-     }
-
 
