@@ -1,0 +1,28 @@
+
+* NetRes
+:PROPERTIES:
+:org-remark-file: NetRes.R
+:END:
+
+** assess
+here is where the performance of the estimated networks is calculated with respect to the true network.
+
+Currently using bnlearn::as.prediction to estimate the performance.
+this give incorrect result in general.
+
+
+** runOneIteration
+
+here is where bnlearn is run 
+
+** initialize
+:PROPERTIES:
+:org-remark-beg: 2874
+:org-remark-end: 2884
+:org-remark-id: 82bd7afb
+:org-remark-label: nil
+:org-remark-link: [[file:NetRes.R::43]]
+:END:
+this is the constructor
+
+**             # @

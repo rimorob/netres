@@ -19,7 +19,9 @@ Imports:
   igraph,
   parallel,
   pcalg,
-  paran
+  paran,
+  minet,
+  patchwork
 Collate: 
     'NetRes.R'
     'LatSpace.R'
