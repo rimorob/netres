@@ -81,6 +81,9 @@ Constructor that fits a NetRes object from a data fram
 \item{\code{lvPrefix}}{Prefix of variables to be treated as latent (if any).  If not present, defautls to "U\\_".  If no latent vars found, 
 no performance assessment of latent discovery will (or indeed can) be made, but whatever latent space is discovered will be duly reported}
 
+\item{\code{mode}}{If set to "oracular", uses the (presumably provided) latent space to infer a "perfect" solution - used in benchmarking 
+performance and should be considered a deprecated argument}
+
 \item{\code{latentSpaceParentOnly}}{If true (default), latent space variables can only be parents, never children                    #'}
 }
 \if{html}{\out{</div>}}

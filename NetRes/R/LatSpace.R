@@ -1,4 +1,5 @@
 #' @include NetRes.R
+NULL
 
 # @description The top-level function to calculate latent variables from residuals
 NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scale=FALSE, algorithm.args=NULL) {
@@ -18,8 +19,9 @@ NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scal
     transposed = TRUE, #variables in columns
     scale = scale,
     ##BSPARAM = IrlbaParam(),
-    BPPARAM = BiocParallel::MulticoreParam()
+    BPPARAM = BiocParallel::DoparParam()
   )
+  print('here')
   
   if (resPpca$n == 0) {
     stop('Latent space not identified - aborting')
@@ -31,8 +33,11 @@ NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scal
     latVars = private$calculateLatVarsSparsePCA(residuals, resPpca = resPpca, scale=scale, algorithm.args=algorithm.args)  
   } else if (method == 'robust.sparse.pca') {
     latVars = private$calculateLatVarsRobustSparsePCA(residuals, resPpca = resPpca, scale=scale, algorithm.args=algorithm.args)  
-  } else if (method == 'autoencoder') {
-    stop('Autoencoder is not ported to the new code version yet')  
+  } else if (method == 'NNMF') {
+    latVars = private$calculateLatVarsNNMF(residuals, resPpca = resPpca, scale=scale, algorithm.args=algorithm.args)      
+  } else if (method == 'VAE') {
+    ##Note: the argument "scale" is neither supported nor necessary
+    latVars = private$calculateLatVarsVAE(residuals, resPpca = resPpca, algorithm.args=algorithm.args)      
   } else {
     stop(paste('Method', method, 'for latent space analysis has not been implemented yet'))
   }
@@ -58,44 +63,25 @@ NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scal
                          )
   )
   latRes = LatentResult$new(latVars)
+
   return(latRes)
 })
 
-# @description Calculate latent variables using linear PCA
+
+# @description Calculate latent variables using NNMF
 # residuals samples x vars matrix of residuals
-NetRes$set("private", "calculateLatVarsPCA", function(residuals, resPpca, scale=F, algorithm.args=NULL) {
-  resPc = prcomp(residuals, rank=resPpca$n, scale=scale)
+NetRes$set("private", "calculateLatVarsNNMF", function(residuals, resPpca, scale=F, algorithm.args=NULL) {
+  ##no native scaling in NNMF, so scale the residuals matrix if needed
+  if (scale) {
+    residuals = scale(residuals)
+  }
+  resPc <- nnmf(as.matrix(residuals), k=resPpca$n)
   
-  return(list(nLatVars = resPpca$n, 
-              latVars = resPc$x,
-              lvPredictor = resPc))
-})
-
-# @description Calculate latent variables using sparse PCA
-# residuals samples x vars matrix of residuals
-NetRes$set("private", "calculateLatVarsSparsePCA", function(residuals, resPpca, scale=F, algorithm.args=NULL) {
-  ##resPc = prcomp(residuals, rank=resPpca$n, scale=scale)
-  resPc = rspca(residuals, k=resPpca$n, scale=scale)
-
-  scores = resPc$scores
+  scores = resPc$W #left matrix is rows by eigenspace
+  ##call these PCs for compatibilty
   colnames(scores) = paste('PC', 1:ncol(scores), sep='')
-  resPc$scores = scores
+  resPc$W = scores
   return(list(nLatVars = resPpca$n, 
-              latVars = resPc$scores,
+              latVars = resPc$W,
               lvPredictor = resPc))
 })
-
-# @description Calculate latent variables using sparse, robust PCA
-# residuals samples x vars matrix of residuals
-NetRes$set("private", "calculateLatVarsRobustSparsePCA", function(residuals, resPpca, scale=F, algorithm.args=NULL) {
-  ##resPc = prcomp(residuals, rank=resPpca$n, scale=scale)
-  resPc = robspca(residuals, k=resPpca$n, scale=scale)
-  
-  scores = resPc$scores
-  colnames(scores) = paste('PC', 1:ncol(scores), sep='')
-  resPc$scores = scores
-  return(list(nLatVars = resPpca$n, 
-              latVars = resPc$scores,
-              lvPredictor = resPc))
-})
-

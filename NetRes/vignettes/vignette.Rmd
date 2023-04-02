@@ -24,15 +24,12 @@ library(bnlearn)
 ##demo script
 network = SFNetwork$new(numVertices=50, topology='star', addOneEdge = FALSE)
 generated = network$generateData(numSamples = 100, latIdx = 1)
-print(network)
-plot(network)
 bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
 
-tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
-##tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
+tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 
 netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', 
-                       algorithm.args = tabuArgs, mode='foo', latentSpaceMethod='sparse.pca') 
+                       algorithm.args = tabuArgs, mode='foo', latentSpaceMethod='VAE') #'sparse.pca') 
 ##netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
 ##after inference
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
@@ -68,8 +65,7 @@ print(network)
 plot(network)
 bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
 
-tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', prior = 'vsp', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
-##tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'bge', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
+tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 
 netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', 
                        algorithm.args = tabuArgs, mode='foo',
@@ -87,7 +83,7 @@ plot(netResObj)
 
 ```
 
-Example 3 - a tiny example of scale-free network generation and inference
+Example 3 - an example of scale-free network generation and inference
 ```{r, include=TRUE}
 pdf('Example3.pdf')
 con <- file("test.log")
@@ -102,7 +98,7 @@ library(bnlearn)
 
 ##demo script
 network = SFNetwork$new(numVertices=500, numNeighbors = 3)
-generated = network$generateData(numSamples=100, latIdx = c(1, 2, 3), rescaleNoiseBy=NULL)
+generated = network$generateData(numSamples=100, latIdx = c(2, 3), rescaleNoiseBy=NULL)
 print(network)
 bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
 

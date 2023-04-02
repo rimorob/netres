@@ -9,7 +9,10 @@
 #' @importFrom GA ga
 #' @importFrom GenSA GenSA
 #' @import sparsepca
-#' 
+#' @importFrom NNLM nnmf
+#' @importFrom torch nn_module torch_tensor nn_linear nn_relu nn_sequential torch_exp torch_randn optim_adam nn_bce_loss
+#' @importFrom rlang ns_env
+
 ##An R6 class for a generated scale-free network
 #' @export
 NetRes <- R6Class("NetRes", 
@@ -38,6 +41,8 @@ NetRes <- R6Class("NetRes",
                     #' @param algorithm.args Arguments to the algorithm (must be a list)
                     #' @param lvPrefix Prefix of variables to be treated as latent (if any).  If not present, defautls to "U\\_".  If no latent vars found, 
                     #' no performance assessment of latent discovery will (or indeed can) be made, but whatever latent space is discovered will be duly reported
+                    #' @param mode If set to "oracular", uses the (presumably provided) latent space to infer a "perfect" solution - used in benchmarking 
+                    #' performance and should be considered a deprecated argument
                     #' @param latentSpaceParentOnly If true (default), latent space variables can only be parents, never children                    #' 
                     #' @return A NetRes object
                     initialize = function(dframe, true.graph = NULL, nIter, nBoot=50, algorithm='tabu', algorithm.args, 
@@ -211,10 +216,12 @@ NetRes <- R6Class("NetRes",
                       new.algorithm.args = algorithm.args
                       new.algorithm.args$blacklist = rbind(algorithm.args$blacklist,
                                                        private$makeBlacklist(dframe, lvPrefix))
+                      print('asdf')
                       ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
                       ##ensBIC =  mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
                       ##  score(net, data, type = algorithm.args$score, prior = algorithm.args$prior)
                       ##}, dframe, new.algorithm.args))
+                      print('m,.;')
                       ensBIC = mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
                         ##note: latent space is regularized during Horn's PFA separately and is excluded from score computation
                         scores = score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, by.node=TRUE)
@@ -225,17 +232,18 @@ NetRes <- R6Class("NetRes",
                           return(sum(scores))
                         }
                       }, dframe, new.algorithm.args))
-                      
+                      print('azxcf')
                       netWeights = private$calcBayesFactors(ens, dframe, cluster, algorithm.args)
+                      print('jkl;')
                       ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)                      
                       if (!learnLatentSpace) { #then return the ensemble-specific BIC (w/o latent space learning)
                         return(list(ensemble=ens2,
                                     latent.space = NULL,
                                     BIC = ensBIC))
                       }
-                      
+                      print('qewr')
                       res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
-
+                      print('uip')
                       ##paran(res)
                       latvars = private$calculateLatVars(res, method=latentSpaceMethod, scale=scale, algorithm.args=new.algorithm.args) 
 

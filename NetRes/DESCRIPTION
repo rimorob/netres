@@ -23,4 +23,6 @@ Imports:
 Collate: 
     'NetRes.R'
     'LatSpace.R'
+    'PCAmethods.R'
     'SFNetwork.R'
+    'VAE.R'
