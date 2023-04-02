@@ -61,7 +61,9 @@ Constructor that fits a NetRes object from a data fram
   debug = FALSE,
   latentSpaceParentOnly = TRUE,
   latentSpaceMethod = "pca",
-  optimizeLatentSpace = FALSE
+  optimizeLatentSpace = FALSE,
+  nCores = NULL,
+  BPPARAM = BiocParallel::DoparParam()
 )}\if{html}{\out{</div>}}
 }
 
@@ -98,7 +100,14 @@ A NetRes object
 \subsection{Method \code{assess()}}{
 assess Assess the inferred ensemble against the true graph
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{NetRes$assess(true.graph = self$true.graph, lvPrefix = "^U\\\\_")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{NetRes$assess(
+  true.graph = self$true.graph,
+  lvPrefix = "^U\\\\_",
+  nCores = NULL,
+  return_roc = FALSE,
+  save_to_pdf = NULL,
+  ci = FALSE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

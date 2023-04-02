@@ -53,7 +53,7 @@ NetRes <- R6Class("NetRes",
                                           latentSpaceMethod = 'pca',
                                           optimizeLatentSpace=FALSE,
                                           nCores=NULL,
-                                          BPPARAM=BiocParallel::MulticoreParam()) {
+                                          BPPARAM=BiocParallel::DoparParam()) {
                       if(debug)
                         browser()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
@@ -87,7 +87,7 @@ NetRes <- R6Class("NetRes",
                                                          weightedResiduals, scale=scale, optimizeLatentSpace=optimizeLatentSpace,
                                                          learnLatentSpace = ifelse(ni == 1, FALSE, TRUE),
                                                          latentSpaceParentOnly=latentSpaceParentOnly,
-                                                         latentSpaceMethod = latentSpaceMethod,debug=debug,BPPARAM=BPPARAM)
+                                                         latentSpaceMethod = latentSpaceMethod,debug=debug, BPPARAM=BPPARAM)
                         if(debug){
                           message("After runOneIteration ")
                           browser()
@@ -239,7 +239,7 @@ NetRes <- R6Class("NetRes",
                                                 weightedResiduals=FALSE, scale=FALSE, learnLatentSpace = TRUE,
                                                 optimizeLatentSpace=FALSE, 
                                                 latentSpaceParentOnly=TRUE, latentSpaceMethod = 'pca',
-                                                BPPARAM=BiocParallel::MulticoreParam(),
+                                                BPPARAM=BiocParallel::DoparParam(),
                                                 debug=FALSE) {
                       dud = function(x) x
                       
@@ -249,7 +249,7 @@ NetRes <- R6Class("NetRes",
 
                       ##This part seems to be slow, at least on small networks.  Parallelizes to only a couple of cores at a time
                       ##It would be nice to figure out why
-                      ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
+                      ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster, debug=TRUE)
                       ##ensBIC =  mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
                       ##  score(net, data, type = algorithm.args$score, prior = algorithm.args$prior)
                       ##}, dframe, new.algorithm.args))
@@ -274,10 +274,11 @@ NetRes <- R6Class("NetRes",
                                     BIC = ensBIC))
                       }
 
+                      ##if latent space was present, then let's determine the residuals
                       res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
-
+                      
                       ##paran(res)
-                      latvars = private$calculateLatVars(res, method=latentSpaceMethod, scale=scale, algorithm.args=new.algorithm.args,BPPARAM=BPPARAM) 
+                      latvars = private$calculateLatVars(res, method=latentSpaceMethod, scale=scale, algorithm.args=new.algorithm.args, BPPARAM=BPPARAM) 
 
                       ##debugging step
                       trueCoefs = NULL
@@ -305,13 +306,23 @@ NetRes <- R6Class("NetRes",
                       latCoefs = array(data = 1, dim=c(ncol(latvars$v) - 1, ncol(latvars$v)))
 
                       if (ncol(latCoefs) > 1 && optimizeLatentSpace) { 
-                        print('optimizing the basis vector of the latent space')                        
+                          print('optimizing the basis vector of the latent space')
+                          ##learn the markov blanket of the latent vars to speed up the process
+                          mb = c()
+                          for (lv in latvars$v) {
+                              dframe.tmp = cbind(dframe, lv)
+                              mb = c(mb, learn.mb(dframe.tmp, colnames(lv), 'fast.iamb'))
+                          }
+                          mb = unique(mb)
+                          
+
                         startTime = Sys.time()
                         optimRes = ga(type = 'real-valued', fitness=private$latVarLinComb, latVars = latvars$v, 
                                       algorithm = algorithm,
                                       algorithm.args = algorithm.args,
                                       lvPrefix = lvPrefix,
-                                      dframe = dframe,
+                                      ##use markov blanket for optimization
+                                      dframe = dframe[, mb],
                                       cluster = cluster,
                                       nBoot = 1, #"fast" regime
                                       lower = rep(-100, length(as.numeric(latCoefs))),

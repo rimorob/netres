@@ -1,5 +1,4 @@
 #' @include NetRes.R
-NULL
 
 NetRes$set("private", "plotIgraph", function(g,
                       edgelabels=F,

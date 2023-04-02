@@ -27,5 +27,6 @@ Collate:
     'LatSpace.R'
     'LatSpaceOptimization.R'
     'PCAmethods.R'
+    'PerformanceAssessment.R'
     'SFNetwork.R'
     'VAE.R'
