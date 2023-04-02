@@ -9,7 +9,6 @@
 #' @importFrom GA ga
 #' @importFrom GenSA GenSA
 #' @import sparsepca
-#' @importFrom NNLM nnmf
 #' 
 ##An R6 class for a generated scale-free network
 #' @export
