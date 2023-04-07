@@ -171,6 +171,7 @@ NetRes <- R6Class("NetRes",
                       ggp3=qplot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')+geom_line()+theme_light()
                         ggpcomb=ggp1/ggp2/ggp3
                         if(!is.null(save_to_pdf)){
+                            message("saving to file ",save_to_pdf)
                             pdf(save_to_pdf)
                             print(ggpcomb)
                             for(ni in 1:length(allplots)){
