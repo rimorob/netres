@@ -1724,6 +1724,7 @@ netResObj = NetRes$new(
                      #BPPARAM=BiocParallel::SerialParam(),
                      debug=F) 
 
+netResObj$assess(nCores=4,lvPrefix="U")
 netResObj$assess(nCores=4,lvPrefix="U",save_to_pdf="testassess.pdf")
 #+end_src
 ** Questions
