@@ -73,7 +73,7 @@ NetRes <- R6Class("NetRes",
                           nCores=min(detectCores()-1,nCores)
                       }
                       for (ni in 1:nIter) {
-                        if(debug){
+                        if(debug) {
                           message("In interation ", ni)
                           browser()
                         }                      
@@ -88,6 +88,8 @@ NetRes <- R6Class("NetRes",
                                                          learnLatentSpace = ifelse(ni == 1, FALSE, TRUE),
                                                          latentSpaceParentOnly=latentSpaceParentOnly,
                                                          latentSpaceMethod = latentSpaceMethod,debug=debug, BPPARAM=BPPARAM)
+                        ##clean up
+                        gc()
                         if(debug){
                           message("After runOneIteration ")
                           browser()
@@ -101,7 +103,7 @@ NetRes <- R6Class("NetRes",
                         print(paste('BIC history:', as.numeric(self$BIC)))
                         
                         if (ni > 1 && self$BIC[[ni]] <= self$BIC[[ni-1]]) {
-                          warning('Stopping early due to convergence')
+                          print('Stopping early due to convergence')
                           break  
                         }
 
@@ -307,27 +309,28 @@ NetRes <- R6Class("NetRes",
 
                       if (ncol(latCoefs) > 1 && optimizeLatentSpace) { 
                           print('optimizing the basis vector of the latent space')
-                          ##learn the markov blanket of the latent vars to speed up the process
-                          mb = c()
-                          for (lv in latvars$v) {
+
+                          ##learn the markov boundary of the latent vars to speed up the process
+                          mb = lapply(as.data.frame(latvars$v), function(lv, dframe) {
+                              lv = data.frame(lv)
+                              colnames(lv) = 'LV'
                               dframe.tmp = cbind(dframe, lv)
-                              mb = c(mb, learn.mb(dframe.tmp, colnames(lv), 'fast.iamb'))
-                          }
-                          mb = unique(mb)
-                          
+                              learn.nbr(dframe.tmp, colnames(lv), 'mmpc')
+                          }, dframe)
+                          mb = unique(unlist(mb))
 
                         startTime = Sys.time()
                         optimRes = ga(type = 'real-valued', fitness=private$latVarLinComb, latVars = latvars$v, 
                                       algorithm = algorithm,
                                       algorithm.args = algorithm.args,
                                       lvPrefix = lvPrefix,
-                                      ##use markov blanket for optimization
+                                      ##use markov boundary for optimization
                                       dframe = dframe[, mb],
                                       cluster = cluster,
                                       nBoot = 1, #"fast" regime
                                       lower = rep(-100, length(as.numeric(latCoefs))),
                                       upper = rep(100, length(as.numeric(latCoefs))),
-                                      run = 10, ##increase this eventually, or leave at default (maxiter)
+                                      run = algorithm.args$max.iter/5, 
                                       monitor=plot,
                                       parallel = cluster,
                                       optim = FALSE, #use optim for local optimization
@@ -340,7 +343,7 @@ NetRes <- R6Class("NetRes",
                         ##FIX THE BELOW - CURRENTLY OVERRIDING LATVARS$V AND UNABLE TO PREDICT CORRECTLY OOS, NEED TO PASS ON THE MAPPING BASIS
                         ##FOR NOW, JUST RETURN THE CORRECT VECTOR OVER TRAINING DATA                          
 
-                        ##latvars$v = mappedLVs
+                          ##optimization may have been done on the Markov boundary, but now fit the whole ensemble
                         remappedRes = private$latVarLinComb(optimRes@solution, latvars$v, algorithm = algorithm,
                                                             algorithm.args = algorithm.args,
                                                             lvPrefix = lvPrefix,

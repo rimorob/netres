@@ -219,8 +219,9 @@ NetRes$set("private", "network_performance", function(true_igraph, edges,Nboot=2
                        by=c("Var1","Var2"))
   trueval=comb_edges$True
   scores=comb_edges$Prob
-  pred <- prediction(comb_edges$Prob, comb_edges$True)
-  perf= performance(pred, "lift", "rpp")
+
+  pred <- ROCR::prediction(comb_edges$Prob, comb_edges$True)
+  perf= ROCR::performance(pred, "lift", "rpp")
   RPP=perf@x.values[[1]]
   lift=perf@y.values[[1]]
   ggp_lift=qplot(RPP,lift,geom='line')+theme_light()+xlab(perf@x.name)+ylab(perf@y.name)+ggtitle("Lift Graph")

@@ -13,6 +13,8 @@ mappedLatVars = function(coefs, latVars) {
   return(newLatVars)
 }
 
+dud = function(x) x
+
 ##optimize latent variables to minimize the Bayes score
 ##do this by calculating a linear combination to optimize the ensemble BIC
 ##note that the sign of returned BIC is flipped for minimization by default
