@@ -147,7 +147,8 @@ NetRes <- R6Class("NetRes",
                       true.graph.ig=as.igraph(true.graph)
                       aucs = c()
                       prAucs = c()
-                      f1maxes = c()
+                        f1maxes = c()
+                        sids=c()
                       allplots=list()
                       ##test performance at every iteration
                       for (ni in 1:length(self$ensemble)) { 
@@ -158,6 +159,7 @@ NetRes <- R6Class("NetRes",
                               as.data.frame() %>%
                               mutate(freq=strength*direction)
                           perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci )
+                          sids[ni]=attributes(perf)$sid$sid
                           auc=filter(attributes(perf)$aucs,curvetypes=="ROC")$AUC
                           aucpr=filter(attributes(perf)$aucs,curvetypes=="PRC")$AUC
                           aucs[ni] = auc
@@ -170,9 +172,11 @@ NetRes <- R6Class("NetRes",
                       }
                       ggp1=qplot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')+geom_line()+theme_light()
                       ggp2=qplot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC') +geom_line()+theme_light()                 
-                      ggp3=qplot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')+geom_line()+theme_light()
-                        ggpcomb=ggp1/ggp2/ggp3
+                        ggp3=qplot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')+geom_line()+theme_light()
+                        ggp4=qplot(1:length(self$ensemble), sids, main='Structural Intervention Distance over iterations', xlab='Iteration', ylab='SID')+geom_line()+theme_light()
+                        ggpcomb=ggp1/ggp2/ggp3/ggp4
                         if(!is.null(save_to_pdf)){
+                            message("saving to file ",save_to_pdf)
                             pdf(save_to_pdf)
                             print(ggpcomb)
                             for(ni in 1:length(allplots)){
