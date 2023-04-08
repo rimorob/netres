@@ -16,13 +16,25 @@ this give incorrect result in general.
 here is where bnlearn is run 
 
 ** initialize
-:PROPERTIES:
-:org-remark-beg: 2874
-:org-remark-end: 2884
-:org-remark-id: 82bd7afb
-:org-remark-label: nil
-:org-remark-link: [[file:NetRes.R::43]]
-:END:
 this is the constructor
 
 **             # @
+
+** assess
+:PROPERTIES:
+:org-remark-beg: 8523
+:org-remark-end: 8529
+:org-remark-id: dc37ca42
+:org-remark-label: nil
+:org-remark-link: [[file:NetRes.R::131]]
+:END:
+
+** assess
+:PROPERTIES:
+:org-remark-beg: 8523
+:org-remark-end: 8529
+:org-remark-id: 21fa2353
+:org-remark-label: nil
+:org-remark-link: [[file:NetRes.R::131]]
+:END:
+here is the performance estimation
