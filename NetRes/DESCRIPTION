@@ -30,3 +30,6 @@ Collate:
     'PerformanceAssessment.R'
     'SFNetwork.R'
     'VAE.R'
+Depends: 
+    R (>= 2.10)
+LazyData: true

@@ -43,8 +43,6 @@ bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = l
 
 ```
 
----
-
 Example 2 - twin-star topology network generation and inference
 
 ```{r setup, include = TRUE}
@@ -97,7 +95,7 @@ library(NetRes)
 library(bnlearn)
 
 ##demo script
-network = SFNetwork$new(numVertices=500, numNeighbors = 3)
+network = SFNetwork$new(numVertices=1000, numNeighbors = 4)
 generated = network$generateData(numSamples=100, latIdx = c(2, 3), rescaleNoiseBy=NULL)
 print(network)
 bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
@@ -121,5 +119,43 @@ bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = l
 sink()
 sink(type='message')
 dev.off()
+
+```
+
+Example 4 - a real example of gene expression and protein levels of neurons in the striatum of mice with Huntington's disease
+The latent variable is the length of CAG repeats in Huntingtin gene, which is the only genetic marker of age of onset of HD and accounts
+for 50% of variability in the age of onset.
+Here we don't know the true graph, but we DO know the latent variable.
+Note: the authors gratefully acknowledge "Cure Huntington's Disease Foundation" for their permission to use this snippet of their data.
+```{r, include=TRUE}
+##pdf('Example4.pdf')
+###con <- file("test.log")
+##sink(con, append=TRUE)
+##sink(con, append=TRUE, type="message")
+data(striatum) #load the HD dataset
+striatum = scale(striatum) #scale all variables
+
+##create a blacklist making Age and Gender input-only variables (these are experimental or, effectively, interventional variables)
+##do not include the latent space in the blacklist
+library(dplyr)
+exptVars =  bnlearn::tiers2blacklist(list(setdiff(colnames(striatum), c('Age', 'Gender')), c('Age', 'Gender'))) %>% as.data.frame %>% dplyr::filter(to != 'U_CAG')
+
+set.seed(42)
+
+library(NetRes)
+library(bnlearn)
+
+algArgs = list(start = NULL, whitelist = NULL, blacklist = exptVars, score = 'ebic-g', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
+
+netResObj = NetRes$new(striatum, nIter = 10, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='VAE', optimizeLatentSpace=FALSE) 
+
+onetResObj$assess()
+nIter = length(netResObj$ensemble)
+bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
+bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[4]][[1]]), value=T), col = "tomato", fill = "orange"))
+
+##sink()
+##sink(type='message')
+##dev.off()
 
 ```
