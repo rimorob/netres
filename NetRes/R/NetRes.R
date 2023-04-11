@@ -4,7 +4,7 @@
 #' @importFrom parallel makeCluster stopCluster detectCores parLapply parSapply 
 #' @importFrom doParallel registerDoParallel
 #' @importFrom BiocSingular IrlbaParam
-#' @importFrom corrplot corrplot
+#' @importFrom corrplot corrplot corrplot.mixed
 #' @importFrom paran paran
 #' @importFrom GA ga
 #' @importFrom GenSA GenSA
