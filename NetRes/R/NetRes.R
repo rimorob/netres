@@ -117,7 +117,8 @@ NetRes <- R6Class("NetRes",
                           warning('!!!RUNNING IN ORACULAR MODE - USING TRUE LATENT VARIABLES FOR INFERENCE OF STRUCTURE!!!')
                           train = cbind(self$train.data, self$latent.data)
                         }
-                        corrplot(cor(cbind(self$latent.data, curRes$latent.space$v)), method='ellipse', order='AOE', diag=F)
+                        
+                        self$assess()
                         print('pausing to admire the corrplot')
                         Sys.sleep(5)
                         stopCluster(cluster)
@@ -130,10 +131,21 @@ NetRes <- R6Class("NetRes",
                     #' @description assess Assess the inferred ensemble against the true graph
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
                     #' @param lvPrefix The latent variable-identifying regular expression, as elsewhere; defaults to "^U\\_"
-                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_",nCores=NULL,return_roc=FALSE,save_to_pdf=NULL,ci=FALSE) {
-                        require(patchwork)
-                      if (is.null(true.graph)) {
-                        stop('Cannot assess performance without the true graph')
+                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_", nCores=NULL, return_roc=FALSE, save_to_pdf=NULL, ci=FALSE, iteration = NULL) {
+                      require(patchwork)
+                      ##plot corrplot of inferred vs true latent space, assuming true latent space exists
+                      if (!is.null(self$latent.data)) {
+                        if (is.null(iteration)) ##plot the last one by default
+                          iteration = length(self$latent.space)
+                        
+                        if ("v" %in% names(self$latent.space[[iteration]])) {
+                          corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), method='ellipse', 
+                                   order='AOE', diag=F)
+                        }
+                      }
+
+                      if (is.null(true.graph)) { #then can't plot other metrics
+                        return  
                       }
                       if(is.null(nCores)){
                           nCores = detectCores() - 2
