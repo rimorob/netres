@@ -139,8 +139,7 @@ NetRes <- R6Class("NetRes",
                           iteration = length(self$latent.space)
                         
                         if ("v" %in% names(self$latent.space[[iteration]])) {
-                          corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), method='ellipse', 
-                                   order='AOE', diag=F)
+                          corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), upper='ellipse', order='AOE', insig='blank')
                         }
                       }
 
