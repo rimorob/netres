@@ -4,7 +4,7 @@
 #' @importFrom parallel makeCluster stopCluster detectCores parLapply parSapply 
 #' @importFrom doParallel registerDoParallel
 #' @importFrom BiocSingular IrlbaParam
-#' @importFrom corrplot corrplot
+#' @importFrom corrplot corrplot corrplot.mixed
 #' @importFrom paran paran
 #' @importFrom GA ga
 #' @importFrom GenSA GenSA
@@ -50,7 +50,7 @@ NetRes <- R6Class("NetRes",
                                           lvPrefix = "^U\\_", mode=NULL,
                                           weightedResiduals = FALSE, scale=FALSE, debug=FALSE,
                                           latentSpaceParentOnly = TRUE,
-                                          latentSpaceMethod = 'pca',
+                                          latentSpaceMethod = 'sparse.pca',
                                           optimizeLatentSpace=FALSE,
                                           nCores=NULL,
                                           BPPARAM=BiocParallel::DoparParam()) {
@@ -73,7 +73,7 @@ NetRes <- R6Class("NetRes",
                           nCores=min(detectCores()-1,nCores)
                       }
                       for (ni in 1:nIter) {
-                        if(debug){
+                        if(debug) {
                           message("In interation ", ni)
                           browser()
                         }                      
@@ -88,6 +88,8 @@ NetRes <- R6Class("NetRes",
                                                          learnLatentSpace = ifelse(ni == 1, FALSE, TRUE),
                                                          latentSpaceParentOnly=latentSpaceParentOnly,
                                                          latentSpaceMethod = latentSpaceMethod,debug=debug, BPPARAM=BPPARAM)
+                        ##clean up
+                        gc()
                         if(debug){
                           message("After runOneIteration ")
                           browser()
@@ -101,7 +103,7 @@ NetRes <- R6Class("NetRes",
                         print(paste('BIC history:', as.numeric(self$BIC)))
                         
                         if (ni > 1 && self$BIC[[ni]] <= self$BIC[[ni-1]]) {
-                          warning('Stopping early due to convergence')
+                          print('Stopping early due to convergence')
                           break  
                         }
 
@@ -115,7 +117,8 @@ NetRes <- R6Class("NetRes",
                           warning('!!!RUNNING IN ORACULAR MODE - USING TRUE LATENT VARIABLES FOR INFERENCE OF STRUCTURE!!!')
                           train = cbind(self$train.data, self$latent.data)
                         }
-                        corrplot(cor(cbind(self$latent.data, curRes$latent.space$v)), method='ellipse', order='AOE', diag=F)
+                        
+                        self$assess()
                         print('pausing to admire the corrplot')
                         Sys.sleep(5)
                         stopCluster(cluster)
@@ -128,10 +131,20 @@ NetRes <- R6Class("NetRes",
                     #' @description assess Assess the inferred ensemble against the true graph
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
                     #' @param lvPrefix The latent variable-identifying regular expression, as elsewhere; defaults to "^U\\_"
-                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_",nCores=NULL,return_roc=FALSE,save_to_pdf=NULL,ci=FALSE) {
-                        require(patchwork)
-                      if (is.null(true.graph)) {
-                        stop('Cannot assess performance without the true graph')
+                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_", nCores=NULL, return_roc=FALSE, save_to_pdf=NULL, ci=FALSE, iteration = NULL) {
+                      require(patchwork)
+                      ##plot corrplot of inferred vs true latent space, assuming true latent space exists
+                      if (!is.null(self$latent.data)) {
+                        if (is.null(iteration)) ##plot the last one by default
+                          iteration = length(self$latent.space)
+                        
+                        if ("v" %in% names(self$latent.space[[iteration]])) {
+                          corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), upper='ellipse', order='AOE', insig='blank')
+                        }
+                      }
+
+                      if (is.null(true.graph)) { #then can't plot other metrics
+                        return  
                       }
                       if(is.null(nCores)){
                           nCores = detectCores() - 2
@@ -311,27 +324,28 @@ NetRes <- R6Class("NetRes",
 
                       if (ncol(latCoefs) > 1 && optimizeLatentSpace) { 
                           print('optimizing the basis vector of the latent space')
-                          ##learn the markov blanket of the latent vars to speed up the process
-                          mb = c()
-                          for (lv in latvars$v) {
+
+                          ##learn the markov boundary of the latent vars to speed up the process
+                          mb = lapply(as.data.frame(latvars$v), function(lv, dframe) {
+                              lv = data.frame(lv)
+                              colnames(lv) = 'LV'
                               dframe.tmp = cbind(dframe, lv)
-                              mb = c(mb, learn.mb(dframe.tmp, colnames(lv), 'fast.iamb'))
-                          }
-                          mb = unique(mb)
-                          
+                              learn.nbr(dframe.tmp, colnames(lv), 'mmpc')
+                          }, dframe)
+                          mb = unique(unlist(mb))
 
                         startTime = Sys.time()
                         optimRes = ga(type = 'real-valued', fitness=private$latVarLinComb, latVars = latvars$v, 
                                       algorithm = algorithm,
                                       algorithm.args = algorithm.args,
                                       lvPrefix = lvPrefix,
-                                      ##use markov blanket for optimization
+                                      ##use markov boundary for optimization
                                       dframe = dframe[, mb],
                                       cluster = cluster,
                                       nBoot = 1, #"fast" regime
                                       lower = rep(-100, length(as.numeric(latCoefs))),
                                       upper = rep(100, length(as.numeric(latCoefs))),
-                                      run = 10, ##increase this eventually, or leave at default (maxiter)
+                                      run = algorithm.args$max.iter/5, 
                                       monitor=plot,
                                       parallel = cluster,
                                       optim = FALSE, #use optim for local optimization
@@ -344,7 +358,7 @@ NetRes <- R6Class("NetRes",
                         ##FIX THE BELOW - CURRENTLY OVERRIDING LATVARS$V AND UNABLE TO PREDICT CORRECTLY OOS, NEED TO PASS ON THE MAPPING BASIS
                         ##FOR NOW, JUST RETURN THE CORRECT VECTOR OVER TRAINING DATA                          
 
-                        ##latvars$v = mappedLVs
+                          ##optimization may have been done on the Markov boundary, but now fit the whole ensemble
                         remappedRes = private$latVarLinComb(optimRes@solution, latvars$v, algorithm = algorithm,
                                                             algorithm.args = algorithm.args,
                                                             lvPrefix = lvPrefix,

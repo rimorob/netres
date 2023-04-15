@@ -60,7 +60,7 @@ Constructor that fits a NetRes object from a data fram
   scale = FALSE,
   debug = FALSE,
   latentSpaceParentOnly = TRUE,
-  latentSpaceMethod = "pca",
+  latentSpaceMethod = "sparse.pca",
   optimizeLatentSpace = FALSE,
   nCores = NULL,
   BPPARAM = BiocParallel::DoparParam()

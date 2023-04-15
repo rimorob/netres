@@ -164,7 +164,7 @@ NetRes$set("private", "trainVAE", function(vae, train_data, epochs = 1000) {
     }
   )
 
-  dl <- torch::dataloader(dataset(as.matrix(train_data)), batch_size = nrow(train_data)/5, shuffle = TRUE, drop_last=TRUE)
+  dl <- torch::dataloader(dataset(as.matrix(train_data)), batch_size = floor(nrow(train_data)/5), shuffle = TRUE, drop_last=TRUE)
   ## Optimize. Note that a scheduler and/or a different learning rate could improve performance
   optimizer <- optim_adam(vae$parameters, lr = 0.001)
   ## Optimization loop
