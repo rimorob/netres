@@ -22,15 +22,20 @@ library(NetRes)
 library(bnlearn)
 
 ##demo script
-network = SFNetwork$new(numVertices=50, topology='star', addOneEdge = FALSE)
-generated = network$generateData(numSamples = 100, latIdx = 1)
+network = SFNetwork$new(numVertices=20, topology='star', addOneEdge = TRUE)
+library(brms)
+generated = network$generateData(numSamples = 100, latIdx = 1, rescaleNoiseBy=function(mu=0.5, sigma=0.5, alpha=-5) {
+    return(rskew_normal(1, mu, sigma, alpha))
+})
+library(GGally)
+ggpairs(generated$data)
 bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
 
 tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 
 netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', 
                        algorithm.args = tabuArgs, mode='foo', latentSpaceMethod='VAE') #'sparse.pca') 
-##netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
+netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
 ##after inference
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
 bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))

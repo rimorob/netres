@@ -52,7 +52,9 @@ SFNetwork <- R6Class("SFNetwork",
                        #' @param numSamples number of samples in the generated data frame (default = 1000)
                        #' @param errDist error distribution of data generated for the network, as in rmvDAG
                        #' @param latIdx indices of hubs (in decreasing order) to make latent; by default 2nd and 3rd largest.  These will be prefixed with "U_" (unobserved).  If none, set to NULL
-                       #' @param rescaleNoiseBy If a positive number, scales sd from default parameter for all variables by a constant; default behavior is scale everything through a left-skewed gaussian to generate several proxy variables for latent space; if NULL, no rescaling
+                       #' @param rescaleNoiseBy If a positive number, scales sd from default parameter for all variables by a constant; 
+                       #' default behavior is scale everything through a left-skewed gaussian to generate several proxy variables for latent space; 
+                       #' if NULL, no rescaling
                        generateData = function(numSamples = 1000,
                                                doPlot = FALSE,
                                                errDist = 'normal',

@@ -106,7 +106,9 @@ assess Assess the inferred ensemble against the true graph
   nCores = NULL,
   return_roc = FALSE,
   save_to_pdf = NULL,
-  ci = FALSE
+  ci = FALSE,
+  iteration = NULL,
+  cluster = NULL
 )}\if{html}{\out{</div>}}
 }
 
