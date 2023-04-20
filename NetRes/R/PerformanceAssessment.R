@@ -265,21 +265,78 @@ NetRes$set("private", "network_performance", function(true_igraph, edges, Nboot 
   scores <- comb_edges$Prob
   
   if(length(unique(trueval))==2){
+      ## there are positive and negative cases
       pred <- prediction(comb_edges$Prob, comb_edges$True)
       perf <- performance(pred, "lift", "rpp")
       RPP <- perf@x.values[[1]]
       lift <- perf@y.values[[1]]
       ggp_lift <- qplot(RPP, lift, geom = "line") + theme_light() + xlab(perf@x.name) + ylab(perf@y.name) + ggtitle("Lift Graph")
       if (ci) {
-          set.seed(seed)
-          resampled_scores <- replicate(Nboot, sample(scores, replace = TRUE))
-          set.seed(seed)
-          resampled_labels <- replicate(Nboot, sample(trueval, replace = TRUE))
-          cidat <- mmdata(resampled_scores, resampled_labels,
-                          modnames = rep("boot_", Nboot), dsids = 1:Nboot
-                          )
+          ## generate confidence intervals
+          if(is.null(oracle)){
+              ## no oracle
+              set.seed(seed)
+              ids=replicate(Nboot,sample(1:length(scores),replace=TRUE))
+              resampled_scores= list(
+                  scores=map(1:Nboot,
+                             function(vv){
+                                 scores[ids[,vv]]
+                             }),
+                  labels=map(1:Nboot,
+                             function(vv){
+                                 trueval[ids[,vv]]
+                             }),
+                  modnames="Inferred",
+                  dsids=1:Nboot
+              ) %>% set_names(c("scores","labels","modnames","dsids"))
+              }else{
+                  ## with oracle
+                  set.seed(seed)
+                  ids=replicate(Nboot,sample(1:length(scores),replace=TRUE))
+                  resampled_scores= list(
+                      scores=map(1:Nboot,
+                                 function(vv){
+                                     list(scores[ids[,vv]],
+                                          oracleest[ids[,vv]]
+                                          )
+                                 }),
+                      labels=map(1:Nboot,
+                                 function(vv){
+                                     list(trueval[ids[,vv]],
+                                          trueval[ids[,vv]]
+                                          )
+                                 }),
+                      modnames=c("Inferred",'Oracle'),
+                      dsids=1:Nboot
+                  ) %>% set_names(c("scores","labels","modnames","dsids"))
+                  ##ressampled_oracle=replicate(Nboot,sample(oracleest,replace=TRUE))
+              }
+              cidat <- mmdata(resampled_scores[["scores"]],
+                              resampled_scores[["labels"]],
+                              modnames = resampled_scores[["modnames"]],
+                              dsids = resampled_scores[["dsids"]]
+                              )
       } else {
-          cidat <- mmdata(scores, trueval)
+          ## no CI
+          if(!is.null(oracle)){
+              scores_withora= list(
+                  scores=list(
+                      list(scores,
+                           oracleest
+                           )
+                  ),
+                  labels=trueval,
+                  modnames=c("Inferred",'Oracle'),
+                  dsids=1
+              )
+              cidat <- mmdata(scores_withora[["scores"]],
+                              scores_withora[["labels"]],
+                              modnames=scores_withora[["modnames"]],
+                              dsids=scores_withora[["dsids"]]
+                              )
+          }else{
+              cidat <- mmdata(scores, trueval)
+          }
       }
       ## get AUC
       sscurves_auc <- precrec::evalmod(cidat)
@@ -292,13 +349,13 @@ NetRes$set("private", "network_performance", function(true_igraph, edges, Nboot 
       sscurves_bas <- precrec::evalmod(cidat, mode = "basic")
       ## generate plots
       prc_random <- sum(true_edges$value) / length(true_edges$value)
-      ggp_fm <- autoplot(sscurves_bas, "fscore")
-      ggp_prc <- autoplot(sscurves_auc, "PRC") +
+      ggp_fm <- autoplot(sscurves_bas, "fscore",show_cb=ci)
+      ggp_prc <- autoplot(sscurves_auc, "PRC",show_cb=ci) +
           ggtitle(sprintf(
               "PR Curve. AUC = %0.2g.\nRandom: %0.2g",
               signif(auc_prc, 2), prc_random
           ))
-      ggp_roc <- autoplot(sscurves_auc, "ROC")
+      ggp_roc <- autoplot(sscurves_auc, "ROC",show_cb=ci)
       if(!is.null(oracle)){
           ggp_roc=ggp_roc+ggtitle(sprintf(
               "ROC. AUC = %0.2g.\nRandom: %0.2g. \nroc.test pvalue =%s",
@@ -435,3 +492,4 @@ rocAUC <- function(ytrue, yprob) {
   sscurves <- precrec::evalmod(scores = yprob, labels = ytrue)
   filter(precrec::auc(sscurves), curvetypes == "ROC")$aucs
 }
+

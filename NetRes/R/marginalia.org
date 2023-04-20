@@ -26,10 +26,3 @@ this is the constructor
 here is the performance estimation
 
 ** _"    
-:PROPERTIES:
-:org-remark-beg: 8569
-:org-remark-end: 8575
-:org-remark-id: 21fa2353
-:org-remark-label: nil
-:org-remark-link: [[file:NetRes.R::134]]
-:END:

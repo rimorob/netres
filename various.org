@@ -1613,7 +1613,7 @@ library(tidyverse)
 library(igraph)
 library(bnlearn)
 library(simcausal)
-
+setwd("/Users/fred/Documents/projects/netres_fork/")
 ##source("~/gitRepos/gnsutils/gnsutils/R/networks.R")
 source("~/Documents/projects/gnsutils/gnsutils/R/networks.R")
 ##library(brms)
@@ -1714,8 +1714,8 @@ netResObj = NetRes$new(
                      data_insurance %>%
                      select(-ID),
                      true.graph = true.graph,
-                     nIter = 5,
-                     nBoot=30,
+                     nIter = 3,
+                     nBoot=10,
                      algorithm='tabu',
                      algorithm.args = algArgs,
                      mode='normal',
@@ -1727,9 +1727,9 @@ netResObj = NetRes$new(
                      #BPPARAM=BiocParallel::SerialParam(),
                      debug=F) 
 
-netResObj$assess(nCores=4,lvPrefix="U",iteration=2)
+netResObj$assess(nCores=4,lvPrefix="U",iteration=2,ci=T)
 
-netResObj$assess(nCores=4,lvPrefix="U",save_to_pdf="testassess.pdf")
+netResObj$assess(nCores=4,lvPrefix="U",save_to_pdf="testassess.pdf",ci=T)
 
 netResObj_oracle  = NetRes$new(
                      data_insurance %>%
@@ -1748,9 +1748,10 @@ netResObj_oracle  = NetRes$new(
                                         #BPPARAM=BiocParallel::SerialParam(),
                      debug=F) 
 
-netResObj_oracle$assess(iteration=1,lvPrefix="U")
+netResObj_oracle$assess(iteration=1,lvPrefix="U",ci=T)
 
-netResObj$assess(nCores=4,lvPrefix="U",iteration=2,oracle=netResObj_oracle) 
+netResObj$assess(nCores=4,lvPrefix="U",oracle=netResObj_oracle,ci=T,iteration=3)
+netResObj$assess(nCores=4,lvPrefix="U",ci=T,iteration='all',save_to_pdf="testall.pdf")
 #+end_src
 ** Try star configuration
 #+begin_src R

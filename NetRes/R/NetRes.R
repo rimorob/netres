@@ -120,7 +120,7 @@ NetRes <- R6Class("NetRes",
                           train = cbind(self$train.data, self$latent.data)
                         }
                         
-                        self$assess(lvPrefix=lvPrefix,cluster=cluster)
+                        self$assess(lvPrefix=lvPrefix,cluster=cluster,ci=TRUE)
 
                         print('pausing to admire the corrplot')
                         Sys.sleep(5)
@@ -135,7 +135,7 @@ NetRes <- R6Class("NetRes",
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
                     #' @param lvPrefix The latent variable-identifying regular expression, as elsewhere; defaults to "^U\\_"
 
-                    assess = function(true.graph = self$true.graph, lvPrefix = self$lvPrefix, nCores=NULL, return_roc=FALSE, save_to_pdf=NULL, ci=FALSE, iteration = NULL,oracle=NULL,cluster=NULL) {
+                    assess = function(true.graph = self$true.graph, lvPrefix = self$lvPrefix, nCores=NULL, return_roc=FALSE, save_to_pdf=NULL, ci=FALSE,Nboot=200, iteration = NULL,oracle=NULL,cluster=NULL) {
                         require(patchwork)
                         require(corrplot)
                         cutoff=0.5
@@ -178,8 +178,12 @@ NetRes <- R6Class("NetRes",
                       ##test performance at every iteration
                       permetrics=NULL
                       allplots=list()
-                      Ne=length(self$ensemble)
-                      for (ni in 1:Ne) { 
+                        Ne=length(self$ensemble)
+                        if(iteration=="all")
+                            inters=1:Ne
+                        else
+                            inters=iteration
+                      for (ni in inters) { 
                           print(paste('step', ni))
                           curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
                           curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))
@@ -192,9 +196,9 @@ NetRes <- R6Class("NetRes",
                               oracleStrengthdf=oracleStrength %>%
                                   as.data.frame() %>%
                                   mutate(freq=strength*direction)
-                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrengthdf)
+                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrengthdf,Nboot=Nboot)
                           }else{
-                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff)
+                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,Nboot=Nboot)
                           }
                           ##perf=network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=0.5 )
                           allplots[[ni]]=perf+plot_annotation(title=sprintf("Iteration %d",ni))
@@ -233,8 +237,8 @@ NetRes <- R6Class("NetRes",
                             ##print(ggpcomb)
                             print(plotstats)
                             for(ni in 1:length(allplots)){
-                                if(!is.null(self$latent.space[[iteration]]$v)){
-                                    corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), upper='ellipse', order='AOE', insig='blank') %>% print()
+                                if(!is.null(self$latent.space[[ni]]$v)){
+                                    corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[ni]]$v)), upper='ellipse', order='AOE', insig='blank') %>% print()
                                 }
                                 print(allplots[[ni]])
                             }
@@ -244,7 +248,7 @@ NetRes <- R6Class("NetRes",
                         }else{
                             message("Plotting metrics")
                             print(
-                                allplots[[iteration]] | ~corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), upper='ellipse', order='AOE', insig='blank')
+                                allplots[[length(allplots)]] | ~corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[length(allplots)]]$v)), upper='ellipse', order='AOE', insig='blank')
                             )
                         }
                         if (cleanUpCluster)
