@@ -258,13 +258,14 @@ NetRes$set("private", "network_performance", function(true_igraph, edges, Nboot 
           message("in perormance assesment before roc.test")
           browser()
       }
-      roctest=pROC::roc.test(comb_edges$True,comb_edges$Prob,comb_edges$Oracle)
   }
 
   trueval <- comb_edges$True
   scores <- comb_edges$Prob
   
   if(length(unique(trueval))==2){
+      if(!is.null(oracle))
+          roctest=pROC::roc.test(comb_edges$True,comb_edges$Prob,comb_edges$Oracle)
       ## there are positive and negative cases
       pred <- prediction(comb_edges$Prob, comb_edges$True)
       perf <- performance(pred, "lift", "rpp")

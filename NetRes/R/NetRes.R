@@ -23,6 +23,8 @@ NetRes <- R6Class("NetRes",
                     #' @field ensemble The final ensemble as inferred after some iterations
                     ensemble = NULL,
                     #' @field latent.space The list of latent spaces after a given iteration
+                    lvPrefix = NULL,
+                    #' @field lvPrefix prefix to identify latent variables in dataset
                     latent.space = NULL,
                     #' @field latent.space.transform The function to map PCs to the final basis vector
                     latent.space.transform = NULL,
@@ -57,7 +59,8 @@ NetRes <- R6Class("NetRes",
                                           nCores=NULL,
                                           BPPARAM=BiocParallel::DoparParam()) {
                       if(debug)
-                        browser()
+                          browser()
+                      self$lvPrefix=lvPrefix
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
                       self$train.data = dframe %>% select_if(!grepl(lvPrefix, names(.)))
                       self$true.graph = true.graph

@@ -1776,6 +1776,13 @@ netResObj_star = NetRes$new(generated_star$data,
                        algorithm.args = tabuArgs, mode='foo')
 
 netResObj_star$assess(iteration=2)
+
+## assessment with oracle should not crash but it will just ignore it. Not point of wating effort on this since this is a edge case.
+netResObj_star_oracle = NetRes$new(generated_star$data,
+                       true.graph = generated_star$graph, nIter = 5, nBoot=100, algorithm='tabu',
+                       algorithm.args = tabuArgs, mode='oracular')
+
+netResObj_star$assess(iteration=1,lvPrefix='U_.*',oracle=netResObj_star_oracle)
 #+end_src
 ** Questions
 - How does the performance compare to simply calculating the PCA on the data and taking the first PC as latent variable and forget about iterations
