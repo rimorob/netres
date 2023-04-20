@@ -3,6 +3,7 @@
 #+email: fred@gnshealthcare.com
 #+PROPERTY: header-args :tangle yes :eval never-export
 #+PROPERTY: header-args:R :session *R* :exports both
+#+TODO: TODO(t) | DONE(d) | PARTIALLY(p)  | CANCELED(c)
 #+OPTIONS: ^:{}
 -----
 
@@ -1607,10 +1608,12 @@ plotIgraph(as.igraph(netResObj_nolat$ensemble[[3]][[3]]),nodesep=0.001,fill=list
 :END:
 
 #+begin_src R
-library(conflicted)
+##library(conflicted)
 library(tidyverse)
 library(igraph)
 library(bnlearn)
+library(simcausal)
+
 ##source("~/gitRepos/gnsutils/gnsutils/R/networks.R")
 source("~/Documents/projects/gnsutils/gnsutils/R/networks.R")
 ##library(brms)
@@ -1623,7 +1626,7 @@ devtools::load_all("./NetRes")
 ##insurancenet=readRDS("~/gitRepos/general-functions/org/bnlearn/insurance.rds")
 insurancenet=readRDS("~/Documents/gitRepos/general-functions/org/bnlearn/insurance.rds")
 
-conflicts_prefer(bnlearn::as.igraph)
+##conflicts_prefer(bnlearn::as.igraph)
 insurance_ig=as.igraph(insurancenet)
 
 insurance_ig=addConfounderIgraph(insurance_ig,prob=0.8,ucoef=4)
@@ -1724,26 +1727,54 @@ netResObj = NetRes$new(
                      #BPPARAM=BiocParallel::SerialParam(),
                      debug=F) 
 
-netResObj$assess(nCores=4,lvPrefix="U")
+netResObj$assess(nCores=4,lvPrefix="U",iteration=2)
+
 netResObj$assess(nCores=4,lvPrefix="U",save_to_pdf="testassess.pdf")
+
+netResObj_oracle  = NetRes$new(
+                     data_insurance %>%
+                     select(-ID),
+                     true.graph = true.graph,
+                     nIter = 2,
+                     nBoot=30,
+                     algorithm='tabu',
+                     algorithm.args = algArgs,
+                     mode='oracular',
+                     weightedResiduals=FALSE,
+                     scale=TRUE,
+                     latentSpaceMethod='pca',
+                     lvPrefix="U",
+                     nCores=4,
+                                        #BPPARAM=BiocParallel::SerialParam(),
+                     debug=F) 
+
+netResObj_oracle$assess(iteration=1,lvPrefix="U")
+
+netResObj$assess(nCores=4,lvPrefix="U",iteration=2,oracle=netResObj_oracle) 
 #+end_src
 ** Try star configuration
 #+begin_src R
 set.seed(42)
 devtools::load_all("NetRes")
+##devtools::load_all("../netres_boris/NetRes/")
 
 library(bnlearn)
 
-network = SFNetwork$new(numVertices=50, topology='star', addOneEdge = FALSE)
-generated = network$generateData(numSamples = 100, latIdx = 1)
-bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
+network_star = SFNetwork$new(numVertices=50, topology='star', addOneEdge = FALSE)
+generated_star = network_star$generateData(numSamples = 100, latIdx = 1)
+
+bnlearn::graphviz.plot(generated_star$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated_star$data), value=T), col = "tomato", fill = "orange"))
 
 tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
 
-netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', 
+library(corrplot)
+library(ggplot2)
+
+netResObj_star = NetRes$new(generated_star$data,
+                       true.graph = generated_star$graph, nIter = 5, nBoot=100, algorithm='tabu', 
                        algorithm.args = tabuArgs, mode='foo')
 
-netResObj$assess()
+netResObj_star$assess(iteration=2)
 #+end_src
 ** Questions
 - How does the performance compare to simply calculating the PCA on the data and taking the first PC as latent variable and forget about iterations
@@ -1760,3 +1791,8 @@ notion?
 
 lift curves.
 
+
+* TODOs
+** TODO assess for specific interation
+have an option where it plots the result for a specific interation
+** TODO add to assess results for inference without latent variable.
