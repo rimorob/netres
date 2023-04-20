@@ -14,6 +14,7 @@
 #' @importFrom torch nn_module torch_tensor nn_linear nn_relu nn_sequential torch_exp torch_randn optim_adam nn_bce_loss
 #' @importFrom rlang ns_env
 #' @importFrom minet rates auc.roc auc.pr pr
+#' @import ggplot2
 
 ##An R6 class for a generated scale-free network
 #' @export
@@ -119,7 +120,8 @@ NetRes <- R6Class("NetRes",
                           train = cbind(self$train.data, self$latent.data)
                         }
                         
-                        self$assess(lvPrefix=lvPrefix)
+                        self$assess(lvPrefix=lvPrefix,cluster=cluster)
+
                         print('pausing to admire the corrplot')
                         Sys.sleep(5)
                         stopCluster(cluster)
@@ -132,10 +134,12 @@ NetRes <- R6Class("NetRes",
                     #' @description assess Assess the inferred ensemble against the true graph
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
                     #' @param lvPrefix The latent variable-identifying regular expression, as elsewhere; defaults to "^U\\_"
-                    assess = function(true.graph = self$true.graph, lvPrefix = self$lvPrefix, nCores=NULL, return_roc=FALSE, save_to_pdf=NULL, ci=FALSE, iteration = NULL,oracle=NULL) {
+
+                    assess = function(true.graph = self$true.graph, lvPrefix = self$lvPrefix, nCores=NULL, return_roc=FALSE, save_to_pdf=NULL, ci=FALSE, iteration = NULL,oracle=NULL,cluster=NULL) {
                         require(patchwork)
                         require(corrplot)
                         cutoff=0.5
+
                       ##plot corrplot of inferred vs true latent space, assuming true latent space exists
                        if (!is.null(self$latent.data)) {
                         if (is.null(iteration)) ##plot the last one by default
@@ -150,13 +154,19 @@ NetRes <- R6Class("NetRes",
                       if (is.null(true.graph)) { #then can't plot other metrics
                         return  
                       }
+
                       if(is.null(nCores)){
                           nCores = detectCores() - 2
                       }else{
                           nCores=min(detectCores()-2,nCores)
                       }
-                      cluster = makeCluster(nCores)
-                      registerDoParallel(cluster)                      
+                      if (is.null(cluster)) {
+                        cluster = makeCluster(nCores)
+                        registerDoParallel(cluster)                      
+                        cleanUpCluster = TRUE
+                      } else {
+                        cleanUpCluster = FALSE
+                      }
                       ##excise the latent space from the true graph
                       true.graph = private$exciseLatVarsFromEnsemble(list(true.graph), cluster, lvPrefix)[[1]]
                       true.graph.ig=as.igraph(true.graph)
@@ -237,7 +247,8 @@ NetRes <- R6Class("NetRes",
                                 allplots[[iteration]] | ~corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), upper='ellipse', order='AOE', insig='blank')
                             )
                         }
-                      stopCluster(cluster)
+                        if (cleanUpCluster)
+                          stopCluster(cluster)
                     },
                     #' @description plot The function to plot (some) networks in the ensemble
                     #' @param networks Indexes into the ensemble

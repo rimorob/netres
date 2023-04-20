@@ -214,6 +214,7 @@ NetRes$set("private", "network_performance", function(true_igraph, edges, Nboot 
   require(SID)
   checkmate::assertClass(true_igraph, "igraph")
   checkmate::assertDataFrame(edges)
+  
   ## convert edges to igraph object
   est_ig <- igraph::graph_from_data_frame(edges)
   ## get adjacency matrix
