@@ -145,7 +145,9 @@ NetRes <- R6Class("NetRes",
                         require(patchwork)
                         require(corrplot)
                         cutoff=0.5
-
+                        if(!is.null(save_to_pdf)){
+                            iteration='all'
+                        }
                       ##plot corrplot of inferred vs true latent space, assuming true latent space exists
                        if (!is.null(self$latent.data)) {
                         if (is.null(iteration)) ##plot the last one by default
@@ -229,9 +231,8 @@ NetRes <- R6Class("NetRes",
                       plotstats=permetrics %>%
                               ggplot(aes(x=iteration,y=Value,colour=Metric))+
                               geom_line()+geom_point()+theme_light()+
-                              ggtitle(sprintf("Cutoff: %0.2g",permetrics$th[1]))+
                           facet_wrap(~Metric,ncol=2,scales='free')
-                        if(iteration=="all")
+                        if(iteration=="all"&is.null(save_to_pdf))
                             return(plotstats)
                       ## ggp1=qplot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')+geom_line()+theme_light()
                       ## ggp2=qplot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC') +geom_line()+theme_light()                 

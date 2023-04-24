@@ -1702,13 +1702,15 @@ netResObj = NetRes$new(
                      mode='normal',
                      weightedResiduals=FALSE,
                      scale=TRUE,
-                     latentSpaceMethod='pca',
+                     ##latentSpaceMethod='pca',
+                     optimizeLatentSpace=F,
                      lvPrefix="U",
                      nCores=4,
                      #BPPARAM=BiocParallel::SerialParam(),
                      debug=F) 
 
 netResObj$assess(iteration="all")
+netResObj$assess(oracle=netResObj_oracle,save_to_pdf="sparsepcs_try2.pdf")
 titer=5
 dev.new();netResObj$assess(iteration=titer)
 netResObj$assess(iteration=titer,oracle=netResObj_oracle)
