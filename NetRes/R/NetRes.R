@@ -146,65 +146,66 @@ NetRes <- R6Class("NetRes",
                         require(corrplot)
                         cutoff=0.5
 
-                      ##plot corrplot of inferred vs true latent space, assuming true latent space exists
-                       if (!is.null(self$latent.data)) {
-                        if (is.null(iteration)) ##plot the last one by default
-                          iteration = length(self$latent.space)
-                        
-                        if ("v" %in% names(self$latent.space[[iteration]])) {
-                            ##dev.set(1)
-                            message("plotting correlation")
-                            corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), upper='ellipse', order='AOE', insig='blank')
+                        ##plot corrplot of inferred vs true latent space, assuming true latent space exists
+                        if (!is.null(self$latent.data)) {
+                            if (is.null(iteration)) ##plot the last one by default
+                                iteration = length(self$latent.space)
+                            
+                            if ("v" %in% names(self$latent.space[[iteration]])) {
+                                ##dev.set(1)
+                                message("plotting correlation")
+                                corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), upper='ellipse', order='AOE', insig='blank')
+                            }
                         }
-                      }
 
-                      if (fast || is.null(true.graph)) { #then shouldn't or can't plot other metrics
-                        return()  
-                      }
+                        if (fast || is.null(true.graph)) { #then shouldn't or can't plot other metrics
+                            return()  
 
-                      if(is.null(nCores)){
-                          nCores = detectCores() - 2
-                      }else{
-                          nCores=min(detectCores()-2,nCores)
-                      }
-                      if (is.null(cluster)) {
-                        cluster = makeCluster(nCores)
-                        registerDoParallel(cluster)                      
-                        cleanUpCluster = TRUE
-                      } else {
-                        cleanUpCluster = FALSE
-                      }
-                      ##excise the latent space from the true graph
-                      true.graph = private$exciseLatVarsFromEnsemble(list(true.graph), cluster, lvPrefix)[[1]]
-                      true.graph.ig=as.igraph(true.graph)
+                        }
 
-                      ##aucs = c()
-                      ##prAucs = c()
-                      ##f1maxes = c()
-                      ##sids=c()
-                      ##test performance at every iteration
-                      permetrics=NULL
-                      allplots=list()
+                        if(is.null(nCores)){
+                            nCores = detectCores() - 2
+                        }else{
+                            nCores=min(detectCores()-2,nCores)
+                        }
+                        if (is.null(cluster)) {
+                            cluster = makeCluster(nCores)
+                            registerDoParallel(cluster)                      
+                            cleanUpCluster = TRUE
+                        } else {
+                            cleanUpCluster = FALSE
+                        }
+                        ##excise the latent space from the true graph
+                        true.graph = private$exciseLatVarsFromEnsemble(list(true.graph), cluster, lvPrefix)[[1]]
+                        true.graph.ig=as.igraph(true.graph)
+
+                        ##aucs = c()
+                        ##prAucs = c()
+                        ##f1maxes = c()
+                        ##sids=c()
+                        ##test performance at every iteration
+                        permetrics=NULL
+                        allplots=list()
                         Ne=length(self$ensemble)
                         if(iteration=="all")
                             inters=1:Ne
                         else
                             inters=iteration
-                      for (ni in inters) { 
-                          print(paste('step', ni))
-                          curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
-                          curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))
-                          curStrengthdf=curStrength %>%
-                              as.data.frame() %>%
-                              mutate(freq=strength*direction)
-                          if(!is.null(oracle)){
-                              oracleEnsemble = private$exciseLatVarsFromEnsemble(oracle$ensemble[[1]], cluster, lvPrefix)
-                              oracleStrength = bnlearn::custom.strength(oracleEnsemble, bnlearn::nodes(true.graph)) %>% 
-                                  as.data.frame() %>%
-                                  mutate(freq=strength*direction)
-                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrength,Nboot=Nboot)
-                          }else{
-                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,Nboot=Nboot)
+                        for (ni in inters) { 
+                            print(paste('step', ni))
+                            curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
+                            curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))
+                            curStrengthdf=curStrength %>%
+                                as.data.frame() %>%
+                                mutate(freq=strength*direction)
+                            if(!is.null(oracle)){
+                                oracleEnsemble = private$exciseLatVarsFromEnsemble(oracle$ensemble[[1]], cluster, lvPrefix)
+                                oracleStrength = bnlearn::custom.strength(oracleEnsemble, bnlearn::nodes(true.graph)) %>% 
+                                    as.data.frame() %>%
+                                    mutate(freq=strength*direction)
+                                perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrength,Nboot=Nboot)
+                            }else{
+                                perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,Nboot=Nboot)
                           }
                           ##perf=network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=0.5 )
                           allplots[[ni]]=perf+plot_annotation(title=sprintf("Iteration %d",ni))
