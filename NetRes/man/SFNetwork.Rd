@@ -38,9 +38,12 @@ Generate a DAG using Barabasi's game and generate matching data
 \if{html}{\out{<div class="r">}}\preformatted{SFNetwork$new(
   numVertices = 20,
   topology = "power",
-  numNeighbors = 4,
+  numChildren = 2,
   nParentOnly = 4,
-  addOneEdge = TRUE
+  addOneEdge = TRUE,
+  par1 = 1,
+  supersize.top.hubs = FALSE,
+  supersize.factor = 2
 )}\if{html}{\out{</div>}}
 }
 
@@ -51,11 +54,17 @@ Generate a DAG using Barabasi's game and generate matching data
 
 \item{\code{topology}}{power/star}
 
-\item{\code{numNeighbors}}{number of neighbors of each vertex, on average (i.e., node denisty, default=4)}
+\item{\code{numChildren}}{number of children of each vertex, on average (i.e., node denisty, default=2)}
 
 \item{\code{nParentOnly}}{how many nodes to make parent-only hubs by removing their high order but low out-degree parents (default=4)}
 
 \item{\code{addOneEdge}}{whether to add a single edge not involving a latent variable to star or twin-star topologies (helps with AUC calculation; default=TRUE)}
+
+\item{\code{par1}}{Par1, as in documentation for pcalg::randDAG.  For Power Law nets, has the meaning of power of preferential attachment.  Defaults to 1}
+
+\item{\code{supersize.top.hubs}}{If true and nParentOnly > 0, then super-size the top n hubs by supersize.factor (up to the total number of nodes in the network)}
+
+\item{\code{supersize.factor}}{Multiply the number of automatically generated nodes by this factor (up to the network size minus the number of top hubs)}
 }
 \if{html}{\out{</div>}}
 }
@@ -93,7 +102,7 @@ plots the DAG
   doPlot = FALSE,
   errDist = "normal",
   latIdx = c(2, 3),
-  rescaleNoiseBy = function(mu = 1, sigma = 0.15, alpha = -5) {
+  rescaleNoiseBy = function(mu = 0.5, sigma = 0.5, alpha = -5) {
     
     return(rskew_normal(1, mu, sigma, alpha))
  }
@@ -111,7 +120,9 @@ plots the DAG
 
 \item{\code{latIdx}}{indices of hubs (in decreasing order) to make latent; by default 2nd and 3rd largest.  These will be prefixed with "U_" (unobserved).  If none, set to NULL}
 
-\item{\code{rescaleNoiseBy}}{If a positive number, scales sd from default parameter for all variables by a constant; default behavior is scale everything through a left-skewed gaussian to generate several proxy variables for latent space; if NULL, no rescaling}
+\item{\code{rescaleNoiseBy}}{If a positive number, scales sd from default parameter for all variables by a constant; 
+default behavior is scale everything through a left-skewed gaussian to generate several proxy variables for latent space; 
+if NULL, no rescaling}
 }
 \if{html}{\out{</div>}}
 }
