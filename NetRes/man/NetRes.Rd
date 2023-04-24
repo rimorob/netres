@@ -108,7 +108,8 @@ assess Assess the inferred ensemble against the true graph
   save_to_pdf = NULL,
   ci = FALSE,
   iteration = NULL,
-  cluster = NULL
+  cluster = NULL,
+  fast = FALSE
 )}\if{html}{\out{</div>}}
 }
 

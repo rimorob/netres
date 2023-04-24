@@ -119,7 +119,7 @@ NetRes <- R6Class("NetRes",
                           train = cbind(self$train.data, self$latent.data)
                         }
                         
-                        self$assess(cluster = cluster)
+                        self$assess(cluster = cluster, fast=TRUE)
                         print('pausing to admire the corrplot')
                         Sys.sleep(5)
                         stopCluster(cluster)
@@ -133,7 +133,7 @@ NetRes <- R6Class("NetRes",
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
                     #' @param lvPrefix The latent variable-identifying regular expression, as elsewhere; defaults to "^U\\_"
                     assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_", nCores=NULL, return_roc=FALSE, save_to_pdf=NULL, 
-                                      ci=FALSE, iteration = NULL, cluster=NULL) {
+                                      ci=FALSE, iteration = NULL, cluster=NULL, fast=FALSE) {
                       require(patchwork)
                       ##plot corrplot of inferred vs true latent space, assuming true latent space exists
                       if (!is.null(self$latent.data)) {
@@ -145,8 +145,8 @@ NetRes <- R6Class("NetRes",
                         }
                       }
 
-                      if (is.null(true.graph)) { #then can't plot other metrics
-                        return  
+                      if (fast || is.null(true.graph)) { #then shouldn't or can't plot other metrics
+                        return()  
                       }
 
                       if(is.null(nCores)){

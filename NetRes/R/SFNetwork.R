@@ -19,13 +19,18 @@ SFNetwork <- R6Class("SFNetwork",
                        #' Generate a DAG using Barabasi's game and generate matching data
                        #' @param numVertices number of vertices in the DAG (default=20)
                        #' @param topology power/star
-                       #' @param numNeighbors number of neighbors of each vertex, on average (i.e., node denisty, default=4)
+                       #' @param numChildren number of children of each vertex, on average (i.e., node denisty, default=2)
                        #' @param nParentOnly how many nodes to make parent-only hubs by removing their high order but low out-degree parents (default=4)
                        #' @param addOneEdge whether to add a single edge not involving a latent variable to star or twin-star topologies (helps with AUC calculation; default=TRUE)
+                       #' @param par1 Par1, as in documentation for pcalg::randDAG.  For Power Law nets, has the meaning of power of preferential attachment.  Defaults to 1
+                       #' @param supersize.top.hubs If true and nParentOnly > 0, then super-size the top n hubs by supersize.factor (up to the total number of nodes in the network)
+                       #' @param supersize.factor Multiply the number of automatically generated nodes by this factor (up to the network size minus the number of top hubs)
                        #' @return A `SFNetwork` object
-                       initialize = function(numVertices = 20, topology='power', numNeighbors = 4, nParentOnly = 4, addOneEdge=TRUE) {
+                       initialize = function(numVertices = 20, topology='power', numChildren = 2, nParentOnly = 4, addOneEdge = TRUE, par1 = 1, 
+                                             supersize.top.hubs = FALSE, supersize.factor = 2) {
                          if (topology == 'power') {
-                           res = private$makePowerDag(numVertices = numVertices, numNeighbors = numNeighbors, nParentOnly = nParentOnly)
+                           res = private$makePowerDag(numVertices = numVertices, numChildren = numChildren, nParentOnly = nParentOnly, 
+                                                      par1 = par1, supersize.top.hubs = supersize.top.hubs, supersize.factor = supersize.factor)
                          } else if (topology == 'twin.star') {
                            res = private$makeTwinStarDag(numVertices = numVertices, addOneEdge = addOneEdge)                                                      
                          } else {
@@ -59,7 +64,7 @@ SFNetwork <- R6Class("SFNetwork",
                                                doPlot = FALSE,
                                                errDist = 'normal',
                                                latIdx = c(2, 3),
-                                               rescaleNoiseBy=function(mu=1, sigma=0.15, alpha=-5) {
+                                               rescaleNoiseBy=function(mu=0.5, sigma=0.5, alpha=-5) {
                                                  return(rskew_normal(1, mu, sigma, alpha))
                                                }) {
                          ##recompute the rDAG
@@ -180,10 +185,11 @@ SFNetwork <- R6Class("SFNetwork",
                          self$vRank = names(sorted)
                          self$outDegree = outDegree
                        },                       
-                       makePowerDag = function(numVertices = 20,  numNeighbors = 4, nParentOnly = 4) {
+                       makePowerDag = function(numVertices = 20,  numChildren = 2, nParentOnly = 4, par1 = 1.2, 
+                                               supersize.top.hubs = FALSE, supersize.factor = 2) {
                          ## generate random DAG
-                         ##rDAG <- randDAG(n = numVertices, method = 'power', d = numNeighbors)
-                         rDAG <- randDAG(n = numVertices, method = 'barabasi', d = numNeighbors)
+                         ##note that d is numChildren * 2 in this implementation of randDAG (symmetric parent and children couns)
+                         rDAG <- randDAG(n = numVertices, d = numChildren*2, par1 = par1, method = 'barabasi')
                          
                          ##iGraph = as.igraph(as.bn(rDAG))
                          
@@ -194,6 +200,27 @@ SFNetwork <- R6Class("SFNetwork",
                          aM = aM[nOrder, nOrder]
                          rownames(aM) = 1:nrow(aM)
                          colnames(aM) = 1:ncol(aM)
+                         
+                         ##The rows are parents and the columns are children
+                         ##For top regulators, add edges if necessary
+                         if (supersize.top.hubs && nParentOnly > 0) {
+                           nOut = apply(aM, 1, function(x) { length(which(x != 0))})
+                           top.hubs = order(nOut, decreasing = TRUE)[1:nParentOnly]
+                           ##up to supersize.factor * nOut but no more than ncol(aM) - 1 total
+                           n.edges.to.add = pmin(rep(ncol(aM) - 1, nParentOnly), supersize.factor*nOut[top.hubs]) - nOut[top.hubs]
+                           ##for each hub
+                           aM2 = aM
+                           for (thi in 1:length(top.hubs)) {
+                             th = top.hubs[thi]
+                             ##find empty spaces
+                             zIdx = setdiff(which(aM[th,] == 0), th)
+                             useIdx = sample(zIdx, n.edges.to.add[thi])
+                             ##sample values from a normal distribution of observed edges
+                             aM2[th, useIdx] = rnorm(n.edges.to.add[thi], mean(aM[th,]), sd(aM[th,]))
+                           }
+                         }
+                         ##continue here
+                         ##AT THIS POINT, am2 is not a dag.  May need to remove parent edges to the hubs first
                          
                          rDAG = as(aM, 'graphNEL')
                          graph::nodes(rDAG) = paste('v', graph::nodes(rDAG), sep = '') #name (a little) better for convenience
