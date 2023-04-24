@@ -25,6 +25,8 @@ NetRes <- R6Class("NetRes",
                     #' @field latent.space The list of latent spaces after a given iteration
                     lvPrefix = NULL,
                     #' @field lvPrefix prefix to identify latent variables in dataset
+                    creation.time=NULL,
+                    #' @field time when the object was created
                     latent.space = NULL,
                     #' @field latent.space.transform The function to map PCs to the final basis vector
                     latent.space.transform = NULL,
@@ -61,6 +63,7 @@ NetRes <- R6Class("NetRes",
                       if(debug)
                           browser()
                       self$lvPrefix=lvPrefix
+                      self$creation.time=date()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
                       self$train.data = dframe %>% select_if(!grepl(lvPrefix, names(.)))
                       self$true.graph = true.graph
@@ -195,11 +198,10 @@ NetRes <- R6Class("NetRes",
                               mutate(freq=strength*direction)
                           if(!is.null(oracle)){
                               oracleEnsemble = private$exciseLatVarsFromEnsemble(oracle$ensemble[[1]], cluster, lvPrefix)
-                              oracleStrength = bnlearn::custom.strength(oracleEnsemble, bnlearn::nodes(true.graph))
-                              oracleStrengthdf=oracleStrength %>%
+                              oracleStrength = bnlearn::custom.strength(oracleEnsemble, bnlearn::nodes(true.graph)) %>% 
                                   as.data.frame() %>%
                                   mutate(freq=strength*direction)
-                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrengthdf,Nboot=Nboot)
+                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrength,Nboot=Nboot)
                           }else{
                               perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,Nboot=Nboot)
                           }
@@ -228,7 +230,9 @@ NetRes <- R6Class("NetRes",
                               ggplot(aes(x=iteration,y=Value,colour=Metric))+
                               geom_line()+geom_point()+theme_light()+
                               ggtitle(sprintf("Cutoff: %0.2g",permetrics$th[1]))+
-                              facet_wrap(~Metric,ncol=2)
+                          facet_wrap(~Metric,ncol=2,scales='free')
+                        if(iteration=="all")
+                            return(plotstats)
                       ## ggp1=qplot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')+geom_line()+theme_light()
                       ## ggp2=qplot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC') +geom_line()+theme_light()                 
                       ##   ggp3=qplot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')+geom_line()+theme_light()

@@ -247,7 +247,7 @@ NetRes$set("private", "network_performance", function(true_igraph, edges, Nboot 
           igraph::get.adjacency(attr = "freq") %>%
           as.matrix()
       oracle_adj <- oracle_adj[colnames(true_adj), colnames(true_adj)]
-      oracle_edges=reshape2::melt(est_adj) %>%
+      oracle_edges=reshape2::melt(oracle_adj) %>%
           filter(Var1 != Var2) ## remove self edges
       comb_edges=full_join(
           comb_edges,
@@ -341,9 +341,16 @@ NetRes$set("private", "network_performance", function(true_igraph, edges, Nboot 
       }
       ## get AUC
       sscurves_auc <- precrec::evalmod(cidat)
-      aucs <- auc(sscurves_auc) %>%
-          group_by(curvetypes) %>%
-          summarise(AUC = mean(aucs))
+      if(!is.null(oracle)){
+          aucs <- auc(sscurves_auc) %>%
+              filter(modnames=="Inferred") %>% 
+              group_by(curvetypes) %>%
+              summarise(AUC = mean(aucs))
+      }else{
+          aucs <- auc(sscurves_auc) %>%
+              group_by(curvetypes) %>%
+              summarise(AUC = mean(aucs))
+      }
       auc_roc <- filter(aucs, curvetypes == "ROC")$AUC
       auc_prc <- filter(aucs, curvetypes == "PRC")$AUC
       ## get other metrics
