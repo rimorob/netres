@@ -191,21 +191,22 @@ NetRes <- R6Class("NetRes",
                             inters=1:Ne
                         else
                             inters=iteration
+
                         for (ni in inters) { 
-                            print(paste('step', ni))
-                            curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
-                            curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))
-                            curStrengthdf=curStrength %>%
-                                as.data.frame() %>%
-                                mutate(freq=strength*direction)
-                            if(!is.null(oracle)){
-                                oracleEnsemble = private$exciseLatVarsFromEnsemble(oracle$ensemble[[1]], cluster, lvPrefix)
-                                oracleStrength = bnlearn::custom.strength(oracleEnsemble, bnlearn::nodes(true.graph)) %>% 
-                                    as.data.frame() %>%
-                                    mutate(freq=strength*direction)
-                                perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrength,Nboot=Nboot)
-                            }else{
-                                perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,Nboot=Nboot)
+                          print(paste('step', ni))
+                          curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
+                          curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))
+                          curStrengthdf=curStrength %>%
+                              as.data.frame() %>%
+                              mutate(freq=strength*direction)
+                          if(!is.null(oracle)){
+                              oracleEnsemble = private$exciseLatVarsFromEnsemble(oracle$ensemble[[1]], cluster, lvPrefix)
+                              oracleStrength = bnlearn::custom.strength(oracleEnsemble, bnlearn::nodes(true.graph)) %>% 
+                                  as.data.frame() %>%
+                                  mutate(freq=strength*direction)
+                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrength,Nboot=Nboot)
+                          }else{
+                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,Nboot=Nboot)
                           }
                           ##perf=network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=0.5 )
                           allplots[[ni]]=perf+plot_annotation(title=sprintf("Iteration %d",ni))
