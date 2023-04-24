@@ -3,6 +3,7 @@
 #+email: fred@gnshealthcare.com
 #+PROPERTY: header-args :tangle yes :eval never-export
 #+PROPERTY: header-args:R :session *R* :exports both
+#+TODO: TODO(t) | DONE(d) | PARTIALLY(p)  | CANCELED(c)
 #+OPTIONS: ^:{}
 -----
 
@@ -1607,10 +1608,12 @@ plotIgraph(as.igraph(netResObj_nolat$ensemble[[3]][[3]]),nodesep=0.001,fill=list
 :END:
 
 #+begin_src R
-library(conflicted)
+##library(conflicted)
 library(tidyverse)
 library(igraph)
 library(bnlearn)
+library(simcausal)
+setwd("/Users/fred/Documents/projects/netres_fork/")
 ##source("~/gitRepos/gnsutils/gnsutils/R/networks.R")
 source("~/Documents/projects/gnsutils/gnsutils/R/networks.R")
 ##library(brms)
@@ -1623,24 +1626,104 @@ devtools::load_all("./NetRes")
 ##insurancenet=readRDS("~/gitRepos/general-functions/org/bnlearn/insurance.rds")
 insurancenet=readRDS("~/Documents/gitRepos/general-functions/org/bnlearn/insurance.rds")
 
-conflicts_prefer(bnlearn::as.igraph)
+##conflicts_prefer(bnlearn::as.igraph)
 insurance_ig=as.igraph(insurancenet)
-
-insurance_ig=addConfounderIgraph(insurance_ig,prob=0.8,ucoef=4)
 ppPlotIgraph(insurance_ig,nodesep=0.01)
 
-insurance_simc=igraph2simcausal(insurance_ig)
+insurance_ig=addConfounderIgraph(insurance_ig,prob=0.8,ucoef=4)
+
+ppPlotIgraph(insurance_ig,nodesep=0.01)
+
+insurance_simc=igraph2simcausal(insurance_ig,specific_parameters = attributes(insurance_ig)$ucoef)
+
 insurance_simc_set=set.DAG(insurance_simc)
 data_insurance=sim(insurance_simc_set,n=1000)
 true.graph=bnlearn::as.bn(insurance_ig)
 
 algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', prior = 'vsp', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
 
+## run with all variables 
+netResObj_oracle  = NetRes$new(
+                     data_insurance %>%
+                     select(-ID),
+                     true.graph = true.graph,
+                     nIter = 1,
+                     nBoot=30,
+                     algorithm='tabu',
+                     algorithm.args = algArgs,
+                     mode='oracular',
+                     weightedResiduals=FALSE,
+                     scale=TRUE,
+                     latentSpaceMethod='pca',
+                     lvPrefix="U",
+                     nCores=4,
+                                        #BPPARAM=BiocParallel::SerialParam(),
+                     debug=T) 
+
+dev.new()
+netResObj_oracle$assess(iteration=1,lvPrefix="U",ci=T)
+
+ppPlotIgraph(as.igraph(netResObj_oracle$ensemble[[1]][[1]]),nodesep=0.01)
+
+## run removing U
+
+netResObj_naive  = NetRes$new(
+                     data_insurance %>%
+                     select(-ID),
+                     true.graph = true.graph,
+                     nIter = 1,
+                     nBoot=30,
+                     algorithm='tabu',
+                     algorithm.args = algArgs,
+                     mode='normal',
+                     weightedResiduals=FALSE,
+                     scale=TRUE,
+                     latentSpaceMethod='pca',
+                     lvPrefix="U",
+                     nCores=4,
+                                        #BPPARAM=BiocParallel::SerialParam(),
+                     debug=F) 
+
+ppPlotIgraph(as.igraph(netResObj_naive$ensemble[[1]][[1]]),nodesep=0.01)
+
+ppPlotIgraph(netResObj_oracle$true.graph %>%  as.igraph(),nodesep=0.01)
+
+netResObj_naive$assess(iteration=1,lvPrefix="U",ci=T)
+
+## run with estimated LV
+netResObj = NetRes$new(
+                     data_insurance %>%
+                     select(-ID),
+                     true.graph = true.graph,
+                     nIter = 10,
+                     nBoot=100,
+                     algorithm='tabu',
+                     algorithm.args = algArgs,
+                     mode='normal',
+                     weightedResiduals=FALSE,
+                     scale=TRUE,
+                     latentSpaceMethod='pca',
+                     lvPrefix="U",
+                     nCores=4,
+                     #BPPARAM=BiocParallel::SerialParam(),
+                     debug=F) 
+
+netResObj$assess(iteration="all")
+titer=5
+dev.new();netResObj$assess(iteration=titer)
+netResObj$assess(iteration=titer,oracle=netResObj_oracle)
+
+
+
+netResObj$assess(nCores=4,lvPrefix="U",ci=T,save_to_pdf="insurance.pdf",iteration="all",oracle=netResObj_oracle)
+
+
+
 nCores = detectCores()-8
 
 cluster = makeCluster(nCores)
 registerDoParallel(cluster)  
-dud = function(x) x
+dud = function(x) x 
 
 ens = bn.boot(data_insurance %>%
             select(-ID), statistic = dud, R=30, algorithm = "tabu", algorithm.args = algArgs, cluster=cluster)
@@ -1711,8 +1794,8 @@ netResObj = NetRes$new(
                      data_insurance %>%
                      select(-ID),
                      true.graph = true.graph,
-                     nIter = 5,
-                     nBoot=30,
+                     nIter = 3,
+                     nBoot=10,
                      algorithm='tabu',
                      algorithm.args = algArgs,
                      mode='normal',
@@ -1724,8 +1807,62 @@ netResObj = NetRes$new(
                      #BPPARAM=BiocParallel::SerialParam(),
                      debug=F) 
 
-netResObj$assess(nCores=4,lvPrefix="U")
-netResObj$assess(nCores=4,lvPrefix="U",save_to_pdf="testassess.pdf")
+netResObj$assess(nCores=4,lvPrefix="U",iteration=2,ci=T)
+
+netResObj$assess(nCores=4,lvPrefix="U",save_to_pdf="testassess.pdf",ci=T)
+
+netResObj_oracle  = NetRes$new(
+                     data_insurance %>%
+                     select(-ID),
+                     true.graph = true.graph,
+                     nIter = 2,
+                     nBoot=30,
+                     algorithm='tabu',
+                     algorithm.args = algArgs,
+                     mode='oracular',
+                     weightedResiduals=FALSE,
+                     scale=TRUE,
+                     latentSpaceMethod='pca',
+                     lvPrefix="U",
+                     nCores=4,
+                                        #BPPARAM=BiocParallel::SerialParam(),
+                     debug=F) 
+
+netResObj_oracle$assess(iteration=1,lvPrefix="U",ci=T)
+
+netResObj$assess(nCores=4,lvPrefix="U",oracle=netResObj_oracle,ci=T,iteration=3)
+netResObj$assess(nCores=4,lvPrefix="U",ci=T,iteration='all',save_to_pdf="testall.pdf")
+#+end_src
+** Try star configuration
+#+begin_src R
+set.seed(42)
+devtools::load_all("NetRes")
+##devtools::load_all("../netres_boris/NetRes/")
+
+library(bnlearn)
+
+network_star = SFNetwork$new(numVertices=50, topology='star', addOneEdge = FALSE)
+generated_star = network_star$generateData(numSamples = 100, latIdx = 1)
+
+bnlearn::graphviz.plot(generated_star$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated_star$data), value=T), col = "tomato", fill = "orange"))
+
+tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', debug = FALSE, tabu = 10, max.iter = Inf, maxp = Inf, optimized = TRUE)
+
+library(corrplot)
+library(ggplot2)
+
+netResObj_star = NetRes$new(generated_star$data,
+                       true.graph = generated_star$graph, nIter = 5, nBoot=100, algorithm='tabu', 
+                       algorithm.args = tabuArgs, mode='foo')
+
+netResObj_star$assess(iteration=2)
+
+## assessment with oracle should not crash but it will just ignore it. Not point of wating effort on this since this is a edge case.
+netResObj_star_oracle = NetRes$new(generated_star$data,
+                       true.graph = generated_star$graph, nIter = 5, nBoot=100, algorithm='tabu',
+                       algorithm.args = tabuArgs, mode='oracular')
+
+netResObj_star$assess(iteration=1,lvPrefix='U_.*',oracle=netResObj_star_oracle)
 #+end_src
 ** Questions
 - How does the performance compare to simply calculating the PCA on the data and taking the first PC as latent variable and forget about iterations
@@ -1742,3 +1879,8 @@ notion?
 
 lift curves.
 
+
+* TODOs
+** TODO assess for specific interation
+have an option where it plots the result for a specific interation
+** TODO add to assess results for inference without latent variable.

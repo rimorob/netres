@@ -5,6 +5,7 @@
 #' @importFrom doParallel registerDoParallel
 #' @importFrom BiocSingular IrlbaParam
 #' @importFrom corrplot corrplot corrplot.mixed
+#' @importFrom ggplot2 qplot
 #' @importFrom paran paran
 #' @importFrom GA ga
 #' @importFrom GenSA GenSA
@@ -22,6 +23,10 @@ NetRes <- R6Class("NetRes",
                     #' @field ensemble The final ensemble as inferred after some iterations
                     ensemble = NULL,
                     #' @field latent.space The list of latent spaces after a given iteration
+                    lvPrefix = NULL,
+                    #' @field lvPrefix prefix to identify latent variables in dataset
+                    creation.time=NULL,
+                    #' @field time when the object was created
                     latent.space = NULL,
                     #' @field latent.space.transform The function to map PCs to the final basis vector
                     latent.space.transform = NULL,
@@ -56,7 +61,9 @@ NetRes <- R6Class("NetRes",
                                           nCores=NULL,
                                           BPPARAM=BiocParallel::DoparParam()) {
                       if(debug)
-                        browser()
+                          browser()
+                      self$lvPrefix=lvPrefix
+                      self$creation.time=date()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
                       self$train.data = dframe %>% select_if(!grepl(lvPrefix, names(.)))
                       self$true.graph = true.graph
@@ -119,7 +126,8 @@ NetRes <- R6Class("NetRes",
                           train = cbind(self$train.data, self$latent.data)
                         }
                         
-                        self$assess(cluster = cluster)
+                        self$assess(lvPrefix=lvPrefix,cluster=cluster,ci=TRUE)
+
                         print('pausing to admire the corrplot')
                         Sys.sleep(5)
                         stopCluster(cluster)
@@ -132,19 +140,23 @@ NetRes <- R6Class("NetRes",
                     #' @description assess Assess the inferred ensemble against the true graph
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
                     #' @param lvPrefix The latent variable-identifying regular expression, as elsewhere; defaults to "^U\\_"
-                    assess = function(true.graph = self$true.graph, lvPrefix = "^U\\_", nCores=NULL, return_roc=FALSE, save_to_pdf=NULL, 
-                                      ci=FALSE, iteration = NULL, cluster=NULL) {
-                      require(patchwork)
+
+                    assess = function(true.graph = self$true.graph, lvPrefix = self$lvPrefix, nCores=NULL, return_roc=FALSE, save_to_pdf=NULL, ci=FALSE,Nboot=200, iteration = NULL,oracle=NULL,cluster=NULL) {
+                        require(patchwork)
+                        require(corrplot)
+                        cutoff=0.5
+
                       ##plot corrplot of inferred vs true latent space, assuming true latent space exists
-                      if (!is.null(self$latent.data)) {
+                       if (!is.null(self$latent.data)) {
                         if (is.null(iteration)) ##plot the last one by default
                           iteration = length(self$latent.space)
                         
                         if ("v" %in% names(self$latent.space[[iteration]])) {
-                          corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), upper='ellipse', order='AOE', insig='blank')
+                            ##dev.set(1)
+                            message("plotting correlation")
+                            corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[iteration]]$v)), upper='ellipse', order='AOE', insig='blank')
                         }
                       }
-
                       if (is.null(true.graph)) { #then can't plot other metrics
                         return  
                       }
@@ -164,48 +176,87 @@ NetRes <- R6Class("NetRes",
                       ##excise the latent space from the true graph
                       true.graph = private$exciseLatVarsFromEnsemble(list(true.graph), cluster, lvPrefix)[[1]]
                       true.graph.ig=as.igraph(true.graph)
-                      aucs = c()
-                      prAucs = c()
-                        f1maxes = c()
-                        sids=c()
-                      allplots=list()
+
+                      ##aucs = c()
+                      ##prAucs = c()
+                      ##f1maxes = c()
+                      ##sids=c()
                       ##test performance at every iteration
-                      for (ni in 1:length(self$ensemble)) { 
+                      permetrics=NULL
+                      allplots=list()
+                        Ne=length(self$ensemble)
+                        if(iteration=="all")
+                            inters=1:Ne
+                        else
+                            inters=iteration
+                      for (ni in inters) { 
                           print(paste('step', ni))
                           curEnsemble = private$exciseLatVarsFromEnsemble(self$ensemble[[ni]], cluster, lvPrefix)
                           curStrength = bnlearn::custom.strength(curEnsemble, bnlearn::nodes(true.graph))
                           curStrengthdf=curStrength %>%
                               as.data.frame() %>%
                               mutate(freq=strength*direction)
-                          perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci )
-                          sids[ni]=attributes(perf)$sid$sid
-                          auc=filter(attributes(perf)$aucs,curvetypes=="ROC")$AUC
-                          aucpr=filter(attributes(perf)$aucs,curvetypes=="PRC")$AUC
-                          aucs[ni] = auc
-                          prAucs[ni] = aucpr
-                          allmes=attributes(perf)$other %>% as.data.frame()
-                          f1maxes[ni] = pracma::interp1(
-                                                    filter(allmes,type=='fscore')$x,
-                                                    filter(allmes,type=='fscore')$y,0.5,method='linear')
+                          if(!is.null(oracle)){
+                              oracleEnsemble = private$exciseLatVarsFromEnsemble(oracle$ensemble[[1]], cluster, lvPrefix)
+                              oracleStrength = bnlearn::custom.strength(oracleEnsemble, bnlearn::nodes(true.graph)) %>% 
+                                  as.data.frame() %>%
+                                  mutate(freq=strength*direction)
+                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrength,Nboot=Nboot)
+                          }else{
+                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,Nboot=Nboot)
+                          }
+                          ##perf=network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=0.5 )
                           allplots[[ni]]=perf+plot_annotation(title=sprintf("Iteration %d",ni))
+                          ## get performance metrics
+                          allmetr=grep("perf_",names(attributes(perf)),value=T)
+                           for(pp in allmetr){
+                              val=attributes(perf)[[pp]]
+                              permetrics=bind_rows(
+                                  permetrics,
+                                  tibble(Metric=val$names,Value=val$value,th=cutoff,iteration=ni)
+                              )
+                          }
+                          ## sids[ni]=attributes(perf)$perf_sid$sid
+                          ## auc=attributes(perf)$perf_auc_roc
+                          ## aucpr=attributes(perf)$perf_aurc_pr
+                          ## aucs[ni] = auc
+                          ## prAucs[ni] = aucpr
+                          ## allmes=attributes(perf)$other %>% as.data.frame()
+                          ## f1maxes[ni] = pracma::interp1(
+                          ##                           filter(allmes,type=='fscore')$x,
+                          ##                           filter(allmes,type=='fscore')$y,0.5,method='linear')
                       }
-                      ggp1=qplot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')+geom_line()+theme_light()
-                      ggp2=qplot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC') +geom_line()+theme_light()                 
-                        ggp3=qplot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')+geom_line()+theme_light()
-                        ggp4=qplot(1:length(self$ensemble), sids, main='Structural Intervention Distance over iterations', xlab='Iteration', ylab='SID')+geom_line()+theme_light()
-                        ggpcomb=ggp1/ggp2/ggp3/ggp4
+                      plotstats=permetrics %>%
+                              ggplot(aes(x=iteration,y=Value,colour=Metric))+
+                              geom_line()+geom_point()+theme_light()+
+                              ggtitle(sprintf("Cutoff: %0.2g",permetrics$th[1]))+
+                          facet_wrap(~Metric,ncol=2,scales='free')
+                        if(iteration=="all")
+                            return(plotstats)
+                      ## ggp1=qplot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')+geom_line()+theme_light()
+                      ## ggp2=qplot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC') +geom_line()+theme_light()                 
+                      ##   ggp3=qplot(1:length(self$ensemble), f1maxes, main='F1max values over iterations', xlab='Iteration', ylab='F1max')+geom_line()+theme_light()
+                      ##   ggp4=qplot(1:length(self$ensemble), sids, main='Structural Intervention Distance over iterations', xlab='Iteration', ylab='SID')+geom_line()+theme_light()
+                      ##   ggpcomb=ggp1/ggp2/ggp3/ggp4
                         if(!is.null(save_to_pdf)){
                             message("saving to file ",save_to_pdf)
                             pdf(save_to_pdf)
-                            print(ggpcomb)
+                            ##print(ggpcomb)
+                            print(plotstats)
                             for(ni in 1:length(allplots)){
+                                if(!is.null(self$latent.space[[ni]]$v)){
+                                    corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[ni]]$v)), upper='ellipse', order='AOE', insig='blank') %>% print()
+                                }
                                 print(allplots[[ni]])
                             }
                             dev.off()
                         }else if(return_roc){
                             allplots
                         }else{
-                            print(ggpcomb)
+                            message("Plotting metrics")
+                            print(
+                                allplots[[length(allplots)]] | ~corrplot.mixed(cor(cbind(self$latent.data, self$latent.space[[length(allplots)]]$v)), upper='ellipse', order='AOE', insig='blank')
+                            )
                         }
                         if (cleanUpCluster)
                           stopCluster(cluster)
@@ -267,6 +318,10 @@ NetRes <- R6Class("NetRes",
                                                 latentSpaceParentOnly=TRUE, latentSpaceMethod = 'pca',
                                                 BPPARAM=BiocParallel::DoparParam(),
                                                 debug=FALSE) {
+                        if(debug){
+                            message("start of runOneIteration")
+                            browser()
+                        }
                       dud = function(x) x
                       
                       new.algorithm.args = algorithm.args
