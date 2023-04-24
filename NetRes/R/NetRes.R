@@ -186,6 +186,7 @@ NetRes <- R6Class("NetRes",
                         ##test performance at every iteration
                         permetrics=NULL
                         allplots=list()
+
                         Ne=length(self$ensemble)
                         if(iteration=="all")
                             inters=1:Ne
