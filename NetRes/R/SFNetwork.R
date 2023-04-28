@@ -10,7 +10,7 @@
 SFNetwork <- R6Class("SFNetwork", 
                      public = list(
                        #' @field dag The generated directed acyclic graph
-                       dag = NULL,
+                       dag = NULL, 
                        #' @field vRank vertex topological rank
                        vRank = NULL,
                        #' @field outDegree out-degree of vertices based on direct descendants
@@ -64,11 +64,11 @@ SFNetwork <- R6Class("SFNetwork",
                                                doPlot = FALSE,
                                                errDist = 'normal',
                                                latIdx = c(2, 3),
-                                               rescaleNoiseBy=function(mu=0.5, sigma=0.5, alpha=-5) {
+                                               rescaleNoiseBy=function(mu=0.5, sigma=0.2, alpha=-5) {
                                                  return(rskew_normal(1, mu, sigma, alpha))
                                                }) {
                          ##recompute the rDAG
-                         rDAG = as.graphNEL(self$dag)
+                         rDAG = self$dag #as.graphNEL(self$dag)
                          dataMat <- rmvDAG(numSamples, rDAG, errDist = errDist)
                          
                          if (!is.null(latIdx)) {
@@ -80,11 +80,9 @@ SFNetwork <- R6Class("SFNetwork",
 
                          if (!is.null(rescaleNoiseBy)) { #then add some noise per variable
                            scales = c()
+                           
                            for (ci in 1:ncol(dataMat)) {
-                             scaleFactor = ifelse(ci %in% latIdx, 
-                                                  0.1, #add little noise to latent space
-                                                  max(0.1, rescaleNoiseBy()) #keep scale factor positive
-                             )
+                             scaleFactor = max(0.1, rescaleNoiseBy()) #keep scale factor positive
                              scales[ci] = scaleFactor
                              dataMat[, ci] = dataMat[, ci] + rnorm(nrow(dataMat), 0, scaleFactor * sd(dataMat[, ci]))
                            }
@@ -131,7 +129,7 @@ SFNetwork <- R6Class("SFNetwork",
                          sorted = order(outDegree, decreasing = T)
                          sorted = V(iGraph)[sorted]
                          
-                         self$dag = dag
+                         self$dag = rDAG
                          self$vRank = names(sorted)
                          self$outDegree = outDegree
                        },
@@ -181,7 +179,7 @@ SFNetwork <- R6Class("SFNetwork",
                          sorted = order(outDegree, decreasing = T)
                          sorted = V(iGraph)[sorted]
                          
-                         self$dag = dag
+                         self$dag = rDAG
                          self$vRank = names(sorted)
                          self$outDegree = outDegree
                        },                       
@@ -191,66 +189,59 @@ SFNetwork <- R6Class("SFNetwork",
                          ##note that d is numChildren * 2 in this implementation of randDAG (symmetric parent and children couns)
                          rDAG <- randDAG(n = numVertices, d = numChildren*2, par1 = par1, method = 'barabasi')
                          
-                         ##iGraph = as.igraph(as.bn(rDAG))
-                         
-                         ##and topologically sort it
-                         nOrder <- as.character(topo_sort(as.igraph(as.bn(rDAG))))
-                         
-                         aM = as(rDAG, 'matrix')
-                         aM = aM[nOrder, nOrder]
-                         rownames(aM) = 1:nrow(aM)
-                         colnames(aM) = 1:ncol(aM)
-                         
                          ##The rows are parents and the columns are children
                          ##For top regulators, add edges if necessary
                          if (supersize.top.hubs && nParentOnly > 0) {
-                           nOut = apply(aM, 1, function(x) { length(which(x != 0))})
-                           top.hubs = order(nOut, decreasing = TRUE)[1:nParentOnly]
-                           ##up to supersize.factor * nOut but no more than ncol(aM) - 1 total
-                           n.edges.to.add = pmin(rep(ncol(aM) - 1, nParentOnly), supersize.factor*nOut[top.hubs]) - nOut[top.hubs]
-                           ##for each hub
-                           aM2 = aM
-                           for (thi in 1:length(top.hubs)) {
-                             th = top.hubs[thi]
-                             ##find empty spaces
-                             zIdx = setdiff(which(aM[th,] == 0), th)
-                             useIdx = sample(zIdx, n.edges.to.add[thi])
-                             ##sample values from a normal distribution of observed edges
-                             aM2[th, useIdx] = rnorm(n.edges.to.add[thi], mean(aM[th,]), sd(aM[th,]))
+                           ##find the top hubs
+                           bnDAG = as.bn(rDAG)
+                           ##nOrder <- as.character(topo_sort(as.igraph(bnDAG)))
+                           nOrder <- RBGL::tsort(rDAG)    
+                           allNodes = nodes(bnDAG)                        
+                           
+                           ##try to add nodes to the top hubs
+                           for (thi in 1:nParentOnly) {
+                             ##remove edges to parents 
+                             curParents = parents(bnDAG, nOrder[thi])
+                             for (parent in curParents) {
+                               bnDAG = drop.arc(bnDAG, parent, nOrder[thi])
+                             } 
+                             ##how many children does this hub have?
+                             curChildren = children(bnDAG, nOrder[thi])
+                             ##figure out which nodes can be added  
+                             curNotChildren = setdiff(allNodes, c(curChildren, nOrder[1:nParentOnly]))
+                             ##add all available not-children or up to supersize*length(children), whichever is smaller
+                             nEdgesToAdd = min(length(curNotChildren),
+                                               (supersize.factor- 1)*length(curChildren))
+                             ##try to add nodes
+                             ##at present, if addition fails due to DAG constraint, the node is skipped silently without substitution
+                             childrenToAdd = sample(curNotChildren, nEdgesToAdd)
+                             for (ci in 1:length(childrenToAdd)) {
+                               bnDAG = set.arc(bnDAG, nOrder[thi], childrenToAdd[ci])
+                               ##need to set arc strength, right?
+                             }
                            }
-                         }
-                         ##continue here
-                         ##AT THIS POINT, am2 is not a dag.  May need to remove parent edges to the hubs first
+                         } 
+
+                         rDAG = as.graphNEL(bnDAG)
+                         graph::nodes(rDAG) = paste('v', graph::nodes(rDAG), sep = '') #name (a little) better for convenience                         
+                         nOrder = RBGL::tsort(rDAG)                         
+                         nChildren = sapply(nOrder, function(v) {
+                           length(graph::adj(rDAG, v)[[1]])
+                         })
                          
+                         ##re-sort the graph
+                         ##convert to matrix for ease of certain operations
+                         aM = as(rDAG, 'matrix')
+                         aM = aM[nOrder, nOrder]
+                         ##set edge weights to something from a normal distribution
+                         aM[which(aM != 0)] = pmin(pmax(rnorm(length(which(aM != 0)), 0.5, 0.1), 0.1), 0.9) 
+
                          rDAG = as(aM, 'graphNEL')
-                         graph::nodes(rDAG) = paste('v', graph::nodes(rDAG), sep = '') #name (a little) better for convenience
-                         
-                         ##compute #s of direct children
-                         iGraph = as.igraph(as.bn(rDAG))
-                         
-                         outDegree = ego_size(
-                           iGraph,
-                           order = 1,
-                           nodes = V(iGraph),
-                           mode = c("out"),
-                           mindist = 1
-                         )
-                         sorted = order(outDegree, decreasing = T)
-                         sorted = V(iGraph)[sorted]
-                         
-                         ##now kill the parents of the top direct drivers of the network - i.e., get rid of nodes with very high order but low out-degree
                          bnDAG = as.bn(rDAG)
-                         for (curLat in names(sorted[1:nParentOnly])) {
-                           curParents = parents(bnDAG, curLat)
-                           for (cp in curParents) {
-                             ##remove the edge from current parent to the current latent var
-                             bnDAG = drop.arc(bnDAG, cp, curLat)
-                           }
-                         }
                          
-                         self$dag = bnDAG
-                         self$vRank = names(sorted)
-                         self$outDegree = outDegree
+                         self$dag = rDAG
+                         self$vRank = nOrder
+                         self$outDegree = nChildren
                        }                       
                      )
 )
