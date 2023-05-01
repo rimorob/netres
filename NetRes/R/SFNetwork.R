@@ -209,12 +209,18 @@ SFNetwork <- R6Class("SFNetwork",
                              curChildren = children(bnDAG, nOrder[thi])
                              ##figure out which nodes can be added  
                              curNotChildren = setdiff(allNodes, c(curChildren, nOrder[1:nParentOnly]))
+                             ##and how many parents they have - use this to compute sampling weights:
+                             ##nodes with fewer parents are more likely to be sampled in order to promote orthogonality
+                             ctParents = sapply(curNotChildren, function(node) {
+                               length(parents(bnDAG, node))
+                             })
+                             samplingWeights = 1/(1+ctParents)
                              ##add all available not-children or up to supersize*length(children), whichever is smaller
                              nEdgesToAdd = min(length(curNotChildren),
                                                (supersize.factor- 1)*length(curChildren))
                              ##try to add nodes
                              ##at present, if addition fails due to DAG constraint, the node is skipped silently without substitution
-                             childrenToAdd = sample(curNotChildren, nEdgesToAdd)
+                             childrenToAdd = sample(curNotChildren, nEdgesToAdd, prob=samplingWeights, replace=F)
                              for (ci in 1:length(childrenToAdd)) {
                                bnDAG = set.arc(bnDAG, nOrder[thi], childrenToAdd[ci])
                                ##need to set arc strength, right?
