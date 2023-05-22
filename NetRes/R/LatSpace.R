@@ -10,9 +10,10 @@ NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scal
   }
   maxRank = min(round(ncol(residuals)*0.1), maxRank)
   print(paste('Maximum latent space rank set to', maxRank))
+  startTime = proc.time()
   ##how many PCs are we dealing with?  Use Horn's parallel analysis to find out
   resPpca = parallelPCA(
-    as.matrix(residuals), #rows have to be variables, so transpose
+    as.matrix(residuals), 
     max.rank = maxRank,
     niters = 500,
     threshold = 0.05/ncol(residuals), #bonferroni-corrected p-vaoue cut-off
@@ -20,7 +21,9 @@ NetRes$set("private", "calculateLatVars", function(residuals, method='pca', scal
     scale = scale,
     BPPARAM = BPPARAM
   )
+  print("Done with Horn's PFA")
 
+  print(paste('Took', proc.time()[1] - startTime[1], 'seconds'))
   if (resPpca$n == 0) {
     stop('Latent space not identified - aborting')
   }  

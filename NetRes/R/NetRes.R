@@ -58,8 +58,7 @@ NetRes <- R6Class("NetRes",
                                           latentSpaceParentOnly = TRUE,
                                           latentSpaceMethod = 'sparse.pca',
                                           optimizeLatentSpace=FALSE,
-                                          nCores=NULL,
-                                          BPPARAM=BiocParallel::DoparParam()) {
+                                          nCores=NULL) {
                       if(debug)
                           browser()
                       self$lvPrefix=lvPrefix
@@ -78,26 +77,32 @@ NetRes <- R6Class("NetRes",
                       if(is.null(nCores)){
                           nCores = detectCores() - 1
                       }else{
-                          nCores=min(detectCores()-1,nCores)
+                          nCores=min(detectCores() - 1, nCores)
                       }
+                      
+                      cluster = makeCluster(nCores)                          
+                      
+                      registerDoParallel(cluster)
+                      setDefaultCluster(cl=cluster)
+                      BPPARAM = BiocParallel::DoparParam()
+                      clusterEvalQ(cluster, library(bnlearn))                      
                       for (ni in 1:nIter) {
                         if(debug) {
                           message("In interation ", ni)
                           browser()
                         }                      
-                        ##cluster creation moved inside the loop in order to help clean up what seems like a memory leak in cluster creation
-                        cluster = makeCluster(nCores)
-                        registerDoParallel(cluster)
-                        setDefaultCluster(cl=cluster)
-                        clusterEvalQ(cluster, library(bnlearn))
 
-                        curRes = private$runOneIteration(train, nBoot, algorithm, algorithm.args, cluster, lvPrefix = lvPrefix, 
+                        ##EXPERIMENTAL: latent space rank can't be above ni - 1
+                        ##Note: no latent space is inferred at ni == 1, so at ni == 2,
+                        ##we start with one latent variable
+                        new.algorithm.args = algorithm.args
+                        new.algorithm.args$max.rank = min(new.algorithm.args$max.rank, ni - 1)
+                        curRes = private$runOneIteration(train, nBoot, algorithm, new.algorithm.args, cluster, lvPrefix = lvPrefix, 
                                                          weightedResiduals, scale=scale, optimizeLatentSpace=optimizeLatentSpace,
                                                          learnLatentSpace = ifelse(ni == 1, FALSE, TRUE),
                                                          latentSpaceParentOnly=latentSpaceParentOnly,
                                                          latentSpaceMethod = latentSpaceMethod,debug=debug, BPPARAM=BPPARAM)
-                        ##clean up
-                        gc()
+                        
                         if(debug){
                           message("After runOneIteration ")
                           browser()
@@ -108,14 +113,21 @@ NetRes <- R6Class("NetRes",
                         ##self$latent.space.transform.coefs[[ni]] = curRes$latent.space.transform.coefs
                         print(paste('ni:', ni))
                         self$BIC[[ni]] = curRes$BIC #for PREVIOUS latent space - this one hasn't been evaluated yet - that's in the next iteration!
-                        print(paste('BIC history:', as.numeric(self$BIC)))
-                        
+
+                        print(paste('BIC history:', paste(as.numeric(unlist(self$BIC)), collapse=' '), sep = ' '))
+
                         if (ni > 1 && self$BIC[[ni]] <= self$BIC[[ni-1]]) {
                           print('Stopping early due to convergence')
+                          ##clean up  
+                          clusterEvalQ(cluster, rm(list=ls()))
+                          clusterEvalQ(cluster, gc())                                                  
                           break  
                         }
 
                         if (ni == 1) { #then skip to the next iteration
+                          ##clean up  
+                          clusterEvalQ(cluster, rm(list=ls()))
+                          clusterEvalQ(cluster, gc())                                                  
                           next
                         }                        
                         
@@ -127,15 +139,16 @@ NetRes <- R6Class("NetRes",
                         }
                         
                         self$assess(lvPrefix=lvPrefix, cluster=cluster, ci=TRUE, fast=TRUE)
-
-                        print('pausing to admire the corrplot')
-                        Sys.sleep(5)
-                        stopCluster(cluster)
+                        ##clean up  
+                        clusterEvalQ(cluster, rm(list=ls()))
+                        clusterEvalQ(cluster, gc())                        
                       }
                       if (ni == nIter) {
                         print('Maximum number of iterations reached - stopping')
                       }
-
+                      ##clean up
+                      stopCluster(cluster)
+                      self$finalize()
                     },
                     #' @description assess Assess the inferred ensemble against the true graph
                     #' @param true.graph The true graph to use; defaults to the one provided at initialization (if any)
@@ -282,6 +295,16 @@ NetRes <- R6Class("NetRes",
                                       highlight = list(nodes = latVars, fill="orange"))
                       }
                       browser()
+                    },
+                    
+                    #' @description 
+                    #' Clean up the foreach backend
+                    #' @param ... any additional parameters to downstream functions (not used)    
+                    #' @return none
+                    finalize = function(...) {      
+                      env <- foreach:::.foreachGlobals
+                      rm(list = ls(name = env), pos = env)
+                      gc()
                     }
                   ),
                   private = list(
@@ -291,10 +314,10 @@ NetRes <- R6Class("NetRes",
                       nonLatVars = setdiff(colnames(dframe), latVars)
                       blacklist = data.frame(from=NULL, to=NULL)
                       
-                      for (nlv in nonLatVars) {
+                      for (input in c(nonLatVars, latVars)) {
                         for (lv in latVars) {
                             blacklist = rbind(blacklist,
-                                              data.frame(from=nlv,to=lv))
+                                              data.frame(from=input, to=lv))
                                         # need to convert to data.frame:
                                         # - otherwise you lose column names
                                         # - then you can't merge to provided 
@@ -326,7 +349,14 @@ NetRes <- R6Class("NetRes",
                             message("start of runOneIteration")
                             browser()
                         }
-                      dud = function(x) x
+                      ##a function that does no computation
+                      ##dud = function(x) x
+                      ##a version that does do clean-up of the temporary data frame so that it doesn't sit around
+                      dud <- function(x) {
+                        rm('replicate',envir=sys.frame(-1))                        
+                        gc()
+                        return(x)
+                      }
                       
                       new.algorithm.args = algorithm.args
                       new.algorithm.args$blacklist = rbind(algorithm.args$blacklist,
@@ -334,14 +364,16 @@ NetRes <- R6Class("NetRes",
 
                       ##This part seems to be slow, at least on small networks.  Parallelizes to only a couple of cores at a time
                       ##It would be nice to figure out why
-                      ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster, debug=TRUE)
+                      print('Computing the full ensemble')
+                      ens = bn.boot(dframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster, debug=FALSE)
+                      
                       ##ensBIC =  mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
                       ##  score(net, data, type = algorithm.args$score, prior = algorithm.args$prior)
                       ##}, dframe, new.algorithm.args))
-
+                      print('Computing BICs')
                       ensBIC = mean(parSapply(cluster, ens, function(net, data, algorithm.args) {
                         ##note: latent space is regularized during Horn's PFA separately and is excluded from score computation
-                        scores = score(net, data, type = algorithm.args$score, prior = algorithm.args$prior, by.node=TRUE)
+                        scores = score(net, data, type = algorithm.args$score, by.node=TRUE)
                         idx = grep(lvPrefix, names(scores))
                         if (length(idx) > 0) {
                           return(sum(scores[-idx]))
@@ -350,8 +382,9 @@ NetRes <- R6Class("NetRes",
                         }
                       }, dframe, new.algorithm.args))
 
+                      print('Calculating Bayes Factors to determine network weights')
                       netWeights = private$calcBayesFactors(ens, dframe, cluster, algorithm.args)
-
+                      print('Excising latent variables from the ensemble')
                       ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)                      
                       if (!learnLatentSpace) { #then return the ensemble-specific BIC (w/o latent space learning)
                         return(list(ensemble=ens2,
@@ -360,9 +393,11 @@ NetRes <- R6Class("NetRes",
                       }
 
                       ##if latent space was present, then let's determine the residuals
+                      print('Calculating residuals')
                       res = private$calculateResiduals(ens2, netWeights, weightedResiduals, cluster)
                       
                       ##paran(res)
+                      print('Re-calculating latent variables')
                       latvars = private$calculateLatVars(res, method=latentSpaceMethod, scale=scale, algorithm.args=new.algorithm.args, BPPARAM=BPPARAM) 
 
                       ##debugging step
@@ -403,6 +438,29 @@ NetRes <- R6Class("NetRes",
                           mb = unique(unlist(mb))
 
                         startTime = Sys.time()
+                        if (0) {
+                          ##prune the latent space
+                          optimRes = ga(type = 'binary', fitness=private$shrinkLatentSpace, 
+                                        latVars = latvars$v, 
+                                        nBits = ncol(latvars$v),
+                                        algorithm = algorithm,
+                                        algorithm.args = algorithm.args,
+                                        lvPrefix = lvPrefix,
+                                        ##use markov boundary for optimization
+                                        dframe = dframe,
+                                        cluster = cluster,
+                                        nBoot = 1, #"fast" regime
+                                        lower = rep(-100, length(as.numeric(latCoefs))),
+                                        upper = rep(100, length(as.numeric(latCoefs))),
+                                        run = 10, #stop if no improvement for 10 generations 
+                                        monitor=plot,
+                                        parallel = cluster,
+                                        optim = FALSE, #use optim for local optimization
+                                        popSize = 500 #and elitism defaults to 5 winners
+                          )     
+                          browser('DeBug')
+                        }
+                        ##do a linear transform on the latent space
                         optimRes = ga(type = 'real-valued', fitness=private$latVarLinComb, latVars = latvars$v, 
                                       algorithm = algorithm,
                                       algorithm.args = algorithm.args,
@@ -413,12 +471,16 @@ NetRes <- R6Class("NetRes",
                                       nBoot = 1, #"fast" regime
                                       lower = rep(-100, length(as.numeric(latCoefs))),
                                       upper = rep(100, length(as.numeric(latCoefs))),
-                                      run = algorithm.args$max.iter/5, 
+                                      run = 10, #stop if no improvement for 10 generations 
                                       monitor=plot,
                                       parallel = cluster,
                                       optim = FALSE, #use optim for local optimization
                                       popSize = 500 #and elitism defaults to 5 winners
                         )
+                        ##clean up  
+                        clusterEvalQ(cluster, rm(list=ls()))
+                        clusterEvalQ(cluster, gc())   
+                        
                         print(Sys.time() - startTime)
                         mappedLVs = mappedLatVars(optimRes@solution, latvars$v)
                         ensBICoptimized = optimRes@fitnessValue                          
@@ -449,6 +511,7 @@ NetRes <- R6Class("NetRes",
                         ens = remappedRes$ens
                         ensBIC = remappedRes$BIC
                       } else { #recalculate the network with the identified latent space
+                        print('Re-calculating the network with the identified latent space')
                         newDframe = private$exciseLatVarsFromDataFrame(dframe, lvPrefix = '^U\\_')
                         newDframe = cbind(newDframe, latvars$v)                        
                         new.algorithm.args = algorithm.args                        
@@ -484,18 +547,23 @@ NetRes <- R6Class("NetRes",
                     # @param dframe data frame
                     # @param cluster cluster to distribute to
                     # @param algorithm.args algorithm arguments to get score from
-                    calcBayesFactors = function(ens, dframe, cluster, algorithm.args) {
+                    calcBayesFactors = function(ens, dframe, cluster, algorithm.args, maxBestProbabilityMass = 0.9) {
                       ##compute all scores relative to the first network
                       BFs = parSapply(cluster, ens, function(net, data, algorithm.args) {
-                        bnlearn::BF(net, ens[[1]], dframe, score = algorithm.args$score, prior = algorithm.args$prior, log=F)
+                        bnlearn::BF(net, ens[[1]], dframe, score = algorithm.args$score, prior = algorithm.args$prior, log=T)
                       }, dframe, algorithm.args)
-                      BFs[BFs > 1e20] = 1e20 #cap max values
+                      ##smaller is better
+                      BFs = BFs - min(BFs)
+                      probs = exp(-BFs)
+                      ##make sure there's some tail probability in networks other than the best one
+                      delta = max(probs) - maxBestProbabilityMass
+                      if (delta > 0) {
+                        idx = which(probs == max(probs))
+                        probs[idx] = probs[idx] - delta
+                        probs[-idx] = probs[-idx] + delta/(length(probs) - 1)
+                      }
 
-                      ##renormalize, with some floor, roughly O(1/(2*length(nets))) 
-                      ##That is, the hoi polloi get half the weight, the best nets the other half
-                      scores = (BFs/sum(BFs) + 1/length(BFs))
-                      scores = scores/sum(scores)
-                      return(scores)  
+                      return(probs)  
                     },
 
                     # @description The private helper function to calculate residuals for a given ensemble

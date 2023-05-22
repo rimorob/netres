@@ -10,6 +10,7 @@ vignette: >
 ---
 
 Example 0 - an example of scale-free network generation and inference using latent space optimization
+
 ```{r, include=TRUE}
 pdf('Example0.pdf')
 con <- file("test0.log")
@@ -24,17 +25,21 @@ library(bnlearn)
 
 ##demo script
 ##Create a network with 3 super-hubs, one of which will be observable (the largest)
-network = SFNetwork$new(numVertices=500, numChildren = 3, par1=1, nParentOnly = 3, supersize.top.hubs = TRUE, supersize.factor=5)
+network = SFNetwork$new(numVertices=1000, numChildren = 2, par1=1.2, nHubs = 2, hubInfluence = 500)
+network$plotVennDiagramOfChildren(network$vRank[c(1:2)])
 
-generated = network$generateData(numSamples=100, latIdx = c(2, 3))#, rescaleNoiseBy=NULL)
+generated = network$generateData(numSamples=200, latIdx = c(1, 2))#, rescaleNoiseBy = NULL)
+
 ##generated = network$generateData(numSamples=200, latIdx = c(2, 3))
-bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
-##Galley(GGally)
-##ggpairs(generated$data, progress=FALSE)
 
-algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
+##bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
+##library(GGally)
+##ggpairs(generated$data[sample(1:nrow(generated$data), 500), ], progress=FALSE)
+##corrplot::corrplot.mixed(cor(generated$data))
 
-netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='sparse.pca', optimizeLatentSpace=TRUE) 
+algArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-g', debug = FALSE, tabu = 1000, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
+
+netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='pca', optimizeLatentSpace=FALSE) 
 
 if (0) {
   netResObj$assess()
@@ -45,7 +50,7 @@ if (0) {
   iter = 1
   tmp = netResObj$clone()
   tmp$ensemble = tmp$ensemble[iter]
-  netResObj$assess(iteration = 3,oracle = tmp)
+  netResObj$assess(iteration = 3, oracle = tmp)
 }  
   ##ENSURE THAT ALL LATENT VARIABLES ARE SCALED PROPORTIONALLY RATHER THAN ALL TO 1 (IF THAT'S THE RIGHT THING - CHECK!!!!).  THIS WOULD BE AT THE END OF THE GA ITERATION.  NEXT THING, TRY ALLOWING GREATER MARGIN FOR VARIABLES WITH COEFFICIENTS NOT SET TO 1.
 
@@ -57,6 +62,7 @@ sink(type='message')
 dev.off()
 
 ```
+
 Example 1 - star topology network generation and inference
 
 ```{r, include = TRUE}
@@ -71,7 +77,7 @@ library(bnlearn)
 
 ##demo script
 network = SFNetwork$new(numVertices=50, topology='star', addOneEdge = TRUE)
-generated = network$generateData(numSamples = 100, latIdx = 1)
+generated = network$generateData(numSamples = 100, latIdx = 1, rescaleNoiseBy = NULL)
 
 library(GGally)
 ggpairs(generated$data, progress=FALSE)
@@ -98,6 +104,7 @@ Example 2 - twin-star topology network generation and inference
 
 ```{r, include = TRUE}
 ##pdf('Example2.pdf')
+##need to use clusterSetRNGStream inside NetRes, and propagate the seed value
 set.seed(42)
 
 ##con <- file("test.log")
@@ -108,7 +115,7 @@ library(NetRes)
 library(bnlearn)
 
 ##demo script
-network = SFNetwork$new(numVertices=200, topology='twin.star', addOneEdge=FALSE)
+network = SFNetwork$new(numVertices=50, topology='twin.star', addOneEdge=FALSE)
 generated = network$generateData(numSamples = 300, latIdx = c(1, 2)) #used to be 500
 print(network)
 plot(network)
@@ -118,11 +125,11 @@ tabuArgs = list(start = NULL, whitelist = NULL, blacklist = NULL, score = 'ebic-
 
 netResObj = NetRes$new(generated$data, true.graph = generated$graph, nIter = 10, nBoot=100, algorithm='tabu', 
                        algorithm.args = tabuArgs, mode='foo',
-                       latentSpaceMethod='sparse.pca') 
+                       latentSpaceMethod='sparse.pca', optimizeLatentSpace = TRUE) 
 ##netResObj$assess() #if the true network has 0 edges among the observable variables, that causes crashes
 ##after inference
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
-bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
+bnlearn::graphviz.plot(netResObj$ensemble[[4]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[2]][[1]]), value=T), col = "tomato", fill = "orange"))
 save.image(file='example2.RData')
 plot(netResObj)
 ##rm(netResObj)
@@ -133,6 +140,7 @@ plot(netResObj)
 ```
 
 Example 3 - an example of scale-free network generation and inference
+
 ```{r, include=TRUE}
 pdf('Example3.pdf')
 con <- file("test3.log")
@@ -173,7 +181,9 @@ sink(type='message')
 dev.off()
 
 ```
+
 Example 4 - an example of scale-free network generation and inference using latent space optimization
+
 ```{r, include=TRUE}
 pdf('Example4.pdf')
 con <- file("test4.log")
@@ -215,34 +225,41 @@ dev.off()
 
 ```
 
-Example 5 - a real example of gene expression and protein levels of neurons in the striatum of mice with Huntington's disease
-The latent variable is the length of CAG repeats in Huntingtin gene, which is the only genetic marker of age of onset of HD and accounts
-for 50% of variability in the age of onset.
-Here we don't know the true graph, but we DO know the latent variable.
-Note: the authors gratefully acknowledge "Cure Huntington's Disease Foundation" for their permission to use this snippet of their data.
+Example 5 - a real example of gene expression and protein levels of neurons in the striatum of mice with Huntington's disease The latent variable is the length of CAG repeats in Huntingtin gene, which is the only genetic marker of age of onset of HD and accounts for 50% of variability in the age of onset. Here we don't know the true graph, but we DO know the latent variable. Note: the authors gratefully acknowledge "Cure Huntington's Disease Foundation" for their permission to use this snippet of their data.
+
 ```{r, include=TRUE}
 ##pdf('Example5.pdf')
 ###con <- file("test.log")
 ##sink(con, append=TRUE)
 ##sink(con, append=TRUE, type="message")
+library(NetRes)
 data(striatum) #load the HD dataset
-striatum = scale(striatum) #scale all variables
 
+if (1) {
+  library(rcompanion)
+  library(copula)
+  toTransform = grep('CAG|GeneExpr|Protein', colnames(striatum), value=TRUE)
+  ##clean up the data and deal with zero-inflation in the process
+  striatum[, toTransform] = sapply(striatum[, toTransform], function(x) { blom(pobs(x, ties.method='random'))})
+}
 ##create a blacklist making Age and Gender input-only variables (these are experimental or, effectively, interventional variables)
 ##do not include the latent space in the blacklist
 library(dplyr)
-exptVars =  bnlearn::tiers2blacklist(list(setdiff(colnames(striatum), c('Age', 'Gender')), c('Age', 'Gender'))) %>% as.data.frame %>% dplyr::filter(to != 'U_CAG')
+##exptVars =  bnlearn::tiers2blacklist(
+##  list(setdiff(colnames(striatum), c('Age', 'Gender')), 
+##       c('Age', 'Gender'))) %>% as.data.frame %>% dplyr::filter(to != 'U_CAG')
+exptVars =  bnlearn::tiers2blacklist(
+  list(c('Age', 'Gender'), setdiff(colnames(striatum), c('Age', 'Gender')))) %>% as.data.frame %>% dplyr::filter(from != 'U_CAG')
 
 set.seed(42)
 
-library(NetRes)
 library(bnlearn)
 
 algArgs = list(start = NULL, whitelist = NULL, blacklist = exptVars, score = 'ebic-g', debug = FALSE, tabu = 100, max.iter = Inf, maxp = Inf, optimized = TRUE, max.rank=10)
 
-netResObj = NetRes$new(striatum, nIter = 10, nBoot=100, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='VAE', optimizeLatentSpace=FALSE) 
+netResObj = NetRes$new(striatum, nIter = 10, nBoot=500, algorithm='tabu', algorithm.args = algArgs, mode='normal', weightedResiduals=FALSE, scale=TRUE, latentSpaceMethod='pca', optimizeLatentSpace=FALSE) 
 
-onetResObj$assess()
+netResObj$assess()
 nIter = length(netResObj$ensemble)
 bnlearn::graphviz.plot(netResObj$ensemble[[1]][[1]], layout='dot')
 bnlearn::graphviz.plot(netResObj$ensemble[[2]][[1]], layout='dot', highlight = list(nodes = grep('U_', bnlearn::nodes(netResObj$ensemble[[4]][[1]]), value=T), col = "tomato", fill = "orange"))
