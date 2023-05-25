@@ -90,7 +90,11 @@ SFNetwork <- R6Class("SFNetwork",
                              if (ci %in% colIdx) { #less noise for latent variables' outgoing edges
                                scaleFactor = 0.1
                              } else {
-                               scaleFactor = max(0.1, rescaleNoiseBy()) #keep scale factor positive
+                               if (is.function(rescaleNoiseBy)) {
+                                 scaleFactor = max(0.1, rescaleNoiseBy()) #keep scale factor positive
+                               } else {
+                                 scaleFactor = rescaleNoiseBy #keep scale factor positive                                 
+                               }
                              }
                              scales[ci] = scaleFactor
                              dataMat[, ci] = dataMat[, ci] + rnorm(nrow(dataMat), 0, scaleFactor * sd(dataMat[, ci]))

@@ -575,7 +575,7 @@ NetRes <- R6Class("NetRes",
 
                         return(as.data.frame(netRes))
                       })
-                      
+
                       if (weightedResiduals) {
                         for (ri in 1:length(residuals)) {
                           residuals[[ri]] = residuals[[ri]] * netWeights[ri]

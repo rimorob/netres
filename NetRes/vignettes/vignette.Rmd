@@ -25,14 +25,15 @@ library(bnlearn)
 
 ##demo script
 ##Create a network with 3 super-hubs, one of which will be observable (the largest)
-network = SFNetwork$new(numVertices=1000, numChildren = 2, par1=1.2, nHubs = 2, hubInfluence = 500)
+network = SFNetwork$new(numVertices=200, numChildren = 2, par1=1.2, nHubs = 2, hubInfluence = 30)
 network$plotVennDiagramOfChildren(network$vRank[c(1:2)])
 
-generated = network$generateData(numSamples=200, latIdx = c(1, 2))#, rescaleNoiseBy = NULL)
+generated = network$generateData(numSamples=200, latIdx = c(1, 2), rescaleNoiseBy = 2) #NULL)
 
 ##generated = network$generateData(numSamples=200, latIdx = c(2, 3))
-
 ##bnlearn::graphviz.plot(generated$graph, layout='dot', highlight = list(nodes = grep('U_', colnames(generated$data), value=T), col = "tomato", fill = "orange"))
+##V97|U_V101
+##V99|U_V102:U_V101
 ##library(GGally)
 ##ggpairs(generated$data[sample(1:nrow(generated$data), 500), ], progress=FALSE)
 ##corrplot::corrplot.mixed(cor(generated$data))
