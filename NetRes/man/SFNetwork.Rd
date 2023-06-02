@@ -26,6 +26,7 @@ SFNetwork SFNetwork class definition
 \item \href{#method-SFNetwork-print}{\code{SFNetwork$print()}}
 \item \href{#method-SFNetwork-plot}{\code{SFNetwork$plot()}}
 \item \href{#method-SFNetwork-generateData}{\code{SFNetwork$generateData()}}
+\item \href{#method-SFNetwork-plotVennDiagramOfChildren}{\code{SFNetwork$plotVennDiagramOfChildren()}}
 \item \href{#method-SFNetwork-clone}{\code{SFNetwork$clone()}}
 }
 }
@@ -39,11 +40,10 @@ Generate a DAG using Barabasi's game and generate matching data
   numVertices = 20,
   topology = "power",
   numChildren = 2,
-  nParentOnly = 4,
   addOneEdge = TRUE,
   par1 = 1,
-  supersize.top.hubs = FALSE,
-  supersize.factor = 2
+  nHubs = 2,
+  hubInfluence = numVertices/nHubs
 )}\if{html}{\out{</div>}}
 }
 
@@ -56,15 +56,13 @@ Generate a DAG using Barabasi's game and generate matching data
 
 \item{\code{numChildren}}{number of children of each vertex, on average (i.e., node denisty, default=2)}
 
-\item{\code{nParentOnly}}{how many nodes to make parent-only hubs by removing their high order but low out-degree parents (default=4)}
-
 \item{\code{addOneEdge}}{whether to add a single edge not involving a latent variable to star or twin-star topologies (helps with AUC calculation; default=TRUE)}
 
 \item{\code{par1}}{Par1, as in documentation for pcalg::randDAG.  For Power Law nets, has the meaning of power of preferential attachment.  Defaults to 1}
 
-\item{\code{supersize.top.hubs}}{If true and nParentOnly > 0, then super-size the top n hubs by supersize.factor (up to the total number of nodes in the network)}
+\item{\code{nHubs}}{how many hubs to create in addition to the regular vertices}
 
-\item{\code{supersize.factor}}{Multiply the number of automatically generated nodes by this factor (up to the network size minus the number of top hubs)}
+\item{\code{hubInfluence}}{how many nodes a hub should influence; default is round(numVertices/nHubs)}
 }
 \if{html}{\out{</div>}}
 }
@@ -105,7 +103,8 @@ plots the DAG
   rescaleNoiseBy = function(mu = 0.5, sigma = 0.2, alpha = -5) {
     
     return(rskew_normal(1, mu, sigma, alpha))
- }
+ },
+  blomTransform = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -123,6 +122,25 @@ plots the DAG
 \item{\code{rescaleNoiseBy}}{If a positive number, scales sd from default parameter for all variables by a constant; 
 default behavior is scale everything through a left-skewed gaussian to generate several proxy variables for latent space; 
 if NULL, no rescaling}
+
+\item{\code{blomTransform}}{If TRUE (default), then blom-transform the data}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SFNetwork-plotVennDiagramOfChildren"></a>}}
+\if{latex}{\out{\hypertarget{method-SFNetwork-plotVennDiagramOfChildren}{}}}
+\subsection{Method \code{plotVennDiagramOfChildren()}}{
+Function to plot a multi-venn of counts of children for top hubs
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SFNetwork$plotVennDiagramOfChildren(hubs)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{hubs}}{The list of hubs the children of which should be inspected for overlap}
 }
 \if{html}{\out{</div>}}
 }

@@ -111,3 +111,4 @@ NetRes$set("private", "shrinkLatentSpace", function(coefs, latVars, algorithm, a
   
   return(newBIC)
 })
+

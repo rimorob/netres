@@ -18,7 +18,8 @@
 
 ##An R6 class for a generated scale-free network
 #' @export
-NetRes <- R6Class("NetRes", 
+NetRes <- R6Class("NetRes",
+                  lock_object = FALSE,
                   public = list(
                     #' @field ensemble The final ensemble as inferred after some iterations
                     ensemble = NULL,
@@ -61,6 +62,9 @@ NetRes <- R6Class("NetRes",
                                           nCores=NULL) {
                       if(debug)
                           browser()
+                      ## check lvPrefix that it incudes ^U\\_
+                      if(!grepl("^U\\_",lvPrefix))
+                          lvPrefix=paste0(lvPrefix,"|^U\\_")
                       self$lvPrefix=lvPrefix
                       self$creation.time=date()
                       self$latent.data = dframe %>% select_if(grepl(lvPrefix, names(.)))
@@ -158,7 +162,8 @@ NetRes <- R6Class("NetRes",
                         require(patchwork)
                         require(corrplot)
                         cutoff=0.5
-
+                        if(!is.null(save_to_pdf)&is.null(iteration))
+                            iteration='all'
                         ##plot corrplot of inferred vs true latent space, assuming true latent space exists
                         if (!is.null(self$latent.data)) {
                             if (is.null(iteration)) ##plot the last one by default
@@ -214,11 +219,20 @@ NetRes <- R6Class("NetRes",
                               as.data.frame() %>%
                               mutate(freq=strength*direction)
                           if(!is.null(oracle)){
+                              if(is.numeric(oracle)){
+                                  ## if you provide an iteration number then close this object and set the ensemble to that iteration
+                                  tmp=self$clone()
+                                  tmp$ensemble =tmp$ensemble[oracle]
+                                  oracle_name=paste0('Iteration ',oracle)
+                                  oracle=tmp
+                              }else{
+                                  oracle_name='Oracle'
+                              }
                               oracleEnsemble = private$exciseLatVarsFromEnsemble(oracle$ensemble[[1]], cluster, lvPrefix)
                               oracleStrength = bnlearn::custom.strength(oracleEnsemble, bnlearn::nodes(true.graph)) %>% 
                                   as.data.frame() %>%
                                   mutate(freq=strength*direction)
-                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrength,Nboot=Nboot)
+                              perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,oracle=oracleStrength,Nboot=Nboot,oracle_name=oracle_name)
                           }else{
                               perf=private$network_performance(true.graph.ig,curStrengthdf,ci=ci,cutoff=cutoff,Nboot=Nboot)
                           }
@@ -246,9 +260,8 @@ NetRes <- R6Class("NetRes",
                       plotstats=permetrics %>%
                               ggplot(aes(x=iteration,y=Value,colour=Metric))+
                               geom_line()+geom_point()+theme_light()+
-                              ggtitle(sprintf("Cutoff: %0.2g",permetrics$th[1]))+
                           facet_wrap(~Metric,ncol=2,scales='free')
-                        if(iteration=="all")
+                        if(iteration=="all"&is.null(save_to_pdf))
                             return(plotstats)
                       ## ggp1=qplot(1:length(self$ensemble), aucs, main='AUCs over iterations', xlab='Iteration', ylab='AUC')+geom_line()+theme_light()
                       ## ggp2=qplot(1:length(self$ensemble), prAucs, main='PR-AUCs over iterations', xlab='Iteration', ylab='PR-AUC') +geom_line()+theme_light()                 
@@ -387,7 +400,7 @@ NetRes <- R6Class("NetRes",
                       print('Excising latent variables from the ensemble')
                       ens2 = private$exciseLatVarsFromEnsemble(ens, cluster, lvPrefix)                      
                       if (!learnLatentSpace) { #then return the ensemble-specific BIC (w/o latent space learning)
-                        return(list(ensemble=ens2,
+                        return(list(ensemble=ens,
                                     latent.space = NULL,
                                     BIC = ensBIC))
                       }
