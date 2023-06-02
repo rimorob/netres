@@ -254,3 +254,158 @@ SFNetwork <- R6Class("SFNetwork",
                        }                       
                      )
 )
+
+addConfounderIgraph <- function(ig,
+                                prob = 0.8,
+                                ucoef = 1,
+                                uname = "U",
+                                exclude = "U.*") {
+    allvars <- names(V(ig))
+    toexc <- grep(exclude, allvars, value = T)
+    allvars <- setdiff(allvars, toexc)
+    ii <- rbinom(length(allvars), 1, prob)
+    newedg <- map(allvars[ii == 1], function(vv) c(uname, vv)) %>% unlist()
+    ucoef <- map(
+        allvars[ii == 1],
+        function(vv) {
+            list(coefficients = set_names(c(ucoef), uname))
+        }
+    ) %>% set_names(allvars[ii == 1])
+    ig_u <- ig %>%
+        add_vertices(1, attr = list(name = uname)) %>%
+        add_edges(newedg)
+    attributes(ig_u)$ucoef <- ucoef
+    return(ig_u)
+}
+
+
+##' Generates a simcausal object from a igraph object
+##'
+##' Take an igraph object and generated a simcausal by generating coefficients and distribution for each of the nodes of the network.
+##' @title igraph2simcausal
+##' @param ig igraph object
+##' @param default_dist default distribution of the nodes in the inside of network. For now rnorm, rbern or rweibull
+##' @param default_param list with parameters of the distribution. Depends on the default_dist. Ex, for rnorm the list should provide sd.
+##' @param default_source_dist default distribution for source nodes.rnorm or rbern
+##' @param default_transformation default transformation of the parent nodes. identiy, sigmoid or square.
+##' @param default_coef default value for coefficient of parents of node. it can be a number or characters 'runif' or 'rnorm'
+##' @param default_coef_square coefficients for the square term. Only applies if default_transformation is 'squared'. 'runif', 'rnorm', or number
+##' @param default_coef_square_param if default_coef_square='runif' then list with min and max. if 'rnorm' then list with mean and sd.
+##' @param default_source_param list with default parameter. Parameter depend on distribution. Ex, for rnorm you need to provide meand sd.
+##' @param default_coef_param  if default_coef_square='runif' then list with min and max. if 'rnorm' then list with mean and sd.
+##' @param specific_parameters list with parameters and distribution for specific nodes and parents.
+##' @return simcausal object
+##' @author Fred Gruber
+igraph2simcausal <- function(ig,
+			     default_dist = "rnorm",
+			     default_param = list(sd = 1),
+			     default_source_dist = "rnorm",
+			     default_transformation = "identity",
+			     default_coef = "runif",
+			     default_coef_square = "runif",
+			     default_coef_square_param = list(min = -2, max = 2),
+			     default_source_param = list(mean = 0, sd = 1),
+			     default_coef_param = list(min = -2, max = 2),
+			     specific_parameters = list()) {
+  require(simcausal)
+  ## check arguments
+  checkmate::assertClass(ig, "igraph")
+  checkmate::assertChoice(default_dist, c("rnorm", "rbern", "rweibull"))
+  checkmate::assertChoice(default_source_dist, c("rnorm", "rbern"))
+  checkmate::assertChoice(default_transformation, c("identity", "sigmoid", "square"))
+  checkmate::assertMultiClass(default_coef, classes = c("numeric", "character"))
+  checkmate::assertList(default_coef_param)
+  checkmate::assertList(specific_parameters)
+  if(default_coef == "runif"&!all(c("min","max") %in% names(default_coef_param)))
+    stop("For default_coef=='runif', default_coef_param should contain min and max")
+  if(default_coef == "rnorm"&!all(c("mean","sd") %in% names(default_coef_param)))
+    stop("For default_coef=='rnorm', default_coef_param should contain mean and sd")
+  ## fix names
+  V(ig)$name=make.names(names(V(ig)))
+  ## start converting
+  allnodes=as.bn(ig) %>% node.ordering()
+  ##allnodes <- V(ig) %>% names()
+  D <- DAG.empty()
+  for (vv in allnodes) {
+    parents <- igraph::neighbors(ig, vv, mode = "in") %>% names()
+    ## node distributions
+    vvdist <- specific_parameters[[vv]][["dist"]]
+    ## are there parents?
+    if (length(parents) == 0) {
+      ## source
+      source_params <-  specific_parameters[[vv]][["default_source_param"]]
+      if (is.null(vvdist)) {
+	vvdist <- default_source_dist
+      }
+      if(is.null(source_params))
+	source_params <- default_source_param
+      D <- D + node(vv,
+		    distr = vvdist,
+		    params = source_params
+		    )
+    }else{
+      ## inner variables
+      if (is.null(vvdist)) {
+	vvdist <- default_dist
+      }
+      ## transformation for each parent
+      alltrans = rep(default_transformation,length(parents)) %>% set_names(parents)
+      providedtrans = specific_parameters[[vv]][["transformations"]]
+      trans = specific_parameters[[vv]][["transformations"]][parents]
+      ## coefficients for every parent
+      coefs = specific_parameters[[vv]][["coefficients"]][parents]
+      myform = NULL
+      for(pp in parents){
+	 ## if missing parameters use default
+	if(is.null(trans[pp])||is.na(trans[pp])){
+	  trans[pp] = default_transformation
+	}
+	if(is.null(coefs[pp])||is.na(coefs[pp])){
+	  if(default_coef == "runif"){
+	    coefs[pp] = runif(1,default_coef_param[["min"]],default_coef_param[["max"]])
+	  }else if(is.numeric(default_coef))
+	    coefs[pp] = default_coef
+	}
+	## generate formula
+	if(trans[pp] == 'identity'){
+	  myform = c(myform,
+		     paste0(coefs[pp],"*",pp)
+		     )
+	}else if(trans[pp] == "sigmoid"){
+	  myform = c(myform,
+		     sprintf("%g/(1+exp(-%s))",coefs[pp],pp)
+		     )
+	}else if(trans[pp] == 'square'){
+	  coefsq = coefs[paste0(pp,"^2")]
+	  if(is.null(coefsq)|is.na(coefsq)){
+	    if(default_coef_square == "runif"){
+	      coefsq = runif(1,default_coef_square_param[["min"]],
+			     default_coef_square_param[["max"]])
+	    }else if(default_coef_square == 'rnorm'){
+	      coefsq = rnorm(1,default_coef_square[["mean"]],default_coef_square[["sd"]])
+	    }else if(is.numeric(default_coef_square)){
+	      coefsq = default_coef_square
+	    }
+	  }
+	  myform = c(myform,
+		     sprintf("%g*%s+%g*%s^2",coefs[pp],pp,coefsq,pp)
+		     )
+	}
+      }
+      myform = paste0(myform,collapse = "+")
+      if(vvdist == 'rnorm'){
+	mysd = specific_parameters[[vv]][["sd"]][parents]
+      if(is.null(mysd)||is.na(mysd))
+	mysd = default_param$sd
+      myparams = list(mean = myform,sd = mysd)
+      }else if(vvdist == 'rbern'){
+	myparams = list(prob = sprintf("1/(1+exp(-(%s)))",myform))
+      }
+      D <- D + node(vv,
+		    distr = vvdist,
+		    params = myparams
+    )      
+    }
+  }
+  return(D)
+}
