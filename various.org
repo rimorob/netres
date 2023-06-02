@@ -2005,18 +2005,29 @@ library(bnlearn)
 library(simcausal)
 setwd("/Users/fred/Documents/projects/netres_fork/")
 ##source("~/gitRepos/gnsutils/gnsutils/R/networks.R")
-source("~/Documents/projects/gnsutils/gnsutils/R/networks.R")
+##source("~/Documents/projects/gnsutils/gnsutils/R/networks.R")
 ##library(brms)
 rskew_normal=brms::rskew_normal
 
 devtools::load_all("./NetRes")
 
-network = SFNetwork$new(numVertices=100, numChildren = 2, par1=1, nParentOnly = 3, supersize.top.hubs = F, supersize.factor=1)
+network = SFNetwork$new(numVertices=30, numChildren = 2, par1=1)
 
-networkig=network$dag %>% as.igraph()
+networkig=igraph::graph_from_graphnel(network$dag)
 networkig=addConfounderIgraph(networkig,prob=0.8,ucoef=4,uname='U1')
 networkig=addConfounderIgraph(networkig,prob=0.5,ucoef=4,uname='U2')
 networkig=addConfounderIgraph(networkig,prob=0.5,ucoef=4,uname='U3')
+
+networkig <- set_graph_attr(networkig, "layout", layout_with_sugiyama(networkig,hgap=10000,vgap=1000,maxiter=1000))
+plot(networkig)
+
+networkd_simc=igraph2simcausal(networkig,default_coef_param=list(min=2,max=5))
+networkd_simc_set=set.DAG(networkd_simc)
+
+true.network=bnlearn::as.bn(networkig)
+
+data_network=sim(networkd_simc_set,n=1000) #[1] 1000   36
+
 
 (U1=igraph::get.edgelist(networkig) %>%
    as.data.frame() %>%
@@ -2049,14 +2060,6 @@ setdiff(U_3,U_1)
   filter(V1=="v1") %>% with(V2))
 
 
-ppPlotIgraph(networkig,nodesep=0.01,check_size = F)
-
-networkd_simc=igraph2simcausal(networkig,default_coef_param=list(min=2,max=5))
-networkd_simc_set=set.DAG(networkd_simc)
-
-true.network=bnlearn::as.bn(networkig)
-
-data_network=sim(networkd_simc_set,n=1000)
 
 save(true.network,data_network,file="SFNetwork_3cluster.RData")
 

@@ -49,6 +49,7 @@ NetRes NetRes class definition
 \item \href{#method-NetRes-new}{\code{NetRes$new()}}
 \item \href{#method-NetRes-assess}{\code{NetRes$assess()}}
 \item \href{#method-NetRes-plot}{\code{NetRes$plot()}}
+\item \href{#method-NetRes-finalize}{\code{NetRes$finalize()}}
 \item \href{#method-NetRes-clone}{\code{NetRes$clone()}}
 }
 }
@@ -73,8 +74,7 @@ Constructor that fits a NetRes object from a data fram
   latentSpaceParentOnly = TRUE,
   latentSpaceMethod = "sparse.pca",
   optimizeLatentSpace = FALSE,
-  nCores = NULL,
-  BPPARAM = BiocParallel::DoparParam()
+  nCores = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -153,6 +153,26 @@ plot The function to plot (some) networks in the ensemble
 \item{\code{lvPrefix}}{The latent variable prefix (default = 'U_'; use perl regexp)}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-NetRes-finalize"></a>}}
+\if{latex}{\out{\hypertarget{method-NetRes-finalize}{}}}
+\subsection{Method \code{finalize()}}{
+Clean up the foreach backend
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{NetRes$finalize(...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{any additional parameters to downstream functions (not used)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+none
 }
 }
 \if{html}{\out{<hr>}}
