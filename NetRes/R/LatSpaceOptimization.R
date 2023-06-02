@@ -37,7 +37,9 @@ NetRes$set("private", "latVarLinComb", function(coefs, latVars, algorithm, algor
   if (returnEnsemble) { # then run a bootstrap with the new lat vars
     ##newEns = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
     newEns = bn.boot(newDframe, statistic = dud, R=nBoot, algorithm = algorithm, algorithm.args = new.algorithm.args, cluster=cluster)
-    
+    ##clean up  
+    clusterEvalQ(cluster, rm(list=ls()))
+    clusterEvalQ(cluster, gc())       
     ##newBIC = mean(sapply(newEns, function(net, data, algorithm.args) {
     ##  score(net, data, type = new.algorithm.args$score, prior = new.algorithm.args$prior)
     ##}, newDframe, new.algorithm.args))
@@ -51,6 +53,9 @@ NetRes$set("private", "latVarLinComb", function(coefs, latVars, algorithm, algor
         return(sum(scores))
       }
     }, newDframe, new.algorithm.args))
+    ##clean up  
+    clusterEvalQ(cluster, rm(list=ls()))
+    clusterEvalQ(cluster, gc())   
     
   } else { #calculate a single network to be used as part of GA optimization
     ##learn the network structure once rather than via a bootstrap
@@ -77,3 +82,33 @@ NetRes$set("private", "latVarLinComb", function(coefs, latVars, algorithm, algor
     return(newBIC)
   }
 }) 
+
+NetRes$set("private", "shrinkLatentSpace", function(coefs, latVars, algorithm, algorithm.args, lvPrefix, dframe, cluster,
+                                                maximize=TRUE, nBoot=detectCores() - 2, returnEnsemble = FALSE) {
+  newLatVars = latVars[, which(coefs == 1)]
+  
+  ##drop the latent variables from the data frame
+  newDframe = private$exciseLatVarsFromDataFrame(dframe, lvPrefix = '^U\\_')
+  newDframe = cbind(newDframe, newLatVars)
+  
+  ##update the blacklist for new variable names
+  new.algorithm.args = algorithm.args                        
+  new.algorithm.args$blacklist = rbind(algorithm.args$blacklist,
+                                       private$makeBlacklist(newDframe, lvPrefix)) 
+  
+  
+  net = do.call(algorithm, c(list(x = newDframe), new.algorithm.args))
+  ##newBIC = score(net, newDframe, type = new.algorithm.args$score, prior = new.algorithm.args$prior)
+  ##note: latent space is regularized during Horn's PFA separately and is excluded from score computation
+  newBIC = {
+    scores = score(net, newDframe, type = algorithm.args$score, prior = algorithm.args$prior, by.node=TRUE)
+    idx = grep(lvPrefix, names(scores))
+    if (length(idx) > 0 && FALSE) { ##COMMENTED OUT FOR NOW - PENALIZE LATVARS AGAIN
+      sum(scores[-idx])
+    } else {
+      sum(scores)
+    }}
+  
+  return(newBIC)
+})
+

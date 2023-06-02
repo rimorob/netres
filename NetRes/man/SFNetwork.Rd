@@ -102,7 +102,7 @@ plots the DAG
   doPlot = FALSE,
   errDist = "normal",
   latIdx = c(2, 3),
-  rescaleNoiseBy = function(mu = 0.5, sigma = 0.5, alpha = -5) {
+  rescaleNoiseBy = function(mu = 0.5, sigma = 0.2, alpha = -5) {
     
     return(rskew_normal(1, mu, sigma, alpha))
  }

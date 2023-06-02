@@ -18,6 +18,10 @@ NetRes NetRes class definition
 
 \item{\code{latent.space}}{The list of latent spaces after a given iteration}
 
+\item{\code{lvPrefix}}{prefix to identify latent variables in dataset}
+
+\item{\code{time}}{when the object was created}
+
 \item{\code{latent.space.transform}}{The function to map PCs to the final basis vector}
 
 \item{\code{latent.space.transform.coefs}}{The transform that maps PCs to the final basis vector form s.t. the PCs are conditionally de-correlated given their descendants (i.e., the network is optimized)}
@@ -29,6 +33,13 @@ NetRes NetRes class definition
 \item{\code{BIC}}{The list of mean ensemble BICs per run - used as the stopping condition}
 
 \item{\code{true.graph}}{The true graph (if any)}
+}
+\if{html}{\out{</div>}}
+}
+\section{Active bindings}{
+\if{html}{\out{<div class="r6-active-bindings">}}
+\describe{
+\item{\code{time}}{when the object was created}
 }
 \if{html}{\out{</div>}}
 }
@@ -102,12 +113,14 @@ assess Assess the inferred ensemble against the true graph
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{NetRes$assess(
   true.graph = self$true.graph,
-  lvPrefix = "^U\\\\_",
+  lvPrefix = self$lvPrefix,
   nCores = NULL,
   return_roc = FALSE,
   save_to_pdf = NULL,
   ci = FALSE,
+  Nboot = 200,
   iteration = NULL,
+  oracle = NULL,
   cluster = NULL,
   fast = FALSE
 )}\if{html}{\out{</div>}}
